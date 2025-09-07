@@ -1,10 +1,13 @@
 #include "Infrastructure/Messaging/Messages/GSMessageFactory.h"
+#include "Infrastructure/Messaging/Messages/GSMessageBase.h"
+#include "Infrastructure/Messaging/Messages/GSCameraFrameMsg.h"
 
 namespace PiTrac
 {
 GSMessageFactory::GSMessageFactory()
 {
     // Register message types
+    registerMessage<GSCameraFrameMessage>("CameraFrame");
 }
 
 std::unique_ptr<GSMessageInterface> GSMessageFactory::createFromZmqMessage(zmq_msg_t &msg)

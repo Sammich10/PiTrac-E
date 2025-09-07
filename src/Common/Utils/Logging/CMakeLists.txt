@@ -12,7 +12,7 @@ file(GLOB LOGGING_SOURCES
 add_library(${PROJECT_NAME} SHARED ${LOGGING_SOURCES})
 
 # Link OpenCV libraries
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME} PUBLIC
     ${OpenCV_LIBS}
-    ${Boost_LIBRARIES}
+    ${BOOST_LIBS}
 )
