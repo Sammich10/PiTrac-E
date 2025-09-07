@@ -1,0 +1,16 @@
+{
+    "imx296": {
+        "resolution": {
+            "width": 1456,
+            "height": 1088
+        },
+        "frame_rate": 60,
+        "focal_length_mm": 2.8,
+        "fov":{
+            "horizontal": 118.0,
+            "vertical": 140.0
+        },
+        "bit_depth": 10,
+        "interface": "MIPI CSI-2"
+    }
+}

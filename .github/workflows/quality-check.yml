@@ -1,0 +1,75 @@
+name: C++ Code Quality
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master, dev  ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install linting tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          clang-format-16 \
+          clang-tidy-16 \
+          cppcheck \
+          cmake
+          
+    - name: Check code formatting with clang-format
+      run: |
+        echo "Checking code formatting..."
+        find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
+        xargs clang-format-16 --dry-run --Werror || {
+          echo "Code formatting issues found. Run 'clang-format -i' on the files above."
+          exit 1
+        }
+        
+    - name: Generate compile commands for clang-tidy
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        
+    - name: Run clang-tidy static analysis
+      run: |
+        echo "Running clang-tidy..."
+        find src/ -name "*.cpp" -o -name "*.cc" -o -name "*.c" | \
+        xargs clang-tidy-16 -p build/ \
+          --checks='-*,
+            readability-*,
+            performance-*,
+            bugprone-*,
+            clang-analyzer-*,
+            modernize-*,
+            -modernize-use-trailing-return-type,
+            -readability-magic-numbers,
+            -readability-identifier-length' \
+          --warnings-as-errors='*' || echo "clang-tidy found issues"
+          
+    - name: Run cppcheck
+      run: |
+        echo "Running cppcheck..."
+        cppcheck --enable=warning,style,performance,portability \
+          --std=c++17 \
+          --platform=unix64 \
+          --suppress=missingIncludeSystem \
+          --suppress=unusedFunction \
+          --suppress=unmatchedSuppression \
+          --error-exitcode=1 \
+          --inline-suppr \
+          src/ || echo "cppcheck found issues"
+          
+    - name: Check for TODO/FIXME comments
+      run: |
+        echo "Checking for TODO/FIXME comments..."
+        if grep -r "TODO\|FIXME" src/ --include="*.cpp" --include="*.h" --include="*.hpp"; then
+          echo "Found TODO/FIXME comments. Consider addressing them."
+        fi

@@ -1,0 +1,73 @@
+name: Build and Test in Container
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master, dev  ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/sammich10/pitrac-e/pitrac-builder:v1.0.0
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: --user root
+      
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+        
+    - name: Setup SDK environment
+      shell: bash
+      run: |
+        echo "Verifying SDK environment..."
+        
+        # Check if setup-env exists and make it executable
+        if [ -f "setup-env" ]; then
+          chmod +x setup-env
+          echo "Found setup-env script"
+        else
+          echo "setup-env script not found in repository root"
+          exit 1
+        fi
+        
+        # Check if PITRAC_SDK_PATH is set (from container)
+        if [ -z "$PITRAC_SDK_PATH" ]; then
+          echo "PITRAC_SDK_PATH is not set. Please set it to the correct path."
+          exit 1
+        fi
+        
+        # Source the setup script
+        . ./setup-env
+        
+        # Export environment variables for subsequent steps
+        echo "CC=$CC" >> $GITHUB_ENV
+        echo "CXX=$CXX" >> $GITHUB_ENV
+        echo "CMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN_FILE" >> $GITHUB_ENV
+        
+        echo "SDK environment loaded successfully"
+        echo "Cross compiler: $CC"
+        
+    - name: Configure and build
+      shell: bash
+      run: |
+        # Re-source environment (GitHub Actions steps are isolated)
+        . ./setup-env
+        make clean all
+        
+    - name: Run tests
+      shell: bash
+      run: |
+        # Re-source environment
+        . ./setup-env
+        make run_tests
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: build-artifacts
+        path: build/

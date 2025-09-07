@@ -1,0 +1,44 @@
+#!/bin/bash
+
+# Parse command line arguments and append them to the podman run command
+ARGS=()
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            echo "Usage: $0 [options]"
+            echo "Options:"
+            echo "  -h, --help       Show this help message"
+            exit 0
+            ;;
+        *)
+            ARGS+=("$1")
+            shift # Move to the next argument
+            ;;
+    esac
+done
+
+# Get the CWD for the repository
+CWD=$(pwd)
+echo "Attaching at ${CWD}"
+
+podman build -t pitrac-ubuntu-builder:22.04 . || { echo "Failed to rebuild PiTrac builder container image."; exit 1; }    
+
+# Get the host user's UID and GID
+HOST_UID=$(id -u)
+HOST_GID=$(id -g)
+
+# Run the container. The container is logged in as the host user and the UID / GID of the host user will be mapped into the container instance
+podman run -it --rm \
+    --privileged \
+    "${ARGS[@]}" \
+    --env-host=false \
+    -v "${CWD}:${CWD}" \
+    -w "${CWD}" \
+    --uidmap 0:${HOST_UID}:1 \
+    --uidmap ${HOST_UID}:0:1 \
+    --gidmap 0:${HOST_GID}:1 \
+    --gidmap ${HOST_GID}:0:1 \
+    -u ${HOST_UID}:${HOST_GID} \
+    --entrypoint "/bin/bash" \
+    --name pitrac-builder \
+    pitrac-ubuntu-builder:22.04

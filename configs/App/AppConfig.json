@@ -1,0 +1,10 @@
+{
+    "ProcessDefs": {
+        "AppMain": {
+            "Executable": "AppMain.exe",
+            "Arguments": [
+                
+            ]
+        }
+    }
+}

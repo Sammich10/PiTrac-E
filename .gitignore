@@ -1,0 +1,8 @@
+.git
+.vscode
+.bash_history
+.gitattributes
+
+build
+sdk
+tmp
