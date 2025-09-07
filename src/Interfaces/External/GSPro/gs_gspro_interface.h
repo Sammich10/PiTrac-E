@@ -15,33 +15,32 @@ using ip::tcp;
 
 // Base class for representing and transferring Golf Sim results
 
-namespace PiTrac {
+namespace PiTrac
+{
+class GsGSProInterface : public GsSimSocketInterface
+{
+  public:
+    GsGSProInterface();
+    virtual ~GsGSProInterface();
 
-    class GsGSProInterface : public GsSimSocketInterface {
+    // Returns true iff the GSPro interface is to be used
+    static bool InterfaceIsPresent();
 
-    public:
-        GsGSProInterface();
-        virtual ~GsGSProInterface();
+    // Must be called before SendResults is called.
+    virtual bool Initialize();
 
-        // Returns true iff the GSPro interface is to be used
-        static bool InterfaceIsPresent();
+    // Deals with, for example, shutting down any socket connection
+    virtual void DeInitialize();
 
-        // Must be called before SendResults is called.
-         virtual bool Initialize();
+    virtual bool SendResults(const GsResults &results);
 
-        // Deals with, for example, shutting down any socket connection
-         virtual void DeInitialize();
+    virtual void SetSimSystemArmed(const bool is_armed);
+    virtual bool GetSimSystemArmed();
 
-         virtual bool SendResults(const GsResults& results);
+  protected:
 
-         virtual void SetSimSystemArmed(const bool is_armed);
-         virtual bool GetSimSystemArmed();
+    virtual std::string GenerateResultsDataToSend(const GsResults &results);
 
-    protected:
-
-        virtual std::string GenerateResultsDataToSend(const GsResults& results);
-
-         virtual bool ProcessReceivedData(const std::string received_data);
-    };
-
+    virtual bool ProcessReceivedData(const std::string received_data);
+};
 }

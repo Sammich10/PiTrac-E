@@ -9,26 +9,25 @@
 // This is basically just a state flag for now.  It's used
 // to determine whether the system is putting or not.
 
-namespace PiTrac {
+namespace PiTrac
+{
+class GolfSimClubs
+{
+  public:
 
-class GolfSimClubs {
+    enum GsClubType
+    {
+        kNotSelected = 0,
+        kDriver = 1,
+        kIron = 2,
+        kPutter = 3
+    };
 
-public:
+    static GsClubType current_club_;
 
-	enum GsClubType	{
-		kNotSelected = 0,
-		kDriver = 1,
-		kIron = 2,
-		kPutter = 3
-	};
-
-	static GsClubType current_club_;
-
-	static GsClubType GetCurrentClubType();
-	static void SetCurrentClubType(GsClubType club_type);
-
+    static GsClubType GetCurrentClubType();
+    static void SetCurrentClubType(GsClubType club_type);
 };
-
 }
 
 #endif // GOLF_CLUBS_H

@@ -2,6 +2,8 @@
 .vscode
 .bash_history
 .gitattributes
+*.unc-backup*
+*.uncrustify
 
 build
 sdk

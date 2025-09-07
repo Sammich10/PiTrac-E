@@ -6,13 +6,13 @@
 #include <signal.h>
 #include <unistd.h>
 
-int appStart(int argc, const char* argv[]) {
+int appStart(int argc, const char *argv[])
+{
     return 0; // Placeholder for application start logic
 }
 
-const pid_t StartApp::startProcess(const char *executable, const char *const args[], const int opts) 
+const pid_t StartApp::startProcess(const char *executable, const char *const args[], const int opts)
 {
-
     pid_t pid = fork();
 
     switch(pid)
@@ -20,7 +20,7 @@ const pid_t StartApp::startProcess(const char *executable, const char *const arg
         case -1:
             perror("Failed to create forked process");
             break;
-        case 0: 
+        case 0:
         {
             execv(executable, const_cast<char *const *>(args));
             perror("Failed to execute process");
@@ -36,6 +36,7 @@ const pid_t StartApp::startProcess(const char *executable, const char *const arg
     return pid;
 }
 
-bool StartApp::fileExists(const std::string &path) {
+bool StartApp::fileExists(const std::string &path)
+{
     return access(path.c_str(), F_OK) != -1;
 }

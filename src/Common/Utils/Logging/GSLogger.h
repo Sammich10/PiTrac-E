@@ -33,110 +33,112 @@
 #include <string>
 #include <cstdarg>
 
-namespace PiTrac 
+namespace PiTrac
 {
-
-enum class logger_level {
-    trace 	= boost::log::trivial::trace,
-    debug 	= boost::log::trivial::debug,
-    info 	= boost::log::trivial::info,
+enum class logger_level
+{
+    trace   = boost::log::trivial::trace,
+    debug   = boost::log::trivial::debug,
+    info    = boost::log::trivial::info,
     warning = boost::log::trivial::warning,
-    error 	= boost::log::trivial::error,
-    fatal 	= boost::log::trivial::fatal
+    error   = boost::log::trivial::error,
+    fatal   = boost::log::trivial::fatal
 };
 
-class GSLogger {
-public:
+class GSLogger
+{
+  public:
     explicit GSLogger
-	(
-		const logger_level logLevel = logger_level::info
-	);
+    (
+        const logger_level logLevel = logger_level::info
+    );
 
     ~GSLogger
-	(
-		void
-	);
+    (
+        void
+    );
 
     // Printf-style logging methods for each severity level
     void trace
-	(
-		const char* format, ...) __attribute__((format(printf, 2, 3))
-	);
+    (
+        const char *format, ...) __attribute__((format(printf, 2, 3))
+                                               );
 
     void debug
-	(
-		const char* format, ...) __attribute__((format(printf, 2, 3))
-	);
+    (
+        const char *format, ...) __attribute__((format(printf, 2, 3))
+                                               );
 
     void info
-	(
-		const char* format, ...) __attribute__((format(printf, 2, 3))
-	);
+    (
+        const char *format, ...) __attribute__((format(printf, 2, 3))
+                                               );
 
     void warning
-	(
-		const char* format, ...) __attribute__((format(printf, 2, 3))
-	);
+    (
+        const char *format, ...) __attribute__((format(printf, 2, 3))
+                                               );
 
     void error
-	(
-		const char* format, ...) __attribute__((format(printf, 2, 3))
-	);
+    (
+        const char *format, ...) __attribute__((format(printf, 2, 3))
+                                               );
 
     void fatal
-	(
-		const char* format, ...) __attribute__((format(printf, 2, 3))
-	);
-	
+    (
+        const char *format, ...) __attribute__((format(printf, 2, 3))
+                                               );
+
     // String-based logging methods (for compatibility)
     void trace
-	(
-		const std::string& message
-	);
+    (
+        const std::string &message
+    );
 
     void debug
-	(
-		const std::string& message
-	);
+    (
+        const std::string &message
+    );
 
     void info
-	(
-		const std::string& message
-	);
+    (
+        const std::string &message
+    );
 
     void warning
-	(
-		const std::string& message
-	);
+    (
+        const std::string &message
+    );
 
     void error
-	(
-		const std::string& message
-	);
+    (
+        const std::string &message
+    );
 
     void fatal
-	(
-		const std::string& message
-	);
+    (
+        const std::string &message
+    );
 
 
     // Set log level at runtime
     void setLogLevel(logger_level level);
-	
-	private:
+
+  private:
     void Init();
-    std::string formatMessage(const char* format, va_list args);
-    void logMessage(boost::log::trivial::severity_level severity, const std::string& message);
-	std::string getProcessName();
+    std::string formatMessage(const char *format, va_list args);
+    void logMessage(boost::log::trivial::severity_level severity, const std::string &message);
+    std::string getProcessName();
 
     logger_level logLevel_;
     std::string logFileName_;
     boost::shared_ptr<boost::log::sinks::text_file_backend> fileBackend_;
-    boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend>> fileSink_;
-    boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend>> consoleSink_;
+    boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend> >
+    fileSink_;
+    boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> >
+    consoleSink_;
     boost::log::sources::severity_logger<boost::log::trivial::severity_level> logger_;
 };
-
 }
 
 #endif // GSLOGGER_H

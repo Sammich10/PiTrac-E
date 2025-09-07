@@ -18,51 +18,53 @@
 #include "gs_message_producer.h"
 #include "gs_ipc_message.h"
 
-namespace PiTrac {
+namespace PiTrac
+{
+class GolfSimIpcSystem
+{
+  public:
 
-	class GolfSimIpcSystem {
+    static const int kIpcLoopIntervalMs = 2000;
+    static std::string kWebActiveMQHostAddress;
 
-	public:
+    static std::string kActiveMQLMIdProperty;
 
-		static const int kIpcLoopIntervalMs = 2000;
-		static std::string kWebActiveMQHostAddress;
+    // Properties (and their potential values) that will be sent within
+    // ActiveMQ messages.
+    static const std::string kGolfSimMessageTypeTag;
+    static const std::string kGolfSimMessageType;
+    static const std::string kGolfSimIPCMessageTypeTag;
 
-		static std::string kActiveMQLMIdProperty;
+    static cv::Mat last_received_image_;
 
-		// Properties (and their potential values) that will be sent within
-		// ActiveMQ messages.
-		static const std::string kGolfSimMessageTypeTag;
-		static const std::string kGolfSimMessageType;
-		static const std::string kGolfSimIPCMessageTypeTag;
+    static bool DispatchReceivedIpcMessage(const BytesMessage &message);
+    static bool SendIpcMessage(const GolfSimIPCMessage &ipc_message);
 
-		static cv::Mat last_received_image_;
+    static GolfSimIPCMessage * BuildIpcMessageFromBytesMessage(
+        const BytesMessage &active_mq_message);
 
-		static bool DispatchReceivedIpcMessage(const BytesMessage& message);
-		static bool SendIpcMessage(const GolfSimIPCMessage& ipc_message);
+    static std::unique_ptr<cms::BytesMessage> BuildBytesMessageObjectFromIpcMessage(
+        const GolfSimIPCMessage &ipc_message);
 
-		static GolfSimIPCMessage* BuildIpcMessageFromBytesMessage(const BytesMessage& active_mq_message);
+    static bool InitializeIPCSystem();
+    static bool ShutdownIPCSystem();
 
-		static std::unique_ptr<cms::BytesMessage> BuildBytesMessageObjectFromIpcMessage(const GolfSimIPCMessage& ipc_message);
+    // The following methods deal with what to do with received IPC messages and
+    // are called
+    // from the main DispatchReceivedIpcMessage method.
+    static bool DispatchRequestForCamera2ImageMessage(const GolfSimIPCMessage &message);
+    static bool DispatchCamera2ImageMessage(const GolfSimIPCMessage &message);
+    static bool DispatchCamera2PreImageMessage(const GolfSimIPCMessage &message);
+    static bool DispatchShutdownMessage(const GolfSimIPCMessage &message);
+    static bool DispatchRequestForCamera2TestStillImage(const GolfSimIPCMessage &message);
+    static bool DispatchResultsMessage(const GolfSimIPCMessage &message);
+    static bool DispatchControlMsgMessage(const GolfSimIPCMessage &message);
 
-		static bool InitializeIPCSystem();
-		static bool ShutdownIPCSystem();
-
-		// The following methods deal with what to do with received IPC messages and are called
-		// from the main DispatchReceivedIpcMessage method.
-		static bool DispatchRequestForCamera2ImageMessage(const GolfSimIPCMessage& message);
-		static bool DispatchCamera2ImageMessage(const GolfSimIPCMessage& message);
-		static bool DispatchCamera2PreImageMessage(const GolfSimIPCMessage& message);
-		static bool DispatchShutdownMessage(const GolfSimIPCMessage& message);
-		static bool DispatchRequestForCamera2TestStillImage(const GolfSimIPCMessage& message);
-		static bool DispatchResultsMessage(const GolfSimIPCMessage& message);
-		static bool DispatchControlMsgMessage(const GolfSimIPCMessage& message);	
-
-		static bool SimulateCamera2ImageMessage();
-	private:
-		static GolfSimMessageConsumer* consumer_;
-		static GolfSimMessageProducer* producer_;
-	};
-
+    static bool SimulateCamera2ImageMessage();
+  private:
+    static GolfSimMessageConsumer *consumer_;
+    static GolfSimMessageProducer *producer_;
+};
 }
 
 #endif // #ifndef GS_IPC_SYSTEM_H

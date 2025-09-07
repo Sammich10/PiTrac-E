@@ -2,5 +2,4 @@
 
 namespace PiTrac
 {
-
 } // namespace PiTrac

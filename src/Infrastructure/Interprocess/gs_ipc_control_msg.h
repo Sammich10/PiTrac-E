@@ -23,38 +23,39 @@
 #include "logging_tools.h"
 
 
-// The primary object for control-type communications from the Golf Sim user interface
+// The primary object for control-type communications from the Golf Sim user
+// interface
 
-namespace PiTrac {
+namespace PiTrac
+{
+// TBD - Add a change-player type?
+enum class GsIPCControlMsgType
+{
+    kUnknown = 0,
+    kClubChangeToPutter = 1,
+    kClubChangeToDriver = 2,
+};
 
-    // TBD - Add a change-player type?
-    enum class GsIPCControlMsgType { 
-        kUnknown = 0, 
-        kClubChangeToPutter = 1,
-        kClubChangeToDriver = 2,
-    };
+// This class is mostly designed to compartmentalize the details of
+// (De)serializing
+// these IPC messages.
+class GsIPCControlMsg
+{
+  public:
 
-    // This class is mostly designed to compartmentalize the details of (De)serializing
-    // these IPC messages.
-    class GsIPCControlMsg {
+    GsIPCControlMsg();
+    virtual ~GsIPCControlMsg();
 
-    public:
+    // Returns a string representation of this result
+    std::string Format() const;
 
-        GsIPCControlMsg();
-        virtual ~GsIPCControlMsg();
+    static std::string FormatControlMessageType(const GsIPCControlMsgType t);
 
-        // Returns a string representation of this result
-        std::string Format() const;
+  public:
+    GsIPCControlMsgType control_type_ = GsIPCControlMsgType::kUnknown;
 
-        static std::string FormatControlMessageType(const GsIPCControlMsgType t);
-
-    public:
-        GsIPCControlMsgType control_type_ = GsIPCControlMsgType::kUnknown;
-
-        MSGPACK_DEFINE( control_type_ );
-
-    };
-
+    MSGPACK_DEFINE( control_type_ );
+};
 }
 // This needs to be placed outside the namespace
 MSGPACK_ADD_ENUM(PiTrac::GsIPCControlMsgType);

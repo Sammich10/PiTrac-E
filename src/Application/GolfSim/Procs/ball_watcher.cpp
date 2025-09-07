@@ -35,114 +35,136 @@ namespace gs = PiTrac;
 
 using namespace std::placeholders;
 
-namespace PiTrac {
-
-
+namespace PiTrac
+{
 static int get_colourspace_flags(std::string const &codec)
 {
-	GS_LOG_TRACE_MSG(trace, "get_colourspace_flags - codec is: " + codec);
+    GS_LOG_TRACE_MSG(trace, "get_colourspace_flags - codec is: " + codec);
 
-	if (codec == "mjpeg" || codec == "yuv420")
-		return RPiCamEncoder::FLAG_VIDEO_JPEG_COLOURSPACE;
-	else
-		return RPiCamEncoder::FLAG_VIDEO_NONE;
+    if (codec == "mjpeg" || codec == "yuv420")
+    {
+        return RPiCamEncoder::FLAG_VIDEO_JPEG_COLOURSPACE;
+    }
+    else
+    {
+        return RPiCamEncoder::FLAG_VIDEO_NONE;
+    }
 }
 
 // The main event loop for the application.
 
-bool ball_watcher_event_loop(RPiCamEncoder &app, bool & motion_detected)
+bool ball_watcher_event_loop(RPiCamEncoder &app, bool &motion_detected)
 {
+    VideoOptions const *options = app.GetOptions();
+    std::unique_ptr<Output> output = std::unique_ptr<Output>(Output::Create(options));
+    app.SetEncodeOutputReadyCallback(std::bind(&Output::OutputReady,
+                                               output.get(),
+                                               std::placeholders::_1,
+                                               std::placeholders::_2,
+                                               std::placeholders::_3,
+                                               std::placeholders::_4));
+    app.SetMetadataReadyCallback(std::bind(&Output::MetadataReady,
+                                           output.get(),
+                                           std::placeholders::_1));
 
-	VideoOptions const *options = app.GetOptions();
-	std::unique_ptr<Output> output = std::unique_ptr<Output>(Output::Create(options));
-	app.SetEncodeOutputReadyCallback(std::bind(&Output::OutputReady, output.get(), std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-	app.SetMetadataReadyCallback(std::bind(&Output::MetadataReady, output.get(), std::placeholders::_1));
+    app.OpenCamera();
 
-	app.OpenCamera();
+    app.ConfigureVideo(get_colourspace_flags(options->codec));
+    GS_LOG_TRACE_MSG(trace, "ball_watcher_event_loop - starting encoder.");
+    app.StartEncoder();
+    app.StartCamera();
 
-	app.ConfigureVideo(get_colourspace_flags(options->codec));
-	GS_LOG_TRACE_MSG(trace, "ball_watcher_event_loop - starting encoder.");
-	app.StartEncoder();
-	app.StartCamera();
+    // Instead of using the dynamical link4ed-library approach used by lrpiocam
+    // apps,
+    // we will just manually create a mottion_detect object
 
-	// Instead of using the dynamical link4ed-library approach used by lrpiocam apps, 
-	// we will just manually create a mottion_detect object
+    MotionDetectStage motion_detect_stage(&app);
 
-	MotionDetectStage motion_detect_stage(&app);
+    // Setup the same elements of the stage that rpicam apps would otherwise do
+    // dynamically.
 
-	// Setup the same elements of the stage that rpicam apps would otherwise do dynamically.
+    boost::property_tree::ptree empty_params;
+    motion_detect_stage.Read(empty_params);
+    motion_detect_stage.Configure();
 
-	boost::property_tree::ptree empty_params;
-	motion_detect_stage.Read(empty_params);
-	motion_detect_stage.Configure();
+    auto start_time = std::chrono::high_resolution_clock::now();
 
+    pollfd p[1] = { { STDIN_FILENO, POLLIN, 0 } };
 
-	auto start_time = std::chrono::high_resolution_clock::now();
+    motion_detected = false;
 
-	pollfd p[1] = { { STDIN_FILENO, POLLIN, 0 } };
+    for (unsigned int count = 0; ; count++)
+    {
+        if (!gs::GolfSimGlobals::PiTrac_running_)
+        {
+            app.StopCamera(); // stop complains if encoder very slow to close
+            app.StopEncoder();
+            return false;
+        }
 
-	motion_detected = false;
+        RPiCamEncoder::Msg msg = app.Wait();
+        if (msg.type == RPiCamApp::MsgType::Timeout)
+        {
+            GS_LOG_MSG(error, "ERROR: Device timeout detected, attempting a restart!!!");
+            app.StopCamera();
+            app.StartCamera();
+            continue;
+        }
 
-	for (unsigned int count = 0; ; count++)
-	{
-		if (!gs::GolfSimGlobals::PiTrac_running_) {
-			app.StopCamera(); // stop complains if encoder very slow to close
-			app.StopEncoder();
-			return false;
-		}
+        if (msg.type == RPiCamEncoder::MsgType::Quit)
+        {
+            return motion_detected;
+        }
+        else if (msg.type != RPiCamEncoder::MsgType::RequestComplete)
+        {
+            throw std::runtime_error("unrecognised message!");
+        }
 
-
-		RPiCamEncoder::Msg msg = app.Wait();
-		if (msg.type == RPiCamApp::MsgType::Timeout)
-		{
-			GS_LOG_MSG(error, "ERROR: Device timeout detected, attempting a restart!!!");
-			app.StopCamera();
-			app.StartCamera();
-			continue;
-		}
-
-		if (msg.type == RPiCamEncoder::MsgType::Quit)
-			return motion_detected;
-		else if (msg.type != RPiCamEncoder::MsgType::RequestComplete)
-			throw std::runtime_error("unrecognised message!");
-
-		// We have a completed request for an image
-		CompletedRequestPtr &completed_request = std::get<CompletedRequestPtr>(msg.payload);
+        // We have a completed request for an image
+        CompletedRequestPtr &completed_request = std::get<CompletedRequestPtr>(msg.payload);
         if (!app.EncodeBuffer(completed_request, app.VideoStream()))
         {
-                // Keep advancing our "start time" if we're still waiting to start recording (e.g.
-                // waiting for synchronisation with another camera).
-                start_time = std::chrono::high_resolution_clock::now();
-                count = 0; // reset the "frames encoded" counter too
+            // Keep advancing our "start time" if we're still waiting to start
+            // recording (e.g.
+            // waiting for synchronisation with another camera).
+            start_time = std::chrono::high_resolution_clock::now();
+            count = 0;     // reset the "frames encoded" counter too
         }
- 
-		// Immediately have the motion detection stage determine if there was movement.
 
-		bool result = motion_detect_stage.Process(completed_request);
+        // Immediately have the motion detection stage determine if there was
+        // movement.
 
-		bool mdResult = false;
-		int getStatus = completed_request->post_process_metadata.Get("motion_detect.result", mdResult);
-		if (getStatus == 0) {
-			if (mdResult) {
-				app.StopCamera(); // stop complains if encoder very slow to close
-				app.StopEncoder();
-				motion_detected = true;
-				
-				// TBD - for now, once we have motion, get out immediately
-				return true;
-			}
-			else {
-				// std::cout << "****** motion stopped ********* " << std::endl;
-			}
-		}
-		else {
-			// std::cout << "WARNING:  Could not find motion_detect.result." << std::endl;
-		}
-	}
+        bool result = motion_detect_stage.Process(completed_request);
 
-	return true;
+        bool mdResult = false;
+        int getStatus = completed_request->post_process_metadata.Get("motion_detect.result",
+                                                                     mdResult);
+        if (getStatus == 0)
+        {
+            if (mdResult)
+            {
+                app.StopCamera(); // stop complains if encoder very slow to
+                                  // close
+                app.StopEncoder();
+                motion_detected = true;
+
+                // TBD - for now, once we have motion, get out immediately
+                return true;
+            }
+            else
+            {
+                // std::cout << "****** motion stopped ********* " << std::endl;
+            }
+        }
+        else
+        {
+            // std::cout << "WARNING:  Could not find motion_detect.result." <<
+            // std::endl;
+        }
+    }
+
+    return true;
 }
-
 }
 
 #endif // #ifdef __unix__  // Ignore in Windows environment

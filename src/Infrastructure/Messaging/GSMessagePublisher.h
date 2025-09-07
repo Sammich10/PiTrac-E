@@ -10,15 +10,15 @@
 
 namespace PiTrac
 {
-
 class GSMessagePublisher
 {
-public:
+  public:
     /**
      * @brief Constructs a ZeroMQ message publisher
-     * @param publishEndpoint Endpoint for publishing messages (e.g., "tcp://*:5555")
+     * @param publishEndpoint Endpoint for publishing messages (e.g.,
+     *"tcp://*:5555")
      */
-    explicit GSMessagePublisher(const std::string& publishEndpoint);
+    explicit GSMessagePublisher(const std::string &publishEndpoint);
 
     virtual ~GSMessagePublisher();
 
@@ -28,29 +28,32 @@ public:
      * @param message Message object to publish
      * @return True if message was sent successfully
      */
-    bool publishMessage(const std::string& topic, const GSMessageBase& message);
-    
+    bool publishMessage(const std::string &topic, const GSMessageBase &message);
+
     /**
      * @brief Publish a raw string message to a specific topic
      * @param topic Message topic/channel
      * @param message Raw message string
      * @return True if message was sent successfully
      */
-    bool publishRawMessage(const std::string& topic, const std::string& message);
-    
+    bool publishRawMessage(const std::string &topic, const std::string &message);
+
     /**
      * @brief Check if publisher is ready
      */
-    bool isReady() const { return publisherReady_; }
+    bool isReady() const
+    {
+        return publisherReady_;
+    }
 
-private:
+  private:
     // ZeroMQ context and socket
     std::unique_ptr<zmq::context_t> context_;
     std::unique_ptr<zmq::socket_t> publishSocket_;
-    
+
     // Configuration
     std::string publishEndpoint_;
-    
+
     // State tracking
     std::atomic<bool> publisherReady_;
 
@@ -61,29 +64,33 @@ private:
 // Mixin class for easy inheritance
 class GSMessagePublisherMixin
 {
-public:
-    explicit GSMessagePublisherMixin(const std::string& publishEndpoint = "tcp://*:5555")
-        : messagePublisher_(std::make_unique<GSMessagePublisher>(publishEndpoint)) {}
-    
+  public:
+    explicit GSMessagePublisherMixin(const std::string &publishEndpoint = "tcp://*:5555")
+        : messagePublisher_(std::make_unique<GSMessagePublisher>(publishEndpoint))
+    {
+    }
+
     virtual ~GSMessagePublisherMixin() = default;
 
-protected:
-    bool publishMessage(const std::string& topic, const GSMessageBase& message) {
+  protected:
+    bool publishMessage(const std::string &topic, const GSMessageBase &message)
+    {
         return messagePublisher_->publishMessage(topic, message);
     }
-    
-    bool publishRawMessage(const std::string& topic, const std::string& message) {
+
+    bool publishRawMessage(const std::string &topic, const std::string &message)
+    {
         return messagePublisher_->publishRawMessage(topic, message);
     }
-    
-    bool isPublisherReady() const {
+
+    bool isPublisherReady() const
+    {
         return messagePublisher_->isReady();
     }
 
-private:
+  private:
     std::unique_ptr<GSMessagePublisher> messagePublisher_;
 };
-
 } // namespace PiTrac
 
 #endif // GS_MESSAGE_PUBLISHER_H

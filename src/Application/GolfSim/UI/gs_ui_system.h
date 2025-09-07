@@ -18,36 +18,43 @@
 
 // The primary object for communications to the Golf Sim user interface
 
-namespace PiTrac {
+namespace PiTrac
+{
+class GsUISystem
+{
+  public:
 
-    class GsUISystem {
+    static std::string kWebServerShareDirectory;
+    static std::string kWebServerResultBallExposureCandidates;
+    static std::string kWebServerResultSpinBall1Image;
+    static std::string kWebServerResultSpinBall2Image;
+    static std::string kWebServerResultBallRotatedByBestAngles;
+    static std::string kWebServerErrorExposuresImage;
+    static std::string kWebServerBallSearchAreaImage;
 
-    public:
+    static void SendIPCErrorStatusMessage(const std::string &error_message);
 
-        static std::string kWebServerShareDirectory;
-        static std::string kWebServerResultBallExposureCandidates;
-        static std::string kWebServerResultSpinBall1Image;
-        static std::string kWebServerResultSpinBall2Image;
-        static std::string kWebServerResultBallRotatedByBestAngles;
-        static std::string kWebServerErrorExposuresImage;
-        static std::string kWebServerBallSearchAreaImage;
+    static bool SendIPCStatusMessage(const GsIPCResultType message_type,
+                                     const std::string &custom_message = "");
 
-        static void SendIPCErrorStatusMessage(const std::string& error_message);
+    static void SendIPCHitMessage(const GolfBall &result_ball,
+                                  const std::string &secondary_message = "");
 
-        static bool SendIPCStatusMessage(const GsIPCResultType message_type, const std::string& custom_message = "");
+    // Save the image into the shared web-server directory so that the web-based
+    // golf-sim user interface can access it.
+    // Also save a uniquely-named copy to the usual images directory unless
+    // suppressed.
 
-        static void SendIPCHitMessage(const GolfBall& result_ball, const std::string& secondary_message = "");
+    static bool SaveWebserverImage(const std::string &file_name,
+                                   const cv::Mat &img,
+                                   bool suppress_diagnostic_saving = false);
+    static bool SaveWebserverImage(const std::string &file_name,
+                                   const cv::Mat &img,
+                                   const std::vector<GolfBall> &balls,
+                                   bool suppress_diagnostic_saving = false);
 
-        // Save the image into the shared web-server directory so that the web-based 
-        // golf-sim user interface can access it.  
-        // Also save a uniquely-named copy to the usual images directory unless suppressed.
-
-        static bool SaveWebserverImage(const std::string& file_name, const cv::Mat& img, bool suppress_diagnostic_saving = false);
-        static bool SaveWebserverImage(const std::string& file_name, const cv::Mat& img, const std::vector<GolfBall>& balls, bool suppress_diagnostic_saving = false);
-
-        static void ClearWebserverImages();
-    };
-
+    static void ClearWebserverImages();
+};
 }
 
 

@@ -1,22 +1,57 @@
 #!/bin/bash
 
-SDK_PATH=
-VER=5.0.12
-SDK_ENV=environment-setup-cortexa76-pitrac-linux
+# SDK Configuration
+SDK_PATH=""
+VER="5.0.12"
+SDK_ENV="environment-setup-cortexa76-pitrac-linux"
+
+# Determine SDK path
 if [ -z "${PITRAC_SDK_PATH}" ]; then
-    echo "PITRAC_SDK_PATH environment variable is not set. Defaulting to ${SDK_PATH}/${VER}/${SDK_ENV}."
-    SDK_PATH="opt/pitrac/${VER}/${SDK_ENV}"
+    echo "PITRAC_SDK_PATH environment variable is not set."
+    echo "Trying default paths..."
+    
+    # Try multiple possible locations
+    POSSIBLE_PATHS=(
+        "/opt/pitrac/${VER}/${SDK_ENV}"
+        "/tmp/pitrac/${VER}/${SDK_ENV}"
+        "$(find /tmp -name "${SDK_ENV}" -type f 2>/dev/null | head -1)"
+    )
+    
+    for path in "${POSSIBLE_PATHS[@]}"; do
+        if [ -f "$path" ]; then
+            SDK_PATH="$path"
+            echo "Found SDK at: $SDK_PATH"
+            break
+        fi
+    done
+    
+    if [ -z "$SDK_PATH" ]; then
+        echo "ERROR: SDK environment file not found in any default location."
+        echo "Please set PITRAC_SDK_PATH environment variable."
+        return 1
+    fi
 else
     SDK_PATH="${PITRAC_SDK_PATH}"
 fi
 
 # Check if the SDK environment file exists
-if [ ! -f ${SDK_PATH} ]; then
-    echo "SDK environment file ${SDK_PATH} not found. Please ensure the SDK is installed correctly."
+if [ ! -f "${SDK_PATH}" ]; then
+    echo "ERROR: SDK environment file ${SDK_PATH} not found."
+    echo "Please ensure the SDK is installed correctly."
     return 1
+fi
+
+echo "Sourcing SDK environment from: ${SDK_PATH}"
+# shellcheck source=/dev/null
+. "${SDK_PATH}"
+
+export YOCTO_SDK_PATH="${SDK_PATH}"
+echo "SDK environment sourced successfully."
+
+# Verify SDK is working
+if [ -n "${CC}" ]; then
+    echo "Cross compiler: ${CC}"
+    echo "Target: ${ARCH}"
 else
-    echo "Sourcing SDK environment from ${SDK_PATH}"
-    . ${SDK_PATH}
-    export YOCTO_SDK_PATH=${SDK_PATH}
-    echo "SDK environment sourced successfully."
+    echo "WARNING: Cross compiler not found in SDK environment."
 fi

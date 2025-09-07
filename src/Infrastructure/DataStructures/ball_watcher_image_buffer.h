@@ -3,8 +3,9 @@
  * Copyright (C) 2022-2025, Verdant Consultants, LLC.
  */
 
-// This structure is setup by the libcamera loop with the (usually) rapidly-taken
-// images from the camera.  
+// This structure is setup by the libcamera loop with the (usually)
+// rapidly-taken
+// images from the camera.
 
 #ifndef GS_BALL_WATCHER_IMG_BUFFER_H
 #define GS_BALL_WATCHER_IMG_BUFFER_H
@@ -14,22 +15,25 @@
 
 #include <boost/circular_buffer.hpp>
 
-namespace PiTrac {
+namespace PiTrac
+{
+//  We also need to be able to reach these variables from within the libcamera
+// namespace.
 
-	//  We also need to be able to reach these variables from within the libcamera namespace.
+struct RecentFrameInfo
+{
+    cv::Mat mat;
+    // Holds the sequence number from the completed request from whence the mat
+    // came
+    unsigned int requestSequence;
+    // True if this was the frame where motion (the ball hit) was first detected
+    bool isballHitFrame = false;
+    float frameRate = 0.0;
+};
 
-	struct RecentFrameInfo {
-		cv::Mat mat;
-		// Holds the sequence number from the completed request from whence the mat came
-		unsigned int requestSequence;
-		// True if this was the frame where motion (the ball hit) was first detected
-		bool isballHitFrame = false;
-		float frameRate = 0.0;
-	};
-
-	// Global queue to hold the last <n> frames before motion is detected in the frame
-	extern boost::circular_buffer<RecentFrameInfo> RecentFrames;
-
+// Global queue to hold the last <n> frames before motion is detected in the
+// frame
+extern boost::circular_buffer<RecentFrameInfo> RecentFrames;
 }
 
 #endif // GS_BALL_WATCHER_IMG_BUFFER_H

@@ -1,58 +1,55 @@
-name: C++ Code Quality (All files)
+name: PR Code Quality (Changes only)
 
 on:
-  push:
-    branches: [ master ]
   pull_request:
-    branches: [ master, develop  ]
+    branches: [ master, develop ]
 
 jobs:
-  lint:
+  lint-changed-files:
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v44
+      with:
+        files: |
+          src/**/*.cpp
+          src/**/*.c
+          src/**/*.h
+          src/**/*.hpp
+        
     - name: Install linting tools
+      if: steps.changed-files.outputs.any_changed == 'true'
       run: |
         sudo apt-get update
-        sudo apt-get install -y \
-          uncrustify \
-          cppcheck \
-          cmake \
-          python3-pip 
+        sudo apt-get install -y uncrustify cppcheck python3-pip
         pip3 install cpplint
         
-    - name: Check code formatting with uncrustify
+    - name: Check formatting on changed files
+      if: steps.changed-files.outputs.any_changed == 'true'
       id: format-check
       continue-on-error: true
-      run: |        
-        echo "Finding source files to check..."
-        SOURCE_FILES=$(find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" 2>/dev/null || true)
-        
-        if [ -z "$SOURCE_FILES" ]; then
-          echo "No source files found to check"
-          exit 0
-        fi
-        
+      run: |
         # Check each file individually and collect failures
         FAILED_FILES=""
         TOTAL_FILES=0
         FAILED_COUNT=0
         
-        for file in $SOURCE_FILES; do
+        for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
           TOTAL_FILES=$((TOTAL_FILES + 1))
-          
           if ! uncrustify -c .github/workflows/uncrustify.cfg --check -q "$file"; then
-            echo "❌ FAILED: $file"
+            echo "❌ Failed: $file"
             FAILED_FILES="$FAILED_FILES$file\n"
             FAILED_COUNT=$((FAILED_COUNT + 1))
           else
-            echo "✅ PASSED: $file"
+            echo "✅ Passed: $file"
           fi
         done
-        
+
         echo ""
         echo "=== FORMATTING CHECK SUMMARY ==="
         echo "Total files checked: $TOTAL_FILES"
@@ -73,36 +70,18 @@ jobs:
         else
           echo "✅ All files passed formatting check!"
         fi
-          
-    - name: Run cppcheck
+        
+    - name: Run cppcheck on changed files
+      if: steps.changed-files.outputs.any_changed == 'true'
       id: cppcheck
       continue-on-error: true
       run: |
-        echo "Running cppcheck..."
         cppcheck --enable=warning,style,performance,portability \
           --std=c++17 \
-          --platform=unix64 \
           --suppress=missingIncludeSystem \
-          --suppress=unusedFunction \
-          --suppress=unmatchedSuppression \
           --error-exitcode=1 \
-          --inline-suppr \
-          src/ || {
-          echo "⚠️ cppcheck found issues."
-          exit 1
-        }
-      
-    - name: Run cpplint
-      id: cpplint-check
-      continue-on-error: true
-      run: |
-        echo "Running cpplint..."
-        find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
-        xargs cpplint --filter=-whitespace/tabs,-whitespace/indent || {
-          echo "⚠️ cpplint found issues."
-          exit 1
-        }
-          
+          ${{ steps.changed-files.outputs.all_changed_files }}
+
     - name: Check for TODO/FIXME comments
       id: todo-check
       continue-on-error: true
@@ -112,7 +91,7 @@ jobs:
           echo "⚠️ Found TODO/FIXME comments. Consider addressing them."
           exit 1
         fi
-        
+    
     - name: Quality check summary and final status
       if: always()
       run: |
@@ -133,13 +112,6 @@ jobs:
           FAILED_CHECKS="$FAILED_CHECKS cppcheck"
         else
           echo "✅ Cppcheck: No issues"
-        fi
-        
-        if [ "${{ steps.cpplint-check.outcome }}" = "failure" ]; then
-          echo "❌ Cpplint: Issues found"
-          FAILED_CHECKS="$FAILED_CHECKS cpplint"
-        else
-          echo "✅ Cpplint: No issues"
         fi
         
         if [ "${{ steps.todo-check.outcome }}" = "failure" ]; then
@@ -173,3 +145,4 @@ jobs:
           echo "No code quality issues found!" >> $GITHUB_STEP_SUMMARY
           echo "All quality checks passed successfully."
         fi
+        

@@ -11,41 +11,43 @@
 #include "gs_ipc_control_msg.h"
 #include "cv_utils.h"
 
-namespace PiTrac {
+namespace PiTrac
+{
+GsIPCControlMsg::GsIPCControlMsg()
+{
+}
 
-    GsIPCControlMsg::GsIPCControlMsg() {
+GsIPCControlMsg::~GsIPCControlMsg()
+{
+}
+
+std::string GsIPCControlMsg::FormatControlMessageType(const GsIPCControlMsgType t)
+{
+    std::string s;
+
+    std::map<GsIPCControlMsgType, std::string> result_table =
+    { {   GsIPCControlMsgType::kUnknown, "Unknown" },
+        { GsIPCControlMsgType::kClubChangeToPutter, "Change club to putter" },
+        { GsIPCControlMsgType::kClubChangeToDriver, "Change club to driver" }
+    };
+
+    if (result_table.count(t) == 0)
+    {
+        s = "SYSTEM ERROR:  Invalid GsIPCControlMsgType: " + std::to_string((int)t);
     }
+    s = result_table[t];
 
-    GsIPCControlMsg::~GsIPCControlMsg() {
-    }
+    return s;
+}
 
-    std::string GsIPCControlMsg::FormatControlMessageType(const GsIPCControlMsgType t)  {
+std::string GsIPCControlMsg::Format() const
+{
+    std::string control_type = FormatControlMessageType(control_type_);
 
-        std::string s;
+    std::string s = "GsIPCControlMsg:  ControlTyp9e: " + control_type + ".";
 
-        std::map<GsIPCControlMsgType, std::string> result_table =
-        { {   GsIPCControlMsgType::kUnknown, "Unknown" },
-            { GsIPCControlMsgType::kClubChangeToPutter, "Change club to putter" },
-            { GsIPCControlMsgType::kClubChangeToDriver, "Change club to driver" }
-        };
-
-        if (result_table.count(t) == 0) {
-            s = "SYSTEM ERROR:  Invalid GsIPCControlMsgType: " + std::to_string((int)t);
-        }
-        s = result_table[t];
-
-        return s;
-    }
-
-    std::string GsIPCControlMsg::Format() const {
-
-        std::string control_type = FormatControlMessageType(control_type_);
-
-        std::string s = "GsIPCControlMsg:  ControlTyp9e: " +  control_type + ".";
-
-        return s;
-    }
-
+    return s;
+}
 }
 
 #endif // #ifdef __unix__  // Ignore in Windows environment
