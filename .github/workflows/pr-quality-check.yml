@@ -1,0 +1,94 @@
+name: PR Code Quality (Simple)
+
+on:
+  pull_request:
+    branches: [ master, develop ]
+
+jobs:
+  lint-changed-files:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v44
+      with:
+        files: |
+          src/**/*.cpp
+          src/**/*.c
+          src/**/*.h
+          src/**/*.hpp
+        
+    - name: Install linting tools
+      if: steps.changed-files.outputs.any_changed == 'true'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y uncrustify cppcheck python3-pip
+        pip3 install cpplint
+        
+    - name: Check formatting on changed files
+      if: steps.changed-files.outputs.any_changed == 'true'
+      continue-on-error: true
+      run: |
+        echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
+
+        # Check each file individually and collect failures
+        FAILED_FILES=""
+        TOTAL_FILES=0
+        FAILED_COUNT=0
+        
+        for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          TOTAL_FILES=$((TOTAL_FILES + 1))
+          if ! uncrustify -c .github/workflows/uncrustify.cfg --check -q "$file"; then
+            echo "❌ Failed: $file"
+            FAILED_FILES="$FAILED_FILES$file\n"
+            FAILED_COUNT=$((FAILED_COUNT + 1))
+          else
+            echo "✅ Passed: $file"
+          fi
+        done
+
+        echo ""
+        echo "=== FORMATTING CHECK SUMMARY ==="
+        echo "Total files checked: $TOTAL_FILES"
+        echo "Files passed: $((TOTAL_FILES - FAILED_COUNT))"
+        echo "Files failed: $FAILED_COUNT"
+        
+        if [ $FAILED_COUNT -gt 0 ]; then
+          echo ""
+          echo "❌ FILES THAT FAILED FORMATTING CHECK:"
+          echo -e "$FAILED_FILES"
+          echo ""
+          echo "To fix these files, run:"
+          echo "uncrustify -c .github/workflows/uncrustify.cfg --replace --no-backup <filename>"
+          echo ""
+          echo "Or to fix all at once:"
+          echo "find src/ -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o -name '*.c' | xargs uncrustify -c .github/workflows/uncrustify.cfg --replace --no-backup"
+          exit 1
+        else
+          echo "✅ All files passed formatting check!"
+        fi
+        
+    - name: Run cppcheck on changed files
+      if: steps.changed-files.outputs.any_changed == 'true'
+      continue-on-error: true
+      run: |
+        cppcheck --enable=warning,style,performance,portability \
+          --std=c++17 \
+          --suppress=missingIncludeSystem \
+          --error-exitcode=1 \
+          ${{ steps.changed-files.outputs.all_changed_files }}
+
+    - name: Check for TODO/FIXME comments
+      id: todo-check
+      continue-on-error: true
+      run: |
+        echo "Checking for TODO/FIXME comments..."
+        if grep -r "TODO\|FIXME" src/ --include="*.cpp" --include="*.h" --include="*.hpp"; then
+          echo "⚠️ Found TODO/FIXME comments. Consider addressing them."
+          exit 1
+        fi
+        

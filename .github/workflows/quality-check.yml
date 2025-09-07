@@ -1,4 +1,4 @@
-name: C++ Code Quality
+name: C++ Code Quality (All files)
 
 on:
   push:
@@ -36,9 +36,6 @@ jobs:
           exit 0
         fi
         
-        echo "Found files to check:"
-        echo "$SOURCE_FILES"
-        
         # Check each file individually and collect failures
         FAILED_FILES=""
         TOTAL_FILES=0
@@ -46,9 +43,8 @@ jobs:
         
         for file in $SOURCE_FILES; do
           TOTAL_FILES=$((TOTAL_FILES + 1))
-          echo "Checking: $file"
           
-          if ! uncrustify -c .github/workflows/uncrustify.cfg --check --quiet "$file"; then
+          if ! uncrustify -c .github/workflows/uncrustify.cfg --check -q "$file"; then
             echo "❌ FAILED: $file"
             FAILED_FILES="$FAILED_FILES$file\n"
             FAILED_COUNT=$((FAILED_COUNT + 1))

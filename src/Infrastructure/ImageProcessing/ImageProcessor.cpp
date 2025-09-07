@@ -5092,7 +5092,11 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *Negative
+                                                                                                     *
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *
@@ -5104,7 +5108,11 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *to
+                                                                                                     *
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *
@@ -5116,7 +5124,11 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *in
+                                                                                                     *
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *
@@ -5128,13 +5140,19 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *axis
                                                                                                      *
                                                                                                      *
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *being
+                                                                                                     *
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *
