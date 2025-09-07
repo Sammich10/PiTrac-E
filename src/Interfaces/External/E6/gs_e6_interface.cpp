@@ -3,8 +3,10 @@
  * Copyright (C) 2022-2025, Verdant Consultants, LLC.
  */
 
-// "TruGolf Simulators" and other marks such as E6 may be trademarked by TruGolf, Inc.
-// The PiTrac project is not endorsed, sponsored by or associated with TrueGolf products or services.
+// "TruGolf Simulators" and other marks such as E6 may be trademarked by
+// TruGolf, Inc.
+// The PiTrac project is not endorsed, sponsored by or associated with TrueGolf
+// products or services.
 
 
 #include <iostream>
@@ -30,242 +32,276 @@ using namespace boost::asio;
 using ip::tcp;
 
 
-namespace PiTrac {
+namespace PiTrac
+{
+long GsE6Interface::kE6InterMessageDelayMs = 50;
 
-    long GsE6Interface::kE6InterMessageDelayMs = 50;
-
-    GsE6Interface::GsE6Interface() {
-
-        if (!GolfSimOptions::GetCommandLineOptions().e6_host_address_.empty()) {
-            socket_connect_address_ = GolfSimOptions::GetCommandLineOptions().e6_host_address_;
-        }
-        else {
-            GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectAddress", socket_connect_address_);
-        }
-
-        GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectPort", socket_connect_port_);
-        GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6InterMessageDelayMs", kE6InterMessageDelayMs);
+GsE6Interface::GsE6Interface()
+{
+    if (!GolfSimOptions::GetCommandLineOptions().e6_host_address_.empty())
+    {
+        socket_connect_address_ = GolfSimOptions::GetCommandLineOptions().e6_host_address_;
+    }
+    else
+    {
+        GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectAddress",
+                                          socket_connect_address_);
     }
 
-    GsE6Interface::~GsE6Interface() {
+    GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectPort",
+                                      socket_connect_port_);
+    GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6InterMessageDelayMs",
+                                      kE6InterMessageDelayMs);
+}
 
-    }
+GsE6Interface::~GsE6Interface()
+{
+}
 
-    bool GsE6Interface::InterfaceIsPresent() {
-        // TBD - For now, just see if the JSON file has E6 information.
-        // If it does, assume that the interface is present and has been selected
-        // for use.
-        std::string test_socket_connect_address;
-        if (!GolfSimOptions::GetCommandLineOptions().e6_host_address_.empty()) {
-            test_socket_connect_address = GolfSimOptions::GetCommandLineOptions().e6_host_address_;
-            GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectAddress", test_socket_connect_address);
-            return true;
-        }
-        else {
-            GS_LOG_TRACE_MSG(trace, "GsE6Interface::InterfaceIsPresent - Not Present.");
-            return false;
-        }
-        return (test_socket_connect_address != "");
-    }
-
-
-    bool GsE6Interface::Initialize() {
-        // Setup the socket connect here first so
-        // that we don't have to repeatedly do so.  May also want to
-        // setup a keep-alive ping to the E6 system.
-        GS_LOG_TRACE_MSG(trace, "GsE6Interface Initialize called.");
-
-	// Get the connection address from the command line if possible
-        if (!GolfSimOptions::GetCommandLineOptions().e6_host_address_.empty()) {
-            socket_connect_address_ = GolfSimOptions::GetCommandLineOptions().e6_host_address_;
-        }
-        else {
-            GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectAddress", socket_connect_address_);
-        }
-
-        GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectPort", socket_connect_port_);
-
-        if (!GsSimSocketInterface::Initialize()) {
-            GS_LOG_MSG(error, "GsE6Interface could not Initialize.");
-            return false;
-        }
-
-        // Give the new thread a moment to get running
-        usleep(500);
-
-        initialized_ = true;
-
-        const std::string kE6KHandshakeMessage = "{\"Type\":\"Handshake\"}";
-
-        SendSimMessage(kE6KHandshakeMessage);
-
-        // We should later receive a handshake message back
-
+bool GsE6Interface::InterfaceIsPresent()
+{
+    // TBD - For now, just see if the JSON file has E6 information.
+    // If it does, assume that the interface is present and has been selected
+    // for use.
+    std::string test_socket_connect_address;
+    if (!GolfSimOptions::GetCommandLineOptions().e6_host_address_.empty())
+    {
+        test_socket_connect_address = GolfSimOptions::GetCommandLineOptions().e6_host_address_;
+        GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectAddress",
+                                          test_socket_connect_address);
         return true;
     }
+    else
+    {
+        GS_LOG_TRACE_MSG(trace, "GsE6Interface::InterfaceIsPresent - Not Present.");
+        return false;
+    }
+    return (test_socket_connect_address != "");
+}
 
+bool GsE6Interface::Initialize()
+{
+    // Setup the socket connect here first so
+    // that we don't have to repeatedly do so.  May also want to
+    // setup a keep-alive ping to the E6 system.
+    GS_LOG_TRACE_MSG(trace, "GsE6Interface Initialize called.");
 
-    void GsE6Interface::DeInitialize() {
-
-        // Send disconnect message to TruGolf before we finish up
-        std::string results_msg = "{\"Type\":\"Disconnect\"}";
-
-        SendSimMessage(results_msg);
-
-        GsSimSocketInterface::DeInitialize();
+    // Get the connection address from the command line if possible
+    if (!GolfSimOptions::GetCommandLineOptions().e6_host_address_.empty())
+    {
+        socket_connect_address_ = GolfSimOptions::GetCommandLineOptions().e6_host_address_;
+    }
+    else
+    {
+        GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectAddress",
+                                          socket_connect_address_);
     }
 
+    GolfSimConfiguration::SetConstant("gs_config.PiTraculator_interfaces.E6.kE6ConnectPort",
+                                      socket_connect_port_);
 
-    void GsE6Interface::SetSimSystemArmed(const bool is_armed) {
-        boost::lock_guard<boost::mutex> lock(sim_arming_mutex_);
-
-        GS_LOG_TRACE_MSG(trace, "GsE6Interface::SetSimSystemArmed called.");
-
-        sim_system_is_armed_ = is_armed;
+    if (!GsSimSocketInterface::Initialize())
+    {
+        GS_LOG_MSG(error, "GsE6Interface could not Initialize.");
+        return false;
     }
 
-    bool GsE6Interface::GetSimSystemArmed() {
-        boost::lock_guard<boost::mutex> lock(sim_arming_mutex_);
+    // Give the new thread a moment to get running
+    usleep(500);
 
-        return sim_system_is_armed_;
+    initialized_ = true;
+
+    const std::string kE6KHandshakeMessage = "{\"Type\":\"Handshake\"}";
+
+    SendSimMessage(kE6KHandshakeMessage);
+
+    // We should later receive a handshake message back
+
+    return true;
+}
+
+void GsE6Interface::DeInitialize()
+{
+    // Send disconnect message to TruGolf before we finish up
+    std::string results_msg = "{\"Type\":\"Disconnect\"}";
+
+    SendSimMessage(results_msg);
+
+    GsSimSocketInterface::DeInitialize();
+}
+
+void GsE6Interface::SetSimSystemArmed(const bool is_armed)
+{
+    boost::lock_guard<boost::mutex> lock(sim_arming_mutex_);
+
+    GS_LOG_TRACE_MSG(trace, "GsE6Interface::SetSimSystemArmed called.");
+
+    sim_system_is_armed_ = is_armed;
+}
+
+bool GsE6Interface::GetSimSystemArmed()
+{
+    boost::lock_guard<boost::mutex> lock(sim_arming_mutex_);
+
+    return sim_system_is_armed_;
+}
+
+bool GsE6Interface::SendResults(const GsResults &input_results)
+{
+    GS_LOG_TRACE_MSG(trace, "GsE6Interface::SendResults called.");
+
+    if (!initialized_)
+    {
+        GS_LOG_MSG(error, "GsE6Interface::SendResults called before the interface was intialized.");
+        return false;
     }
 
+    if (!GetSimSystemArmed())
+    {
+        GS_LOG_MSG(warning, "GsE6Interface::SendResults called before the E6 system was armed.");
+        return false;
+    }
 
-    bool GsE6Interface::SendResults(const GsResults& input_results) {
+    if (receive_thread_exited_)
+    {
+        // If we ended the recieve thread, try re-initializing the connection
 
-        GS_LOG_TRACE_MSG(trace, "GsE6Interface::SendResults called.");
+        GS_LOG_MSG(error,
+                   "GsGSProInterface::SendResults called before the interface was intialized.");
 
-        if (!initialized_) {
-            GS_LOG_MSG(error, "GsE6Interface::SendResults called before the interface was intialized.");
+        DeInitialize();
+        if (!Initialize())
+        {
+            GS_LOG_MSG(error,
+                       "GsE6Interface::SendResults called before the interface was intialized.");
             return false;
         }
+    }
 
-        if (!GetSimSystemArmed()) {
-            GS_LOG_MSG(warning, "GsE6Interface::SendResults called before the E6 system was armed.");
-            return false;
-        }
+    GsE6Results results(input_results);
 
-        if (receive_thread_exited_) {
-            // If we ended the recieve thread, try re-initializing the connection
+    size_t write_length = -1;
 
-            GS_LOG_MSG(error, "GsGSProInterface::SendResults called before the interface was intialized.");
+    std::string results_msg = results.Format();
 
-            DeInitialize();
-            if (!Initialize()) {
-                GS_LOG_MSG(error, "GsE6Interface::SendResults called before the interface was intialized.");
-            return false;
-            }
-        }
+    GS_LOG_MSG(info, "Sending E6 shot results message:\n" + results_msg);
+    write_length = SendSimMessage(results_msg);
 
-        GsE6Results results(input_results);
+    if (write_length <= 0)
+    {
+        GS_LOG_MSG(error, "GsE6Interface::SendResults was not able to send Ball Data.");
+        return false;
+    }
 
-        size_t write_length = -1;
+    // E6 also requires SendClubData and a SendShot messages along with the ball
+    // data
+    // Give E6 a moment to proces the earlier message
+    usleep(kE6InterMessageDelayMs * 1000);
 
-        std::string results_msg = results.Format();
+    boost::property_tree::ptree root;
+    root.put("Type", "SetClubData");
 
-        GS_LOG_MSG(info, "Sending E6 shot results message:\n" + results_msg);
-        write_length = SendSimMessage(results_msg);
+    // Create the three required children objects and add to the JSON root
+    boost::property_tree::ptree club_data_child;
 
-        if (write_length <= 0) {
-            GS_LOG_MSG(error, "GsE6Interface::SendResults was not able to send Ball Data.");
-            return false;
-        }
+    // Create a dummy club data - we really don't have this information
+    // Head speed is feet per second
+    club_data_child.put("ClubHeadSpeed", GsResults::FormatDoubleAsString(0.0));     // (results.speed_mph_
+                                                                                    // /
+                                                                                    // 3600.)
+                                                                                    // *
+                                                                                    // 5280.));
+    club_data_child.put("ClubAngleFace", GsResults::FormatDoubleAsString(0.0));
+    club_data_child.put("ClubAnglePath", GsResults::FormatDoubleAsString(0.0));
+    club_data_child.put("ClubHeadSpeedMPH", GsResults::FormatDoubleAsString(0.0));      // results.speed_mph_));
 
-        // E6 also requires SendClubData and a SendShot messages along with the ball data
-        // Give E6 a moment to proces the earlier message
-        usleep(kE6InterMessageDelayMs * 1000);
+    root.add_child("ClubData", club_data_child);
 
-        boost::property_tree::ptree root;
-        root.put("Type", "SetClubData");
+    std::string club_data_message = GsE6Results::GenerateStringFromJsonTree(root);
 
-        // Create the three required children objects and add to the JSON root
-        boost::property_tree::ptree club_data_child;
+    if (club_data_message == "")
+    {
+        GS_LOG_MSG(warning, "GsE6Results::Format() returning empty string.");
+    }
 
-        // Create a dummy club data - we really don't have this information
-        // Head speed is feet per second
-        club_data_child.put("ClubHeadSpeed", GsResults::FormatDoubleAsString(0.0)); // (results.speed_mph_ / 3600.) * 5280.));
-        club_data_child.put("ClubAngleFace", GsResults::FormatDoubleAsString(0.0));
-        club_data_child.put("ClubAnglePath", GsResults::FormatDoubleAsString(0.0));
-        club_data_child.put("ClubHeadSpeedMPH", GsResults::FormatDoubleAsString(0.0));  // results.speed_mph_));
+    write_length = SendSimMessage(club_data_message);
 
-        root.add_child("ClubData", club_data_child);
+    if (write_length <= 0)
+    {
+        GS_LOG_MSG(error, "GsE6Interface::SendResults was not able to send Club Data.");
+        return false;
+    }
 
-        std::string club_data_message = GsE6Results::GenerateStringFromJsonTree(root);
+    // ShotData
+    usleep(kE6InterMessageDelayMs * 1000);
 
-        if (club_data_message == "") {
-            GS_LOG_MSG(warning, "GsE6Results::Format() returning empty string.");
-        }
+    results_msg = "{\"Type\":\"SendShot\"}";
 
-        write_length = SendSimMessage(club_data_message);
+    write_length = SendSimMessage(results_msg);
 
-        if (write_length <= 0) {
-            GS_LOG_MSG(error, "GsE6Interface::SendResults was not able to send Club Data.");
-            return false;
-        }
+    if (write_length <= 0)
+    {
+        GS_LOG_MSG(error, "GsE6Interface::SendResults was not able to send SendShot message.");
+        return false;
+    }
 
-        // ShotData
-        usleep(kE6InterMessageDelayMs * 1000);
+    // If we successfully sent a shot, we assume that E6 is no longer armed
+    SetSimSystemArmed(false);
 
-        results_msg = "{\"Type\":\"SendShot\"}";
+    GS_LOG_TRACE_MSG(trace, "Finished Sending E6 results input message:\n" + results.Format());
 
-        write_length = SendSimMessage(results_msg);
+    return true;
+}
 
-        if (write_length <= 0) {
-            GS_LOG_MSG(error, "GsE6Interface::SendResults was not able to send SendShot message.");
-            return false;
-        }
+std::string GsE6Interface::GenerateResultsDataToSend(const GsResults &input_results)
+{
+    GsE6Results e6_results(input_results);
 
-        // If we successfully sent a shot, we assume that E6 is no longer armed
-        SetSimSystemArmed(false);
+    std::string results_string = e6_results.Format();
 
-        GS_LOG_TRACE_MSG(trace, "Finished Sending E6 results input message:\n" + results.Format());
+    GS_LOG_TRACE_MSG(trace,
+                     "GsE6Interface::GenerateResultsDataToSend) returning:\n" + results_string);
 
+    return results_string;
+}
+
+bool GsE6Interface::ProcessReceivedData(const std::string received_data)
+{
+    GsE6Response e6_response;
+    std::string e6_response_string;
+
+    if (!e6_response.ProcessJson(received_data, e6_response_string))
+    {
+        GS_LOG_MSG(error,
+                   "Failed GsE6Interface::ProcessReceivedData - Could not process json: " +
+                   received_data);
+        return false;
+    }
+
+    if (e6_response_string == "")
+    {
+        // GS_LOG_TRACE_MSG(trace, "GsE6Interface::ProcessReceivedData had no
+        // response string to return to E6");
         return true;
     }
+    else
+    {
+        GS_LOG_TRACE_MSG(trace,
+                         "GsE6Interface::ProcessReceivedData about to send response of: " +
+                         e6_response_string);
 
+        size_t write_length = SendSimMessage(e6_response_string);
 
-    std::string GsE6Interface::GenerateResultsDataToSend(const GsResults& input_results) {
-
-        GsE6Results e6_results(input_results);
-
-        std::string results_string = e6_results.Format();
-
-        GS_LOG_TRACE_MSG(trace, "GsE6Interface::GenerateResultsDataToSend) returning:\n" + results_string);
-
-        return results_string;
-    }
-
-
-    bool GsE6Interface::ProcessReceivedData(const std::string received_data) {
-
-        GsE6Response e6_response;
-        std::string e6_response_string;
-
-        if (!e6_response.ProcessJson(received_data, e6_response_string)) {
-            GS_LOG_MSG(error, "Failed GsE6Interface::ProcessReceivedData - Could not process json: " + received_data);
+        if (write_length <= 0)
+        {
+            GS_LOG_MSG(error,
+                       "GsE6Interface::ProcessReceivedData failed to send date message: " +
+                       e6_response_string);
             return false;
         }
-
-        if (e6_response_string == "") {
-            // GS_LOG_TRACE_MSG(trace, "GsE6Interface::ProcessReceivedData had no response string to return to E6");
-            return true;
-        }
-        else {
-            GS_LOG_TRACE_MSG(trace, "GsE6Interface::ProcessReceivedData about to send response of: " + e6_response_string);
-
-            size_t write_length = SendSimMessage(e6_response_string);
-
-            if (write_length <= 0) {
-                GS_LOG_MSG(error, "GsE6Interface::ProcessReceivedData failed to send date message: " + e6_response_string);
-                return false;
-            }
-        }
-
-        return true;
     }
 
-
-
-
+    return true;
+}
 }
 #endif

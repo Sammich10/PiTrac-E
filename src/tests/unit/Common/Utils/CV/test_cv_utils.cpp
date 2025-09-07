@@ -5,18 +5,21 @@
 #include <NumCpp/NdArray.hpp>
 #include "Common/Utils/CVUtils/cv_utils.h"
 
-namespace PiTrac {
-
-class CvUtilsTest : public ::testing::Test {
-protected:
-    void SetUp() override {
+namespace PiTrac
+{
+class CvUtilsTest : public ::testing::Test
+{
+  protected:
+    void SetUp() override
+    {
         // Create test images of different sizes
         test_image_small = cv::Mat::zeros(100, 200, CV_8UC3);  // 200x100
         test_image_large = cv::Mat::ones(480, 640, CV_8UC1);   // 640x480
-        
+
         // Create test circle
-        test_circle = cv::Vec3f(150.0f, 100.0f, 25.0f);  // x=150, y=100, radius=25
-        
+        test_circle = cv::Vec3f(150.0f, 100.0f, 25.0f);  // x=150, y=100,
+                                                         // radius=25
+
         // Create test RGB and HSV colors
         test_rgb = cv::Scalar(128, 64, 192);  // Some purple color
         test_hsv = cv::Scalar(90, 180, 64);   // Some green color
@@ -33,7 +36,7 @@ protected:
 TEST_F(CvUtilsTest, CircleRadius) {
     int radius = CvUtils::CircleRadius(test_circle);
     EXPECT_EQ(radius, 25);
-    
+
     // Test with different radius
     cv::Vec3f circle_large1(100.0f, 50.0f, 75.5f);
     int radius_large1 = CvUtils::CircleRadius(circle_large1);
@@ -68,7 +71,7 @@ TEST_F(CvUtilsTest, CvSize) {
     cv::Vec2i size_small = CvUtils::CvSize(test_image_small);
     EXPECT_EQ(size_small[0], 200);  // width
     EXPECT_EQ(size_small[1], 100);  // height
-    
+
     cv::Vec2i size_large = CvUtils::CvSize(test_image_large);
     EXPECT_EQ(size_large[0], 640);  // width
     EXPECT_EQ(size_large[1], 480);  // height
@@ -78,7 +81,7 @@ TEST_F(CvUtilsTest, CvSize) {
 TEST_F(CvUtilsTest, CvHeight) {
     int height_small = CvUtils::CvHeight(test_image_small);
     EXPECT_EQ(height_small, 100);
-    
+
     int height_large = CvUtils::CvHeight(test_image_large);
     EXPECT_EQ(height_large, 480);
 }
@@ -87,7 +90,7 @@ TEST_F(CvUtilsTest, CvHeight) {
 TEST_F(CvUtilsTest, CvWidth) {
     int width_small = CvUtils::CvWidth(test_image_small);
     EXPECT_EQ(width_small, 200);
-    
+
     int width_large = CvUtils::CvWidth(test_image_large);
     EXPECT_EQ(width_large, 640);
 }
@@ -139,7 +142,8 @@ TEST_F(CvUtilsTest, ColorDistance) {
 
     cv::Scalar rgb3(200, 150, 100);
     float dist_diff = CvUtils::ColorDistance(rgb1, rgb3);
-    // sqrt((100-200)^2 + (150-150)^2 + (200-100)^2) = sqrt(10000 + 0 + 10000) = sqrt(20000)
+    // sqrt((100-200)^2 + (150-150)^2 + (200-100)^2) = sqrt(10000 + 0 + 10000) =
+    // sqrt(20000)
     EXPECT_NEAR(dist_diff, std::sqrt(20000.0f), 1e-3);
 
     cv::Scalar rgb4(0, 0, 0);
@@ -168,5 +172,4 @@ TEST_F(CvUtilsTest, InchesToMeters) {
     EXPECT_DOUBLE_EQ(CvUtils::InchesToMeters(1.0), 0.0254);
     EXPECT_DOUBLE_EQ(CvUtils::InchesToMeters(10.0), 0.254);
 }
-
 }  // namespace PiTrac

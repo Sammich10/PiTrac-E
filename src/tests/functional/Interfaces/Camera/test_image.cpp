@@ -3,7 +3,7 @@
 #include <opencv4/opencv2/imgproc.hpp>
 
 using namespace PiTrac;
-int test_open_camera(GSCameraInterface* const& camera, const uint32_t cameraIndex)
+int test_open_camera(GSCameraInterface * const &camera, const uint32_t cameraIndex)
 {
     int32_t result = 0;
     std::cout << "Testing camera: " << camera->toString() << std::endl;
@@ -16,7 +16,7 @@ int test_open_camera(GSCameraInterface* const& camera, const uint32_t cameraInde
     return result;
 }
 
-int test_configure_camera(GSCameraInterface* const& camera)
+int test_configure_camera(GSCameraInterface * const &camera)
 {
     int32_t result = 0;
     std::cout << "Configuring camera: " << camera->toString() << std::endl;
@@ -29,7 +29,7 @@ int test_configure_camera(GSCameraInterface* const& camera)
     return result;
 }
 
-int test_camera_capture(GSCameraInterface* const& camera, const std::string& testImagePath)
+int test_camera_capture(GSCameraInterface * const &camera, const std::string &testImagePath)
 {
     int32_t result = 0;
     std::cout << "Testing camera capture: " << camera->toString() << std::endl;
@@ -46,7 +46,7 @@ int test_camera_capture(GSCameraInterface* const& camera, const std::string& tes
         std::cout << "Type: " << frame.type() << std::endl;
         std::cout << "Size: " << frame.size() << std::endl;
         std::cout << "Depth: " << frame.depth() << std::endl;
-    
+
         cv::imwrite(testImagePath, frame);
         std::cout << "Captured image saved to: " << testImagePath << std::endl;
     }

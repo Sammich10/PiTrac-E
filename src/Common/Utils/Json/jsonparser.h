@@ -9,9 +9,7 @@ namespace PiTrac
 {
 class JsonParser
 {
-
-}; 
-
+};
 }
 
 #endif // JSON_PARSER_H

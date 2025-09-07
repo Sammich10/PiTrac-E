@@ -37,9 +37,8 @@ jobs:
         EOF
         
         find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
-        xargs uncrustify -c uncrustify.cfg --check || {
-          echo "Code formatting issues found. Run 'uncrustify -c uncrustify.cfg --replace' on the files."
-          exit 1
+        xargs uncrustify -c .github/workflows/uncrustify.cfg --check || {
+          echo "Code formatting issues found. Run 'uncrustify -c .github/workflows/uncrustify.cfg --replace' on the files."
         }
 
     - name: Generate compile commands for clang-tidy

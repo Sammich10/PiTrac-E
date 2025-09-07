@@ -5,8 +5,9 @@
 
 using namespace PiTrac;
 
-class FileUtilsTest : public ::testing::Test {
-protected:
+class FileUtilsTest : public ::testing::Test
+{
+  protected:
     std::string tmpDir = "/tmp";
     std::string testDir = tmpDir + "/test_dir";
     std::string testDir2 = tmpDir + "/test_dir2";
@@ -14,7 +15,8 @@ protected:
     std::string testFileCopy = "/test_file_copy.txt";
     std::string testFileMove = "/test_file_move.txt";
 
-    void SetUp() override {
+    void SetUp() override
+    {
         std::filesystem::remove_all(testDir);
         std::filesystem::remove_all(testDir2);
         std::filesystem::remove(testDir + testFile);
@@ -22,7 +24,8 @@ protected:
         std::filesystem::remove(testDir + testFileMove);
     }
 
-    void TearDown() override {
+    void TearDown() override
+    {
         std::filesystem::remove_all(testDir);
         std::filesystem::remove(testDir + testFile);
         std::filesystem::remove(testDir + testFileCopy);

@@ -16,54 +16,53 @@ using ip::tcp;
 
 // Base class for representing and transferring Golf Sim results over sockets
 
-namespace PiTrac {
+namespace PiTrac
+{
+class GsSimSocketInterface : public GsSimInterface
+{
+  public:
+    GsSimSocketInterface();
+    virtual ~GsSimSocketInterface();
 
-    class GsSimSocketInterface : public GsSimInterface {
+    // Returns true iff the SimSocket interface is to be used
+    static bool InterfaceIsPresent();
 
-    public:
-        GsSimSocketInterface();
-        virtual ~GsSimSocketInterface();
+    // Must be called before SendResults is called.
+    virtual bool Initialize();
 
-        // Returns true iff the SimSocket interface is to be used
-        static bool InterfaceIsPresent();
+    // Deals with, for example, shutting down any socket connection
+    virtual void DeInitialize();
 
-        // Must be called before SendResults is called.
-        virtual bool Initialize();
+    virtual bool SendResults(const GsResults &results);
 
-        // Deals with, for example, shutting down any socket connection
-        virtual void DeInitialize();
+    virtual void ReceiveSocketData();
 
-        virtual bool SendResults(const GsResults& results);
+  public:
 
-        virtual void ReceiveSocketData();
+    std::string socket_connect_address_;
+    std::string socket_connect_port_;
 
-    public:
+  protected:
 
-        std::string socket_connect_address_;
-        std::string socket_connect_port_;
+    virtual std::string GenerateResultsDataToSend(const GsResults &results);
 
-    protected:
+    virtual bool ProcessReceivedData(const std::string received_data);
 
-        virtual std::string GenerateResultsDataToSend(const GsResults& results);
-        
-        virtual bool ProcessReceivedData(const std::string received_data);
+    // Default behavior here is just to send the message to the socket and
+    // return the number of bytes written
+    virtual int SendSimMessage(const std::string &message);
 
-        // Default behavior here is just to send the message to the socket and 
-        // return the number of bytes written
-        virtual int SendSimMessage(const std::string& message);
+  protected:
 
-    protected:
+    tcp::socket *socket_ = nullptr;
+    boost::asio::io_context *io_context_ = nullptr;
 
-        tcp::socket* socket_ = nullptr;
-        boost::asio::io_context* io_context_ = nullptr;
+    std::unique_ptr<std::thread> receiver_thread_ = nullptr;
 
-        std::unique_ptr<std::thread> receiver_thread_ = nullptr;
+    // TBD - Is this thread safe?
+    bool receive_thread_exited_ = false;
 
-        // TBD - Is this thread safe?
-        bool receive_thread_exited_ = false;
-
-        boost::mutex sim_socket_receive_mutex_;
-        boost::mutex sim_socket_send_mutex_;
-    };
-
+    boost::mutex sim_socket_receive_mutex_;
+    boost::mutex sim_socket_send_mutex_;
+};
 }

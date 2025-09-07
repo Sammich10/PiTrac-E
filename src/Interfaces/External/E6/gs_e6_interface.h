@@ -3,13 +3,16 @@
  * Copyright (C) 2022-2025, Verdant Consultants, LLC.
  */
 
- // "TruGolf Simulators" and other marks such as E6 may be trademarked by TruGolf, Inc.
- // The PiTrac project is not endorsed, sponsored by or associated with TrueGolf products or services.
+// "TruGolf Simulators" and other marks such as E6 may be trademarked by
+// TruGolf, Inc.
+// The PiTrac project is not endorsed, sponsored by or associated with TrueGolf
+// products or services.
 
 
 #pragma once
 
- // Base class for representing and transferring Golf Sim results to the E6 golf simulator
+// Base class for representing and transferring Golf Sim results to the E6 golf
+// simulator
 
 #include <boost/asio.hpp>
 
@@ -19,36 +22,35 @@
 using namespace boost::asio;
 using ip::tcp;
 
-namespace PiTrac {
+namespace PiTrac
+{
+class GsE6Interface : public GsSimSocketInterface
+{
+  public:
+    GsE6Interface();
+    virtual ~GsE6Interface();
 
-    class GsE6Interface : public GsSimSocketInterface {
+    // Returns true iff the GSPro interface is to be used
+    static bool InterfaceIsPresent();
 
-    public:
-        GsE6Interface();
-        virtual ~GsE6Interface();
+    // Must be called before SendResults is called.
+    virtual bool Initialize();
 
-        // Returns true iff the GSPro interface is to be used
-        static bool InterfaceIsPresent();
+    // Deals with, for example, shutting down any socket connection
+    virtual void DeInitialize();
 
-        // Must be called before SendResults is called.
-        virtual bool Initialize();
+    virtual bool SendResults(const GsResults &results);
 
-        // Deals with, for example, shutting down any socket connection
-        virtual void DeInitialize();
+    virtual void SetSimSystemArmed(const bool is_armed);
+    virtual bool GetSimSystemArmed();
 
-        virtual bool SendResults(const GsResults& results);
+  protected:
 
-        virtual void SetSimSystemArmed(const bool is_armed);
-        virtual bool GetSimSystemArmed();
+    virtual std::string GenerateResultsDataToSend(const GsResults &results);
 
-    protected:
+    virtual bool ProcessReceivedData(const std::string received_data);
 
-        virtual std::string GenerateResultsDataToSend(const GsResults& results);
-
-        virtual bool ProcessReceivedData(const std::string received_data);
-
-    protected:
-        static long kE6InterMessageDelayMs;
-    };
-
+  protected:
+    static long kE6InterMessageDelayMs;
+};
 }

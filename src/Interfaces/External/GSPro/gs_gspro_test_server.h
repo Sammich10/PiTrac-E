@@ -15,44 +15,43 @@
 using boost::asio::ip::tcp;
 
 
-namespace PiTrac {
+namespace PiTrac
+{
+class GsGSProConnection : public std::enable_shared_from_this<GsGSProConnection>
+{
+  public:
+    typedef std::shared_ptr<GsGSProConnection> pointer;
 
-    class GsGSProConnection : public std::enable_shared_from_this<GsGSProConnection>
-    {
-    public:
-        typedef std::shared_ptr<GsGSProConnection> pointer;
+    static pointer Create(boost::asio::io_context &io_context, int port_number);
 
-        static pointer Create(boost::asio::io_context& io_context, int port_number);
+    tcp::socket& GetSocket();
 
-        tcp::socket& GetSocket();
+    std::string GenerateResponseString();
 
-        std::string GenerateResponseString();
+    void Start();
 
-        void Start();
+  private:
+    GsGSProConnection(boost::asio::io_context &io_context, int port_number);
 
-    private:
-        GsGSProConnection(boost::asio::io_context& io_context, int port_number);
+    void HandleWrite(const boost::system::error_code &error, size_t bytes_transferred);
 
-        void HandleWrite(const boost::system::error_code& error, size_t bytes_transferred);
+    tcp::socket socket_;
+    std::string message_;
+};
 
-        tcp::socket socket_;
-        std::string message_;
-    };
+class GsGSProTestServer
+{
+  public:
+    GsGSProTestServer(boost::asio::io_context &io_context, int port_number);
 
-    class GsGSProTestServer
-    {
-    public:
-        GsGSProTestServer(boost::asio::io_context& io_context, int port_number);
+  private:
+    void StartAccept();
 
-    private:
-        void StartAccept();
+    void HandleAccept(GsGSProConnection::pointer new_connection,
+                      const boost::system::error_code &error);
 
-        void HandleAccept(GsGSProConnection::pointer new_connection,
-            const boost::system::error_code& error);
-            
-        boost::asio::io_context& io_context_;
-        int port_number_ = 0;
-        tcp::acceptor acceptor_;
-    };
-
+    boost::asio::io_context &io_context_;
+    int port_number_ = 0;
+    tcp::acceptor acceptor_;
+};
 }

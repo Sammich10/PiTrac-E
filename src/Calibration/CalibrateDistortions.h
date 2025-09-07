@@ -1,10 +1,10 @@
 /**
  * Calibrate Distortions
- * 
+ *
  * This file is part of the PiTrac Software project.
- * 
+ *
  * calibrate_distortions:
- * 
+ *
  * This module provides functionality to calibrate camera distortions,
  * including lens distortion and perspective correction.
  */
@@ -22,50 +22,49 @@
 #include <string>
 #include <fstream>
 
-namespace pitrac {
-class CalibrateDistortions {
+namespace pitrac
+{
+class CalibrateDistortions
+{
+    CalibrateDistortions(
+        cv::Size chessboardSize,
+        float squareSize,
+        cv::Size frameSize
+        );
 
-CalibrateDistortions(
-    cv::Size chessboardSize,
-    float squareSize,
-    cv::Size frameSize
-);
+    void processImage
+    (
+        const std::string &imagePathPattern
+    );
 
-void processImage
-(
-    const std::string& imagePathPattern
-);
+    void calibrateCamera
+    (
+        void
+    );
 
-void calibrateCamera
-(
-    void
-);
+    void undistortImage
+    (
+        const std::string &inputImage,
+        const std::string &outputImage
+    );
 
-void undistortImage
-(
-    const std::string& inputImage,
-    const std::string& outputImage
-);
+  private:
 
-private:
+    cv::Size chessboardSize;
+    float squareSize;
+    cv::Size frameSize;
+    std::vector<std::vector<cv::Point3f> > objpoints;
+    std::vector<std::vector<cv::Point2f> > imgpoints;
+    cv::Mat cameraMatrix;
+    cv::Mat distCoeffs;
+    std::vector<cv::Mat> rvecs, tvecs;
+    std::vector<cv::Point3f> objp;
 
-cv::Size chessboardSize;
-float squareSize;
-cv::Size frameSize;
-std::vector<std::vector<cv::Point3f>> objpoints;
-std::vector<std::vector<cv::Point2f>> imgpoints;
-cv::Mat cameraMatrix;
-cv::Mat distCoeffs;
-std::vector<cv::Mat> rvecs, tvecs;
-std::vector<cv::Point3f> objp;
-
-void prepareObjectPoints
-(
-    void
-);
-
+    void prepareObjectPoints
+    (
+        void
+    );
 }; // class CalibrateDistortions
-
 }  // namespace pitrac
 
 #endif // CALIBRATE_DISTORTIONS_HPP

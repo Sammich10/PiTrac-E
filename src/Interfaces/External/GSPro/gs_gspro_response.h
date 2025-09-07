@@ -6,41 +6,43 @@
 #pragma once
 
 
-// Class for representing, parsing and transferring Golf Sim responses from GsPro
+// Class for representing, parsing and transferring Golf Sim responses from
+// GsPro
 
-namespace PiTrac {
-
-    class GsGSProResponse {
-
-    public:
-        enum ReturnCode {
-            kShotReceivedSuccessfully = 200,
-            kPlayerInformation = 201,
-            k501Failure = 501,
-            kShotOtherFailure = 599
-        };
-
-        enum PlayerHandedness {
-            kRightHanded = 0,
-            kLeftHanded = 1
-        };
-
-        enum PlayerClub {
-            kDriver = 0,
-            kPutter = 1
-        };
-
-    public:
-        GsGSProResponse();
-        bool ParseJson(const std::string& gspro_json_string);
-        virtual ~GsGSProResponse();
-        virtual std::string Format() const;
-
-        ReturnCode return_code_ = ReturnCode::kShotReceivedSuccessfully;
-        std::string message_ = "Not Set";
-        PlayerHandedness player_handed_ = PlayerHandedness::kRightHanded;
-        PlayerClub player_club_ = PlayerClub::kDriver;
-
+namespace PiTrac
+{
+class GsGSProResponse
+{
+  public:
+    enum ReturnCode
+    {
+        kShotReceivedSuccessfully = 200,
+        kPlayerInformation = 201,
+        k501Failure = 501,
+        kShotOtherFailure = 599
     };
 
+    enum PlayerHandedness
+    {
+        kRightHanded = 0,
+        kLeftHanded = 1
+    };
+
+    enum PlayerClub
+    {
+        kDriver = 0,
+        kPutter = 1
+    };
+
+  public:
+    GsGSProResponse();
+    bool ParseJson(const std::string &gspro_json_string);
+    virtual ~GsGSProResponse();
+    virtual std::string Format() const;
+
+    ReturnCode return_code_ = ReturnCode::kShotReceivedSuccessfully;
+    std::string message_ = "Not Set";
+    PlayerHandedness player_handed_ = PlayerHandedness::kRightHanded;
+    PlayerClub player_club_ = PlayerClub::kDriver;
+};
 }
