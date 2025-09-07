@@ -2,6 +2,10 @@
 # Default behavior is to check files changed in the current branch against the master branch, but can be overridden to check all files in the src/ directory.
 
 SOURCE_FILES=
+if [ -z "$UNCRUST_CONFIG" ]; then
+  UNCRUST_CONFIG=".github/workflows/uncrustify.cfg"
+fi
+AUTO_FIX=false
 while [[ $# -gt 0 ]]; do
     case $1 in
         -a|--all)
@@ -46,6 +50,8 @@ if [ -z "$SOURCE_FILES" ]; then
   exit 0
 fi
 
+echo "Using uncrustify configuration from ${UNCRUST_CONFIG}"
+
 # Check each file individually and collect failures
 FAILED_FILES=()
 FAILED_COUNT=0
@@ -54,7 +60,7 @@ TOTAL_FILES=0
 for file in $SOURCE_FILES; do
   TOTAL_FILES=$((TOTAL_FILES + 1))
   file=$(echo "$file" | tr -d '\n')
-  if ! uncrustify -c .github/workflows/uncrustify.cfg --check -q "$file"; then
+  if ! uncrustify -c ${UNCRUST_CONFIG} --check -q "$file"; then
     echo "❌ FAILED: $file"
     FAILED_FILES+=("$file")
     FAILED_COUNT=$((FAILED_COUNT + 1))
@@ -74,7 +80,7 @@ if [ $FAILED_COUNT -gt 0 ]; then
   if [[ "$response" == "y" ]]; then
     for file in "${FAILED_FILES[@]}"; do
       echo "Fixing formatting for: $file"
-      uncrustify -c .github/workflows/uncrustify.cfg --replace --no-backup "$file"
+      uncrustify -c ${UNCRUST_CONFIG} --replace --no-backup "$file"
     done
     echo "Formatting fixes applied!"
   fi
