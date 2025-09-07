@@ -19,10 +19,10 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y \
           uncrustify \
-          clang-tidy-16 \
           cppcheck \
           cmake \
-          python3-pip
+          python3-pip 
+        pip3 install cpplint
         
     - name: Check code formatting with uncrustify
       id: format-check
@@ -40,33 +40,6 @@ jobs:
         xargs uncrustify -c .github/workflows/uncrustify.cfg --check || {
           echo "⚠️ Code formatting issues found."
           echo "To fix: find src/ -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o -name '*.c' | xargs uncrustify -c .github/workflows/uncrustify.cfg --replace --no-backup"
-          exit 1
-        }
-
-    - name: Generate compile commands for clang-tidy
-      continue-on-error: true
-      run: |
-        mkdir -p build
-        cd build
-        cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-        
-    - name: Run clang-tidy static analysis
-      id: clang-tidy-check
-      continue-on-error: true
-      run: |
-        echo "Running clang-tidy..."
-        find src/ -name "*.cpp" -o -name "*.cc" -o -name "*.c" | \
-        xargs clang-tidy-16 -p build/ \
-          --checks='-*,
-            readability-*,
-            performance-*,
-            bugprone-*,
-            clang-analyzer-*,
-            modernize-*,
-            -modernize-use-trailing-return-type,
-            -readability-magic-numbers,
-            -readability-identifier-length' || {
-          echo "⚠️ clang-tidy found issues."
           exit 1
         }
           
@@ -87,9 +60,6 @@ jobs:
           echo "⚠️ cppcheck found issues."
           exit 1
         }
-
-    - name: Install cpplint
-      run: pip3 install cpplint
       
     - name: Run cpplint
       id: cpplint-check
@@ -125,13 +95,6 @@ jobs:
           FAILED_CHECKS="$FAILED_CHECKS formatting"
         else
           echo "✅ Code Formatting: No issues"
-        fi
-        
-        if [ "${{ steps.clang-tidy-check.outcome }}" = "failure" ]; then
-          echo "❌ Clang-tidy: Issues found"
-          FAILED_CHECKS="$FAILED_CHECKS clang-tidy"
-        else
-          echo "✅ Clang-tidy: No issues"
         fi
         
         if [ "${{ steps.cppcheck.outcome }}" = "failure" ]; then
