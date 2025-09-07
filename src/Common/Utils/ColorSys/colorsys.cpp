@@ -1,5 +1,5 @@
 /* Copyright 2005-2011 Mark Dufour and contributors; License Expat (See LICENSE)
-*/
+ */
 /* Copyright (C) 2022-2025, Verdant Consultants, LLC. */
 
 

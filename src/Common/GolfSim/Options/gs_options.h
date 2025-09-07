@@ -6,9 +6,9 @@
 /**
  * \brief This file contains the definitions for the PiTrac options.
  * It contains methods for parsing command line options and storing them in a
- *structured way.
+ * structured way.
  * These options are used to configure the behavior of the PiTrac system during
- *runtime.
+ * runtime.
  */
 
 #ifndef GS_OPTIONS_H

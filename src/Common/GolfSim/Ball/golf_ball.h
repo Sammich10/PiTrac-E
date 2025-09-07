@@ -6,7 +6,7 @@
 
 /**
  * \brief The GolfBall class represents a golf ball in the simulation. It
- *contains properties and methods
+ * contains properties and methods
  * to manage the ball's position, color, and other attributes.
  */
 

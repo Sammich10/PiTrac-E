@@ -109,19 +109,19 @@ void SetLibCameraLoggingOff()
 
 /**
  * \brief  Once a ball has been identified in the image, this method will
- *continuously watch the
+ * continuously watch the
  * area where the ball is by taking images as quickly as possible and comparing
- *each
+ * each
  * image to the prior image.  See motion_detect_stage.cpp for details on
- *detection.
+ * detection.
  * As soon as movement is detected, signals are sent to the camera 2 and strobe
- *to take
+ * to take
  * a picture.
  *
  * \param ball The teed-up ball that was previously located in the image
  * \param image The image with the ball
  * \param motion_detected Returns whether motion was detected at the time the
- *method ended
+ * method ended
  * \return True iff no error occurred.
  */
 bool WatchForHitAndTrigger(const GolfBall &ball, cv::Mat &image, bool &motion_detected)
@@ -1898,7 +1898,8 @@ bool PerformCameraSystemStartup()
                 * programmatically.  Instead, please see the following
                 * discussion on how to setup the boot/firmware.config.txt
                 * dtoverlays for triggering:
-                *  https://forums.raspberrypi.com/viewtopic.php?p=2315464#p2315464.");
+                *
+                * https://forums.raspberrypi.com/viewtopic.php?p=2315464#p2315464.");
                 *  }
                 ****/
                 GS_LOG_TRACE_MSG(trace,

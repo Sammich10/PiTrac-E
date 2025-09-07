@@ -37,9 +37,9 @@ jobs:
         EOF
         
         find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
-        xargs uncrustify -c uncrustify.cfg --check || {
+        xargs uncrustify -c .github/workflows/uncrustify.cfg --check || {
           echo "⚠️ Code formatting issues found."
-          echo "To fix: find src/ -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o -name '*.c' | xargs uncrustify -c uncrustify.cfg --replace --no-backup"
+          echo "To fix: find src/ -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o -name '*.c' | xargs uncrustify -c .github/workflows/uncrustify.cfg --replace --no-backup"
           exit 1
         }
 

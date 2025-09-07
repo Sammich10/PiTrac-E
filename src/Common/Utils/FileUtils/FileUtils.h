@@ -47,7 +47,7 @@ class FileUtils
  *
  * @param dirPath The path of the directory to create.
  * @return true if the directory was successfully created or already exists,
- *false otherwise.
+ * false otherwise.
  */
     static bool createDirectory
     (

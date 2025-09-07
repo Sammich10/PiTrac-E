@@ -17,16 +17,17 @@
 * along with this program.  If not, see <http://www.gnu.org/licenses/>.
 *
 * By using this library you are implicitly assumed to have accepted all of the
-*above statements,
+* above statements,
 * and accept to cite the following papers:
 *
 * [1] C. Topal and C. Akinlar, �Edge Drawing: A Combined Real-Time Edge and
-*Segment Detector,?*     Journal of Visual Communication and Image
-*Representation, 23(6), 862-872, DOI: 10.1016/j.jvcir.2012.05.004 (2012).
+* Segment Detector,?*     Journal of Visual Communication and Image
+* Representation, 23(6), 862-872, DOI: 10.1016/j.jvcir.2012.05.004 (2012).
 *
 * [2] C. Akinlar and C. Topal, �EDPF: A Real-time Parameter-free Edge Segment
-*Detector with a False Detection Control,?*     International Journal of Pattern
-*Recognition and Artificial Intelligence, 26(1), DOI: 10.1142/S0218001412550026
+* Detector with a False Detection Control,?*     International Journal of
+* Pattern
+* Recognition and Artificial Intelligence, 26(1), DOI: 10.1142/S0218001412550026
 *(2012).
 **************************************************************************************************************/
 

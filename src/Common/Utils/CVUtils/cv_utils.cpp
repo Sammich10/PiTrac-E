@@ -405,13 +405,13 @@ void BrightnessAndContrastAutoAlgo2(const cv::Mat &bgr_image, cv::Mat &dst)
 
 /**
  *  \brief Automatic brightness and contrast optimization with optional
- *histogram clipping
+ * histogram clipping
  *  \param [in]src Input image GRAY or BGR or BGRA
  *  \param [out]dst Destination image
  *  \param clip_hist_percent cut wings of histogram at given percent tipical=>1,
- *0=>Disabled
+ * 0=>Disabled
  *              (Seems like it must be at least 30 or so to make much of a
- *difference)
+ * difference)
  *  \note In case of BGRA image, we won't touch the transparency
  */
 void BrightnessAndContrastAutoAlgo1(const cv::Mat &src, cv::Mat &dst, float clip_hist_percent = 0)

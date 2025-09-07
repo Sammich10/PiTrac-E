@@ -11,9 +11,9 @@
  * @brief Test function for IMX296 camera interface.
  *
  * This function tests the IMX296 camera interface by performing a series of
- *operations
+ * operations
  * including opening the camera, starting continuous capture, retrieving frames,
- *and stopping capture.
+ * and stopping capture.
  */
 
 int main(int argc, char *argv[])

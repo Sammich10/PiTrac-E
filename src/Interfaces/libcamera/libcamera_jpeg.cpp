@@ -347,7 +347,10 @@ bool ball_flight_camera_event_loop(LibcameraJpegApp &app, cv::Mat &returnImg)
                  *          // Save the image in memory
                  *          cv::Mat pre_image = frame.clone();
                  *
-                 *          PiTrac::LibCameraInterface::SendCamera2PreImage(pre_image);
+                 *
+                 *
+                 *
+                 *  PiTrac::LibCameraInterface::SendCamera2PreImage(pre_image);
                  ***/
 
                 // TBD - If using second priming group, use state =

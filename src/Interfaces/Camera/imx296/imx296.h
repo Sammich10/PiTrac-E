@@ -14,16 +14,16 @@ class IMX296Camera : public GSCameraBase
      * @brief Constructs an IMX296Camera object with specified parameters.
      *
      * Initializes the camera interface for the IMX296 sensor, setting up sensor
-     *dimensions,
+     * dimensions,
      * field of view calculations, and trigger mode. The camera is not
-     *configured or capturing
+     * configured or capturing
      * upon construction.
      *
      * @param[in] width         Image width in pixels.
      * @param[in] height        Image height in pixels.
      * @param[in] focalLength   Focal length of the lens in millimeters.
      * @param[in] mode          Trigger mode for image acquisition (default:
-     *FREE_RUNNING).
+     * FREE_RUNNING).
      */
     IMX296Camera(int width,
                  int height,
@@ -52,7 +52,7 @@ class IMX296Camera : public GSCameraBase
 
     /**
      * @brief Provides a string representation of the camera and its current
-     *settings.
+     * settings.
      *
      * @return A string describing the camera.
      */

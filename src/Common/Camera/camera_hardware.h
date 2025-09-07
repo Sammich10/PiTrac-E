@@ -49,7 +49,7 @@ class CameraHardware
 
     /**
      * \brief Camera number enumeration, from the perspective of the PiTrac
-     *system
+     * system
      */
     enum GsCameraNumber
     {

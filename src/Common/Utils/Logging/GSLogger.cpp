@@ -75,7 +75,7 @@ void GSLogger::Init()
             << "[" << fmtTimeStamp << "] "
             << "[PID:"
             << boost::log::expressions::attr<boost::log::attributes::current_process_id::value_type>
-        ("ProcessID")
+            ("ProcessID")
             << "] "
             << "[" << fmtProcessName << "] "
             << "[TID:"

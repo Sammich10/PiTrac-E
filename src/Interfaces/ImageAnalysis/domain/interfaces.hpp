@@ -50,7 +50,7 @@ class IImageAnalyzer
      * @param image_sequence Sequence of images to analyze for movement
      * @param reference_ball_position Known position of ball before movement
      * @return Result indicating if movement was detected and its
-     *characteristics
+     * characteristics
      */
     [[nodiscard]] virtual MovementResult DetectMovement(
         const std::vector<ImageBuffer> &image_sequence,

@@ -935,7 +935,8 @@ bool GolfSimCamera::ComputeSingleBallXYZOrthoCamPerspective(const GolfSimCamera 
      *
      * GS_LOG_TRACE_MSG(trace, "Calculated currentDistance is: " +
      * std::to_string(ball1.distance_to_z_plane_from_lens_) + " meters = " +
-     *  std::to_string(12*CvUtils::MetersToFeet(ball1.distance_to_z_plane_from_lens_))
+     *
+     * std::to_string(12*CvUtils::MetersToFeet(ball1.distance_to_z_plane_from_lens_))
      * + " inches from the lens.");
      */
 
@@ -1502,11 +1503,11 @@ bool GolfSimCamera::ComputeXyzDistanceFromOrthoCamPerspective(const GolfSimCamer
                                                                                 // -
                                                                                 // pow(xDistanceFromCamCenter,
                                                                                 // 2));
-                                                                                // 
+                                                                                //
                                                                                 // //
                                                                                 // Z
                                                                                 // distance.
-                                                                                // 
+                                                                                //
                                                                                 // Only
                                                                                 // positive
                                                                                 // values
@@ -5002,7 +5003,7 @@ bool GolfSimCamera::ComputeAveragedStrobedBallData(const GolfSimCamera &camera,
             // Ball2 will have the averaged information
             if (!ComputeBallDeltas(ball1, ball2, camera, camera /*
                                                                  * all_balls_camera2
-                                                                */                     ))
+                                                                 */))
             {
                 GS_LOG_MSG(error, "ComputeAveragedStrobedBallData failed.");
                 return false;
@@ -5304,7 +5305,7 @@ void GolfSimCamera::DrawFilterLines(const std::vector<cv::Vec4i> &lines,
         // it's a long line.
         if (!is_high_priority_angle /* && line_length <
                                      * kExternallyStrobedEnvMinimumHoughLineLength
-                                    */                                                                )
+                                     */)
         {
             continue;
         }
@@ -5794,7 +5795,7 @@ bool GolfSimCamera::AutoCalibrateCamera(GsCameraNumber camera_number)
     // that this function is being called to re-set
     camera.camera_hardware_.init_camera_parameters(camera_number, camera_model,
                                                    true /* Use default, not
-                                                         * .json focal-length*/                 );
+                                                         * .json focal-length*/);
 
     cv::Mat color_image;
 

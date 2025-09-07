@@ -55,11 +55,11 @@ class GSCameraInterface
  * @brief Abstract base class for camera interfaces.
  *
  * Provides a common interface for camera operations, calibration, and
- *properties.
+ * properties.
  * Derived classes must implement core camera functionality. All derived camera
- *classes
+ * classes
  * are expected to utilize the libcamera library for camera management and frame
- *capture.
+ * capture.
  *
  */
   public:

@@ -8,9 +8,9 @@
  * @brief Machine Learning-based implementation framework for image analysis
  *
  * Provides a framework for integrating AI/ML approaches like YOLO, TensorFlow
- *Lite,
+ * Lite,
  * and other modern computer vision models alongside the existing OpenCV
- *implementation.
+ * implementation.
  * This enables experimentation with modern AI approaches while preserving the
  * sophisticated existing algorithms.
  */

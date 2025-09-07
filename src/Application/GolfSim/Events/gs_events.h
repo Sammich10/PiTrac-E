@@ -6,10 +6,10 @@
 
 /**
  * \brief This module defines the events, event queue, and associated processing
- *for the various
+ * for the various
  * types of events that occur within the launch monitor system.
  * These events largely drive the transitions in the system's finite state
- *machine
+ * machine
  * and are used to trigger specific actions within the system.
  *
  * These events are separate from IPC events that deal with external messaging.

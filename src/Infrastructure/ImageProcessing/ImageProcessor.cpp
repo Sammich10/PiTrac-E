@@ -479,7 +479,7 @@ BallImageProc::~BallImageProc()
 
 /**
  * Given a gray-scale image and a ball search mode (e.g., kStrobed), this
- *function applies
+ * function applies
  * CLAHE processing to improve the contrast and edge definition of the balls.
  * It then
  * applies a Guassian blur and edge detection to the image.
@@ -4886,7 +4886,7 @@ struct projectionOp
                                                                                                             // is
                                                                                                             // this
                                                                                                             // right?
-                                                                                                            // 
+                                                                                                            //
                                                                                                             // Why
                                                                                                             // change
                                                                                                             // the
@@ -5087,16 +5087,34 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
     projectionOp::setup(&ball,
                         projectedImg,
                         -(float)CvUtils::DegreesToRadians((double)rotation_angles_degrees[0]),      /*
-                                                                                                     * Negative
-                                                                                                     * due
-                                                                                                     * to
-                                                                                                     * rotation
-                                                                                                     * in
-                                                                                                     * X
-                                                                                                     * axis
-                                                                                                     * being
-                                                                                                     * backward
-                                                                                                    */
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *Negative
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *due
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *to
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *rotation
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *in
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *X
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *axis
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *being
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *backward
+                                                                                                     */
                         (float)CvUtils::DegreesToRadians((double)rotation_angles_degrees[1]),
                         (float)CvUtils::DegreesToRadians((double)rotation_angles_degrees[2]));
 

@@ -1,6 +1,6 @@
 
 /* Copyright 2005-2011 Mark Dufour and contributors; License Expat (See LICENSE)
-*/
+ */
 /* Copyright (C) 2022-2025, Verdant Consultants, LLC. */
 
 #ifndef COLOR_SYS_H
@@ -51,12 +51,12 @@ struct colorsys
 
     /**
      * @brief Computes the floating-point modulus of two numbers, ensuring a
-     *non-negative result.'
+     * non-negative result.'
      *
      * @param a The dividend (numerator).
      * @param b The divisor (denominator).
      * @return The floating-point modulus of `a` and `b`, adjusted to be
-     *non-negative with respect to `b`.
+     * non-negative with respect to `b`.
      */
     inline static float fmods(float a, float b)
     {

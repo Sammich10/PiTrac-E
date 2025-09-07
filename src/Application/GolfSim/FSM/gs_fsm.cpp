@@ -154,7 +154,7 @@ GolfSimState onEvent(const state::InitializingCamera1System &initializing,
         return state::WaitingForBall{ std::chrono::steady_clock::now(),
                                       false /* have not sent the
                                              * waiting-for-ball IPC message yet
-                                            */                                                       };
+                                             */};
     }
 
     GolfSimEventElement beginWaitingForSimulatorArmedEvent{ new GolfSimEvent::
@@ -180,7 +180,7 @@ GolfSimState onEvent(const state::WaitingForBall &waitingForBallState,
 
     return state::WaitingForBall{ std::chrono::steady_clock::now(),
                                   false /* have not sent the waiting-for-ball
-                                         * IPC message yet */                                    };
+                                         * IPC message yet */};
 }
 
 GolfSimState onEvent(const state::WaitingForBall &waitingForBallState,
@@ -333,7 +333,7 @@ GolfSimState onEvent(const state::WaitingForBallStabilization &waitingForBallSta
 
         return state::WaitingForBall{ std::chrono::steady_clock::now(),
                                       false /* send the ball-waiting message
-                                             * again*/                              };
+                                             * again*/};
     }
 
     // The ball has stabilized.  Now we just have to wait for the ball to be hit
@@ -453,7 +453,7 @@ GolfSimState onEvent(const state::WaitingForSimulatorArmed &waitingForSimulatorA
         return state::WaitingForBall{ std::chrono::steady_clock::now(),
                                       false /* have not sent the
                                              * waiting-for-ball IPC message yet
-                                            */                                                      };
+                                             */};
     }
 
     // Otherwise, keep in waiting state
@@ -483,7 +483,7 @@ GolfSimState onEvent(const state::WaitingForSimulatorArmed &waitingForSimulatorA
 
     return state::WaitingForBall{ std::chrono::steady_clock::now(),
                                   false /* have not sent the waiting-for-ball
-                                         * IPC message yet */                                    };
+                                         * IPC message yet */};
 }
 
 /*********** WaitingForBallHit ************/
@@ -630,7 +630,7 @@ GolfSimState onEvent(const state::BallHitNowWaitingForCam2Image &BallHitNowWaiti
 
     return state::WaitingForBall{ std::chrono::steady_clock::now(),
                                   false /* have not sent the waiting-for-ball
-                                         * IPC message yet */                                    };
+                                         * IPC message yet */};
 }
 
 GolfSimState onEvent(const state::BallHitNowWaitingForCam2Image &BallHitNowWaitingForCam2Image,

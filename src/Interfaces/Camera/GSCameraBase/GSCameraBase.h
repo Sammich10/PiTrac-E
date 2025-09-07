@@ -12,16 +12,16 @@ class GSCameraBase : public GSCameraInterface
      * @brief Constructs an GSCameraBase object with specified parameters.
      *
      * Initializes the camera interface for the IMX296 sensor, setting up sensor
-     *dimensions,
+     * dimensions,
      * field of view calculations, and trigger mode. The camera is not
-     *configured or capturing
+     * configured or capturing
      * upon construction.
      *
      * @param[in] width         Image width in pixels.
      * @param[in] height        Image height in pixels.
      * @param[in] focalLength   Focal length of the lens in millimeters.
      * @param[in] mode          Trigger mode for image acquisition (default:
-     *FREE_RUNNING).
+     * FREE_RUNNING).
      */
     GSCameraBase(int width,
                  int height,
@@ -35,7 +35,7 @@ class GSCameraBase : public GSCameraInterface
      * @brief Destructor for GSCameraBase.
      *
      * Cleans up resources, stops capturing if necessary, and releases the
-     *camera.
+     * camera.
      */
     ~GSCameraBase();
 
@@ -76,7 +76,7 @@ class GSCameraBase : public GSCameraInterface
      * @brief Gets the next available frame from the camera.
      *
      * @return The next frame as a cv::Mat, or an empty Mat if no frame is
-     *available.
+     * available.
      */
     cv::Mat getNextFrame() override;
 
@@ -94,7 +94,7 @@ class GSCameraBase : public GSCameraInterface
      * @brief Sets the trigger mode for image acquisition.
      *
      * @param[in] mode The desired trigger mode (FREE_RUNNING or
-     *EXTERNAL_TRIGGER).
+     * EXTERNAL_TRIGGER).
      * @return True if the trigger mode was set successfully, false otherwise.
      */
     bool setTriggerMode(TriggerMode mode) override;
@@ -104,7 +104,7 @@ class GSCameraBase : public GSCameraInterface
      *
      * In FREE_RUNNING mode, the camera captures frames continuously.
      * In EXTERNAL_TRIGGER mode, frames are captured upon receiving an external
-     *trigger signal.
+     * trigger signal.
      *
      * @return True if continuous capture started successfully, false otherwise.
      */
@@ -119,7 +119,7 @@ class GSCameraBase : public GSCameraInterface
 
     /**
      * @brief Provides a string representation of the camera and its current
-     *settings.
+     * settings.
      *
      * @return A string describing the camera.
      */
@@ -147,7 +147,7 @@ class GSCameraBase : public GSCameraInterface
      * @brief Allocates memory buffers required for the specified camera stream.
      *
      * @param stream Pointer to the libcamera::Stream object for which buffers
-     *are to be allocated.
+     * are to be allocated.
      *
      * @return true if buffer allocation was successful, false otherwise.
      */
@@ -157,7 +157,7 @@ class GSCameraBase : public GSCameraInterface
      * @brief Configures the camera to operate in trigger mode.
      *
      * @return true if the trigger mode was successfully configured; false
-     *otherwise.
+     * otherwise.
      */
     bool configureTriggerMode(const TriggerMode &mode) override;
 
@@ -165,7 +165,7 @@ class GSCameraBase : public GSCameraInterface
      * @brief Converts a libcamera::FrameBuffer to an OpenCV cv::Mat object.
      *
      * @param buffer Pointer to the libcamera::FrameBuffer containing the image
-     *data.
+     * data.
      * @return cv::Mat The resulting OpenCV matrix containing the image.
      */
     cv::Mat convertBufferToMat(libcamera::FrameBuffer *buffer) override;
@@ -204,16 +204,16 @@ class GSCameraBase : public GSCameraInterface
      *
      * In EXTERNAL_TRIGGER mode, this returns the most recent frame captured.
      * In FREE_RUNNING mode, this returns the latest frame in the continuous
-     *stream.
+     * stream.
      *
      * @return The latest frame as a cv::Mat, or an empty Mat if no frame is
-     *available.
+     * available.
      */
     cv::Mat getLatestFrame();
 
     /**
      * @brief Get all available frames in the buffer (EXTERNAL_TRIGGER mode
-     *only)
+     * only)
      *
      * Returns all frames currently stored in the internal buffer.
      * Clears the buffer after retrieval.
@@ -232,7 +232,7 @@ class GSCameraBase : public GSCameraInterface
 
     /**
      * @brief Get the number of frames currently in the buffer (EXTERNAL_TRIGGER
-     *mode only)
+     * mode only)
      *
      * @return The number of frames in the buffer.
      */
@@ -240,7 +240,7 @@ class GSCameraBase : public GSCameraInterface
 
     /**
      * @brief Set the maximum number of frames to buffer (EXTERNAL_TRIGGER mode
-     *only)
+     * only)
      *
      * If the buffer exceeds this size, the oldest frames will be discarded.
      *
