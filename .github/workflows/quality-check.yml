@@ -4,7 +4,7 @@ on:
   push:
     branches: [ master ]
   pull_request:
-    branches: [ master, dev  ]
+    branches: [ master, develop  ]
 
 jobs:
   lint:
@@ -18,20 +18,30 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          clang-format-16 \
+          uncrustify \
           clang-tidy-16 \
           cppcheck \
-          cmake
-          
-    - name: Check code formatting with clang-format
+          cmake \
+          python3-pip \
+          cpplint
+        
+    - name: Check code formatting with uncrustify
       run: |
-        echo "Checking code formatting..."
+        echo "Checking code formatting with uncrustify..."
+        # Create a basic config or use your own
+        cat > uncrustify.cfg << EOF
+        indent_with_tabs = 0
+        indent_columns = 4
+        align_with_tabs = false
+        newlines = lf
+        EOF
+        
         find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
-        xargs clang-format-16 --dry-run --Werror || {
-          echo "Code formatting issues found. Run 'clang-format -i' on the files above."
+        xargs uncrustify -c uncrustify.cfg --check || {
+          echo "Code formatting issues found. Run 'uncrustify -c uncrustify.cfg --replace' on the files."
           exit 1
         }
-        
+
     - name: Generate compile commands for clang-tidy
       run: |
         mkdir -p build
@@ -66,6 +76,15 @@ jobs:
           --error-exitcode=1 \
           --inline-suppr \
           src/ || echo "cppcheck found issues"
+
+    - name: Install cpplint
+      run: pip3 install cpplint
+      
+    - name: Run cpplint
+      run: |
+        echo "Running cpplint..."
+        find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
+        xargs cpplint --filter=-whitespace/tabs,-whitespace/indent || echo "cpplint completed"
           
     - name: Check for TODO/FIXME comments
       run: |
