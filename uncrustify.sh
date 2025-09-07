@@ -50,6 +50,10 @@ if [ -z "$SOURCE_FILES" ]; then
   exit 0
 fi
 
+# Run dos2unix on all project files to ensure consistent line endings before running uncrustify
+echo "Converting line endings to Unix format for all project files."
+find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" -o -name "*.cmake" -o -name "CMakeLists.txt" -o -name "*.py" -o -name "*.sh" \) -exec dos2unix {} > /dev/null 2>&1 \;
+
 echo "Using uncrustify configuration from ${UNCRUST_CONFIG}"
 
 # Check each file individually and collect failures
