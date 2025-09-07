@@ -15,7 +15,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -c|--changed)
             echo "Checking only changed source files against master branch."
-            SOURCE_FILES=$(git diff --name-only origin/master...HEAD | grep -E '\.(cpp|h|hpp|c)$')
+            SOURCE_FILES=$(git diff --name-only origin/master | grep -E '\.(cpp|h|hpp|c)$')
             shift
             ;;
         -y|--yes)
@@ -41,7 +41,7 @@ done
 
 # If no options provided, default to checking changed files against master branch
 if [ -z "$SOURCE_FILES" ]; then
-  SOURCE_FILES=$(git diff --name-only origin/master...HEAD | grep -E '\.(cpp|h|hpp|c)$')
+  SOURCE_FILES=$(git diff --name-only origin/master | grep -E '\.(cpp|h|hpp|c)$')
 fi
 
 # If still no source files found, exit with message
@@ -58,8 +58,12 @@ FAILED_COUNT=0
 TOTAL_FILES=0
 
 for file in $SOURCE_FILES; do
-  TOTAL_FILES=$((TOTAL_FILES + 1))
   file=$(echo "$file" | tr -d '\n')
+  if [ ! -f "$file" ]; then
+    echo "Skipping non-existent file: $file"
+    continue
+  fi
+  TOTAL_FILES=$((TOTAL_FILES + 1))
   if ! uncrustify -c ${UNCRUST_CONFIG} --check -q "$file"; then
     echo "❌ FAILED: $file"
     FAILED_FILES+=("$file")
