@@ -1,4 +1,4 @@
-name: PR Code Quality (Simple)
+name: PR Code Quality (Changes only)
 
 on:
   pull_request:
@@ -31,6 +31,7 @@ jobs:
         
     - name: Check formatting on changed files
       if: steps.changed-files.outputs.any_changed == 'true'
+      id: format-check
       continue-on-error: true
       run: |
         echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
@@ -74,6 +75,7 @@ jobs:
         
     - name: Run cppcheck on changed files
       if: steps.changed-files.outputs.any_changed == 'true'
+      id: cppcheck
       continue-on-error: true
       run: |
         cppcheck --enable=warning,style,performance,portability \
@@ -90,5 +92,59 @@ jobs:
         if grep -r "TODO\|FIXME" src/ --include="*.cpp" --include="*.h" --include="*.hpp"; then
           echo "⚠️ Found TODO/FIXME comments. Consider addressing them."
           exit 1
+        fi
+    
+    - name: Quality check summary and final status
+      if: always()
+      run: |
+        echo "=== Code Quality Summary ==="
+        
+        # Track failures
+        FAILED_CHECKS=""
+        
+        if [ "${{ steps.format-check.outcome }}" = "failure" ]; then
+          echo "❌ Code Formatting: Issues found"
+          FAILED_CHECKS="$FAILED_CHECKS formatting"
+        else
+          echo "✅ Code Formatting: No issues"
+        fi
+        
+        if [ "${{ steps.cppcheck.outcome }}" = "failure" ]; then
+          echo "❌ Cppcheck: Issues found"
+          FAILED_CHECKS="$FAILED_CHECKS cppcheck"
+        else
+          echo "✅ Cppcheck: No issues"
+        fi
+        
+        if [ "${{ steps.todo-check.outcome }}" = "failure" ]; then
+          echo "❌ TODO/FIXME: Comments found"
+          FAILED_CHECKS="$FAILED_CHECKS todos"
+        else
+          echo "✅ TODO/FIXME: No outstanding items"
+        fi
+        
+        # Generate summary for GitHub
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# 🔍 Code Quality Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -n "$FAILED_CHECKS" ]; then
+          echo "## ⚠️ Issues Found" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following checks found issues:" >> $GITHUB_STEP_SUMMARY
+          for check in $FAILED_CHECKS; do
+            echo "- $check" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Note: These issues are for informational purposes and do not block development._" >> $GITHUB_STEP_SUMMARY
+          
+          # Fail the workflow to show red X, but don't block PR
+          echo "Quality checks found issues. Failing workflow for visibility."
+          exit 1
+        else
+          echo "## ✅ All Checks Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No code quality issues found!" >> $GITHUB_STEP_SUMMARY
+          echo "All quality checks passed successfully."
         fi
         
