@@ -22,11 +22,11 @@ jobs:
           clang-tidy-16 \
           cppcheck \
           cmake \
-          python3-pip \
-          cpplint
+          python3-pip
         
     - name: Check code formatting with uncrustify
-      continue-on-error: true  # Don't fail workflow if this step fails
+      id: format-check
+      continue-on-error: true
       run: |
         echo "Checking code formatting with uncrustify..."
         cat > uncrustify.cfg << EOF
@@ -38,9 +38,9 @@ jobs:
         
         find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
         xargs uncrustify -c uncrustify.cfg --check || {
-          echo "⚠️ Code formatting issues found. This is a warning only."
+          echo "⚠️ Code formatting issues found."
           echo "To fix: find src/ -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o -name '*.c' | xargs uncrustify -c uncrustify.cfg --replace --no-backup"
-          exit 1  # Exit with error, but continue-on-error will make it non-blocking
+          exit 1
         }
 
     - name: Generate compile commands for clang-tidy
@@ -51,6 +51,7 @@ jobs:
         cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         
     - name: Run clang-tidy static analysis
+      id: clang-tidy-check
       continue-on-error: true
       run: |
         echo "Running clang-tidy..."
@@ -65,11 +66,12 @@ jobs:
             -modernize-use-trailing-return-type,
             -readability-magic-numbers,
             -readability-identifier-length' || {
-          echo "⚠️ clang-tidy found issues. This is a warning only."
+          echo "⚠️ clang-tidy found issues."
           exit 1
         }
           
     - name: Run cppcheck
+      id: cppcheck
       continue-on-error: true
       run: |
         echo "Running cppcheck..."
@@ -82,7 +84,7 @@ jobs:
           --error-exitcode=1 \
           --inline-suppr \
           src/ || {
-          echo "⚠️ cppcheck found issues. This is a warning only."
+          echo "⚠️ cppcheck found issues."
           exit 1
         }
 
@@ -90,27 +92,90 @@ jobs:
       run: pip3 install cpplint
       
     - name: Run cpplint
+      id: cpplint-check
       continue-on-error: true
       run: |
         echo "Running cpplint..."
         find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
         xargs cpplint --filter=-whitespace/tabs,-whitespace/indent || {
-          echo "⚠️ cpplint found issues. This is a warning only."
+          echo "⚠️ cpplint found issues."
           exit 1
         }
           
     - name: Check for TODO/FIXME comments
+      id: todo-check
       continue-on-error: true
       run: |
         echo "Checking for TODO/FIXME comments..."
         if grep -r "TODO\|FIXME" src/ --include="*.cpp" --include="*.h" --include="*.hpp"; then
           echo "⚠️ Found TODO/FIXME comments. Consider addressing them."
+          exit 1
         fi
         
-    - name: Quality check summary
-      if: always()  # Always run this step
+    - name: Quality check summary and final status
+      if: always()
       run: |
         echo "=== Code Quality Summary ==="
-        echo "✅ Quality checks completed (warnings only)"
-        echo "Check the step logs above for any issues found."
-        echo "This workflow provides feedback but won't block your development."
+        
+        # Track failures
+        FAILED_CHECKS=""
+        
+        if [ "${{ steps.format-check.outcome }}" = "failure" ]; then
+          echo "❌ Code Formatting: Issues found"
+          FAILED_CHECKS="$FAILED_CHECKS formatting"
+        else
+          echo "✅ Code Formatting: No issues"
+        fi
+        
+        if [ "${{ steps.clang-tidy-check.outcome }}" = "failure" ]; then
+          echo "❌ Clang-tidy: Issues found"
+          FAILED_CHECKS="$FAILED_CHECKS clang-tidy"
+        else
+          echo "✅ Clang-tidy: No issues"
+        fi
+        
+        if [ "${{ steps.cppcheck.outcome }}" = "failure" ]; then
+          echo "❌ Cppcheck: Issues found"
+          FAILED_CHECKS="$FAILED_CHECKS cppcheck"
+        else
+          echo "✅ Cppcheck: No issues"
+        fi
+        
+        if [ "${{ steps.cpplint-check.outcome }}" = "failure" ]; then
+          echo "❌ Cpplint: Issues found"
+          FAILED_CHECKS="$FAILED_CHECKS cpplint"
+        else
+          echo "✅ Cpplint: No issues"
+        fi
+        
+        if [ "${{ steps.todo-check.outcome }}" = "failure" ]; then
+          echo "❌ TODO/FIXME: Comments found"
+          FAILED_CHECKS="$FAILED_CHECKS todos"
+        else
+          echo "✅ TODO/FIXME: No outstanding items"
+        fi
+        
+        # Generate summary for GitHub
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "# 🔍 Code Quality Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -n "$FAILED_CHECKS" ]; then
+          echo "## ⚠️ Issues Found" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The following checks found issues:" >> $GITHUB_STEP_SUMMARY
+          for check in $FAILED_CHECKS; do
+            echo "- $check" >> $GITHUB_STEP_SUMMARY
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Note: These issues are for informational purposes and do not block development._" >> $GITHUB_STEP_SUMMARY
+          
+          # Fail the workflow to show red X, but don't block PR
+          echo "Quality checks found issues. Failing workflow for visibility."
+          exit 1
+        else
+          echo "## ✅ All Checks Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No code quality issues found!" >> $GITHUB_STEP_SUMMARY
+          echo "All quality checks passed successfully."
+        fi
