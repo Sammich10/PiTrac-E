@@ -17,9 +17,6 @@ RUN apt-get update && apt-get install -y \
     unzip \
     dos2unix \
     uncrustify \
-    clang-format-16 \
-    cppcheck \
-    cpplint \
     build-essential \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 

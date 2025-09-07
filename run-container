@@ -1,18 +1,36 @@
 #!/bin/bash
 
-# Parse command line arguments and append them to the podman run command
-ARGS=()
+# Default behavior
+BUILD_MODE="auto"  # auto, build, fetch
+CONTAINER_IMAGE="pitrac-ubuntu-builder:22.04"
+REGISTRY_IMAGE="ghcr.io/sammich10/pitrac-e/pitrac-builder:v1.0.1"
+
+# Parse command line arguments
+PODMAN_ARGS=()
 while [[ $# -gt 0 ]]; do
     case $1 in
+        -b|--build)
+            BUILD_MODE="build"
+            shift
+            ;;
+        -f|--fetch)
+            BUILD_MODE="fetch"
+            shift
+            ;;
         -h|--help)
             echo "Usage: $0 [options]"
             echo "Options:"
+            echo "  -b, --build      Force build container from Containerfile"
+            echo "  -f, --fetch      Force fetch container from registry"
             echo "  -h, --help       Show this help message"
+            echo ""
+            echo "Default behavior: Auto-detect (build if Containerfile exists, otherwise fetch)"
+            echo "All other arguments are passed to podman run"
             exit 0
             ;;
         *)
-            ARGS+=("$1")
-            shift # Move to the next argument
+            PODMAN_ARGS+=("$1")
+            shift
             ;;
     esac
 done
@@ -21,16 +39,79 @@ done
 CWD=$(pwd)
 echo "Attaching at ${CWD}"
 
-podman build -t pitrac-ubuntu-builder:22.04 . || { echo "Failed to rebuild PiTrac builder container image."; exit 1; }    
+# Container management functions
+build_container() {
+    echo "Building container from Containerfile..."
+    if [ ! -f "Containerfile" ]; then
+        echo "Error: Containerfile not found in current directory"
+        exit 1
+    fi
+
+    podman build -f Containerfile -t "${CONTAINER_IMAGE}" . || {
+        echo "Failed to build PiTrac builder container image."
+        exit 1
+    }
+    echo "Container built successfully"
+}
+
+fetch_container() {
+    echo "Fetching container from registry..."
+    podman pull "${REGISTRY_IMAGE}" || {
+        echo "Failed to pull container from registry: ${REGISTRY_IMAGE}"
+        echo "Try using -b/--build to build from Containerfile instead"
+        exit 1
+    }
+    
+    # Tag the pulled image with local name
+    podman tag "${REGISTRY_IMAGE}" "${CONTAINER_IMAGE}" || {
+        echo "Failed to tag pulled image"
+        exit 1
+    }
+    echo "Container fetched and tagged successfully"
+}
+
+check_container_exists() {
+    podman image exists "${CONTAINER_IMAGE}"
+}
+
+# Determine what to do based on mode
+case $BUILD_MODE in
+    "build")
+        build_container
+        ;;
+    "fetch")
+        fetch_container
+        ;;
+    "auto")
+        echo "Auto-detecting container strategy..."
+        
+        # Check if container already exists locally
+        if check_container_exists; then
+            echo "Container ${CONTAINER_IMAGE} already exists locally"
+        elif [ -f "Containerfile" ]; then
+            echo "Containerfile found, building locally..."
+            build_container
+        else
+            echo "No Containerfile found, attempting to fetch from registry..."
+            fetch_container
+        fi
+        ;;
+    *)
+        echo "Invalid build mode: $BUILD_MODE"
+        exit 1
+        ;;
+esac
 
 # Get the host user's UID and GID
 HOST_UID=$(id -u)
 HOST_GID=$(id -g)
 
-# Run the container. The container is logged in as the host user and the UID / GID of the host user will be mapped into the container instance
+echo "Starting container..."
+
+# Run the container
 podman run -it --rm \
     --privileged \
-    "${ARGS[@]}" \
+    "${PODMAN_ARGS[@]}" \
     --env-host=false \
     -v "${CWD}:${CWD}" \
     -w "${CWD}" \
@@ -41,4 +122,4 @@ podman run -it --rm \
     -u ${HOST_UID}:${HOST_GID} \
     --entrypoint "/bin/bash" \
     --name pitrac-builder \
-    pitrac-ubuntu-builder:22.04
+    "${CONTAINER_IMAGE}"
