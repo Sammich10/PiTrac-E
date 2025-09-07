@@ -10,14 +10,14 @@
 
 namespace PiTrac
 {
-class ZmqMessenger
+class GSMessagerBase
 {
   private:
     void *context_;
     void *socket_;
     std::atomic<bool> running_;
     std::thread receive_thread_;
-    std::function<void(std::unique_ptr<IMessage>)> message_handler_;
+    std::function<void(std::unique_ptr<GSMessageInterface>)> message_handler_;
 
   public:
     enum class SocketType
@@ -30,7 +30,7 @@ class ZmqMessenger
         Pull
     };
 
-    ZmqMessenger(SocketType type) : context_(nullptr), socket_(nullptr), running_(false)
+    GSMessagerBase(SocketType type) : context_(nullptr), socket_(nullptr), running_(false)
     {
         context_ = zmq_ctx_new();
         if (!context_)
@@ -58,7 +58,7 @@ class ZmqMessenger
         }
     }
 
-    ~ZmqMessenger()
+    ~GSMessagerBase()
     {
         stop();
         if (socket_)
@@ -95,11 +95,12 @@ class ZmqMessenger
         int rc = zmq_setsockopt(socket_, ZMQ_SUBSCRIBE, topic.c_str(), topic.length());
         if (rc != 0)
         {
-            throw std::runtime_error("Failed to subscribe to topic: " + zmq_strerror(errno));
+            throw std::runtime_error("Failed to subscribe to topic: " +
+                                     std::string(zmq_strerror(errno)));
         }
     }
 
-    void sendMessage(const IMessage &message)
+    void sendMessage(const GSMessageInterface &message)
     {
         zmq_msg_t msg;
         message.toZmqMessage(msg);
@@ -114,7 +115,7 @@ class ZmqMessenger
         zmq_msg_close(&msg);
     }
 
-    void sendMessage(const IMessage &message, const std::string &topic)
+    void sendMessage(const GSMessageInterface &message, const std::string &topic)
     {
         // Send topic frame first
         zmq_msg_t topic_msg;
@@ -158,7 +159,7 @@ class ZmqMessenger
         return message;
     }
 
-    void startReceiving(std::function<void(std::unique_ptr<IMessage>)> handler)
+    void startReceiving(std::function<void(std::unique_ptr<GSMessageInterface>)> handler)
     {
         message_handler_ = handler;
         running_ = true;

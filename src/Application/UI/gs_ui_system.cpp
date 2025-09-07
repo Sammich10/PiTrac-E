@@ -149,7 +149,8 @@ void GsUISystem::SendIPCHitMessage(const GolfBall &result_ball,
     results.message_ = "Ball Hit - Results returned." + secondary_message;
 
     GS_LOG_MSG(info,
-               "BALL_HIT_CSV, " + std::to_string(GsSimInterface::GetShotCounter()) +
+               "BALL_HIT_CSV, " + std::to_string(
+                   GsSimInterface::GetShotCounter()) +
                ", (carry - NA), (Total - NA), (Side Dest - NA), (Smash Factor - NA), (Club Speed - NA), "
                + std::to_string(CvUtils::MetersPerSecondToMPH(results.speed_mpers_)) + ", "
                + std::to_string(results.back_spin_rpm_) + ", "

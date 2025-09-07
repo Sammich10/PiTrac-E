@@ -579,7 +579,8 @@ GolfSimState onEvent(const state::BallHitNowWaitingForCam2Image &BallHitNowWaiti
         GsUISystem::SendIPCErrorStatusMessage("GolfSim FSM could not ProcessReceivedCam2Image.");
 
         GS_LOG_MSG(info,
-                   "BALL_HIT_CSV, " + std::to_string(GsSimInterface::GetShotCounter()) +
+                   "BALL_HIT_CSV, " + std::to_string(
+                       GsSimInterface::GetShotCounter()) +
                    ", (carry - Error), (Total - Error), (Side Dest - Error), (Smash Factor - Error), (Club Speed - Error), "
                    + std::to_string(0) + ", "
                    + std::to_string(0) + ", "
