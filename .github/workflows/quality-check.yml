@@ -26,9 +26,9 @@ jobs:
           cpplint
         
     - name: Check code formatting with uncrustify
+      continue-on-error: true  # Don't fail workflow if this step fails
       run: |
         echo "Checking code formatting with uncrustify..."
-        # Create a basic config or use your own
         cat > uncrustify.cfg << EOF
         indent_with_tabs = 0
         indent_columns = 4
@@ -37,17 +37,21 @@ jobs:
         EOF
         
         find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
-        xargs uncrustify -c .github/workflows/uncrustify.cfg --check || {
-          echo "Code formatting issues found. Run 'uncrustify -c .github/workflows/uncrustify.cfg --replace' on the files."
+        xargs uncrustify -c uncrustify.cfg --check || {
+          echo "⚠️ Code formatting issues found. This is a warning only."
+          echo "To fix: find src/ -name '*.cpp' -o -name '*.h' -o -name '*.hpp' -o -name '*.c' | xargs uncrustify -c uncrustify.cfg --replace --no-backup"
+          exit 1  # Exit with error, but continue-on-error will make it non-blocking
         }
 
     - name: Generate compile commands for clang-tidy
+      continue-on-error: true
       run: |
         mkdir -p build
         cd build
         cmake .. -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         
     - name: Run clang-tidy static analysis
+      continue-on-error: true
       run: |
         echo "Running clang-tidy..."
         find src/ -name "*.cpp" -o -name "*.cc" -o -name "*.c" | \
@@ -60,10 +64,13 @@ jobs:
             modernize-*,
             -modernize-use-trailing-return-type,
             -readability-magic-numbers,
-            -readability-identifier-length' \
-          --warnings-as-errors='*' || echo "clang-tidy found issues"
+            -readability-identifier-length' || {
+          echo "⚠️ clang-tidy found issues. This is a warning only."
+          exit 1
+        }
           
     - name: Run cppcheck
+      continue-on-error: true
       run: |
         echo "Running cppcheck..."
         cppcheck --enable=warning,style,performance,portability \
@@ -74,20 +81,36 @@ jobs:
           --suppress=unmatchedSuppression \
           --error-exitcode=1 \
           --inline-suppr \
-          src/ || echo "cppcheck found issues"
+          src/ || {
+          echo "⚠️ cppcheck found issues. This is a warning only."
+          exit 1
+        }
 
     - name: Install cpplint
       run: pip3 install cpplint
       
     - name: Run cpplint
+      continue-on-error: true
       run: |
         echo "Running cpplint..."
         find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" | \
-        xargs cpplint --filter=-whitespace/tabs,-whitespace/indent || echo "cpplint completed"
+        xargs cpplint --filter=-whitespace/tabs,-whitespace/indent || {
+          echo "⚠️ cpplint found issues. This is a warning only."
+          exit 1
+        }
           
     - name: Check for TODO/FIXME comments
+      continue-on-error: true
       run: |
         echo "Checking for TODO/FIXME comments..."
         if grep -r "TODO\|FIXME" src/ --include="*.cpp" --include="*.h" --include="*.hpp"; then
-          echo "Found TODO/FIXME comments. Consider addressing them."
+          echo "⚠️ Found TODO/FIXME comments. Consider addressing them."
         fi
+        
+    - name: Quality check summary
+      if: always()  # Always run this step
+      run: |
+        echo "=== Code Quality Summary ==="
+        echo "✅ Quality checks completed (warnings only)"
+        echo "Check the step logs above for any issues found."
+        echo "This workflow provides feedback but won't block your development."
