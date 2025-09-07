@@ -5089,28 +5089,55 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                         -(float)CvUtils::DegreesToRadians((double)rotation_angles_degrees[0]),      /*
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *Negative
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *due
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *to
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *rotation
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *in
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *X
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *axis
                                                                                                      *
                                                                                                      *
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *being
+                                                                                                     *
+                                                                                                     *
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *backward
