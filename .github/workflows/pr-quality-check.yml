@@ -34,8 +34,6 @@ jobs:
       id: format-check
       continue-on-error: true
       run: |
-        echo "Changed files: ${{ steps.changed-files.outputs.all_changed_files }}"
-
         # Check each file individually and collect failures
         FAILED_FILES=""
         TOTAL_FILES=0
