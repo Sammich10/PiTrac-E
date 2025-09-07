@@ -43,5 +43,4 @@ std::unique_ptr<GSMessageInterface> GSMessageFactory::createFromZmqMessage(zmq_m
     message->fromZmqMessage(msg);
     return message;
 }
-
 } // namespace PiTrac
