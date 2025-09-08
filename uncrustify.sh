@@ -83,14 +83,24 @@ if [ $FAILED_COUNT -gt 0 ]; then
   for file in "${FAILED_FILES[@]}"; do
     echo "  - $file"
   done
-  echo "Would you like to run uncrustify to fix these issues? (y/n)"
-  read -r response
-  if [[ "$response" == "y" ]]; then
+  if [ "$AUTO_FIX" = true ]; then
+    echo "Automatically fixing formatting issues for failed files."
     for file in "${FAILED_FILES[@]}"; do
       echo "Fixing formatting for: $file"
       uncrustify -c ${UNCRUST_CONFIG} --replace --no-backup "$file"
     done
     echo "Formatting fixes applied!"
+    exit 1
+  else
+    echo "Would you like to run uncrustify to fix these issues? (y/n)"
+    read -r response
+    if [[ "$response" == "y" ]]; then
+      for file in "${FAILED_FILES[@]}"; do
+        echo "Fixing formatting for: $file"
+        uncrustify -c ${UNCRUST_CONFIG} --replace --no-backup "$file"
+      done
+      echo "Formatting fixes applied!"
+    fi
   fi
 else
   echo -e "\nUncrustify check completed successfully. All $TOTAL_FILES files passed."
