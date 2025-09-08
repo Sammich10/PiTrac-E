@@ -2,6 +2,7 @@
 #define GS_CAMERA_BASE_H
 
 #include "Interfaces/Camera/GSCameraInterface.h"
+#include "Common/Utils/Logging/GSLogger.h"
 namespace PiTrac
 {
 class GSCameraBase : public GSCameraInterface
@@ -27,7 +28,8 @@ class GSCameraBase : public GSCameraInterface
                  int height,
                  float focalLength,
                  TriggerMode mode = TriggerMode::FREE_RUNNING)
-        : GSCameraInterface(width, height, focalLength, mode)
+        : GSCameraInterface(width, height, focalLength, mode),
+          logger_(GSLogger::getInstance())
     {
     }
 
@@ -278,6 +280,9 @@ class GSCameraBase : public GSCameraInterface
      * @return cv::Mat The unpacked image as an OpenCV matrix.
      */
     cv::Mat unpack10BitBayer(void *data, int width, int height, size_t stride);
+
+    std::shared_ptr<GSLogger> logger_;
+
 }; // class GSCameraBase
 } // namespace PiTrac
 

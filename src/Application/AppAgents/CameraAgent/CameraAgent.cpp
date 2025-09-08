@@ -14,9 +14,7 @@ CameraAgent::CameraAgent(std::unique_ptr<GSCameraInterface> camera_,
     current_mode_(SystemMode::Initializing)
 {
     publisher_ = std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Publisher);
-    publisher_->bind(endpoint_);
     subscriber_ = std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Subscriber);
-    subscriber_->connect(endpoint_);
 }
 
 CameraAgent::~CameraAgent()
@@ -46,6 +44,17 @@ bool CameraAgent::initialize()
             return false;
         }
     }
+    // ZMQ setup last (after camera is working)
+    try {
+        publisher_->bind(endpoint_);
+        subscriber_->connect(endpoint_);
+    } catch (const std::exception& e) {
+        logger_->error("ZMQ initialization failed: " + std::string(e.what()));
+        return false;
+    }
+
+    logger_->info("ZMQ messaging initialized for CameraAgent with ID: " + camera_id_);
+
     return true;
 }
 
@@ -75,9 +84,12 @@ void CameraAgent::captureLoop()
         // fragmentation in high-frequency scenarios like camera frame capture.
         GSCameraFrameRawMessage message(camera_id_, frame, frame_counter_++);
         publisher_->sendMessage(message, "CameraFrameRaw");
-        logger_->info("Published frame number " + std::to_string(
-                          frame_counter_ - 1) + " from CameraAgent with ID: " + camera_id_);
+        // logger_->info("Published frame number " + std::to_string(
+        //                   frame_counter_ - 1) + " from CameraAgent with ID: " + camera_id_);
     }
+
+    logger_->info("CameraAgent capture loop exiting for camera ID: " + camera_id_);
+    camera_->stopContinuousCapture();
 }
 
 void CameraAgent::cleanup()

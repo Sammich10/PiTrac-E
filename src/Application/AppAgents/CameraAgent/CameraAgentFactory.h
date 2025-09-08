@@ -8,10 +8,14 @@ namespace PiTrac
 class CameraAgentFactory
 {
   public:
-    static CameraAgent createCameraAgent(GSCameraInterface *const &camera,
-                                         const std::string &endpoint)
+    static std::shared_ptr<CameraAgent> createCameraAgent
+    (
+      std::unique_ptr<GSCameraInterface> camera,
+      const std::string &id,
+      const std::string &endpoint
+    )
     {
-        return CameraAgent(camera, endpoint);
+        return std::make_shared<CameraAgent>(std::move(camera), id, endpoint);
     }
 };
 } // namespace PiTrac

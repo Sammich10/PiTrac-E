@@ -16,7 +16,7 @@ GSAgentBase::GSAgentBase(const std::string &name, AgentPriority priority)
     , timeout_duration_(std::chrono::milliseconds::max())
     , iterations_completed_(0)
     , errors_count_(0)
-    , logger_(std::make_shared<GSLogger>(logger_level::info))
+    , logger_(GSLogger::getInstance())
 {
     logInfo("Agent created: " + agent_name_ + " [" + agent_id_ + "]");
 }
@@ -67,22 +67,26 @@ bool GSAgentBase::start()
 
 void GSAgentBase::stop()
 {
+    logger_->info("Stopping agent: " + agent_name_);
     {
         std::lock_guard<std::mutex> lock(status_mutex_);
         if (status_ == AgentStatus::NotStarted || status_ == AgentStatus::Completed ||
             status_ == AgentStatus::Failed)
         {
+            logger_->info("Agent already in terminal state: " + agent_name_);
             return;
         }
-
-        changeStatus(AgentStatus::Stopping);
     }
-
+    
     should_stop_ = true;
     should_pause_ = false;
-
+    
+    logger_->info("Changing agent status to Stopping: " + agent_name_);
+    changeStatus(AgentStatus::Stopping);
+    
     if (agent_thread_.joinable())
     {
+        logger_->info("Joining agent execution thread for: " + agent_name_);
         agent_thread_.join();
     }
 
@@ -240,7 +244,7 @@ void GSAgentBase::agentWrapper()
             return;
         }
 
-        // Execute main agent 
+        // Execute main agent
         changeStatus(AgentStatus::Running);
         execute();
 

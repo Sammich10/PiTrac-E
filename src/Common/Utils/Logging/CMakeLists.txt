@@ -15,4 +15,5 @@ add_library(${PROJECT_NAME} SHARED ${LOGGING_SOURCES})
 target_link_libraries(${PROJECT_NAME} PUBLIC
     ${OpenCV_LIBS}
     ${BOOST_LIBS}
+    CVUtils
 )

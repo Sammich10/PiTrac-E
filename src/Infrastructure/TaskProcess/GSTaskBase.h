@@ -14,9 +14,10 @@
 #include <thread>
 #include <mutex>
 
-namespace PiTrac {
-
-enum class TaskStatus {
+namespace PiTrac
+{
+enum class TaskStatus
+{
     NotStarted,
     Starting,
     Running,
@@ -26,83 +27,117 @@ enum class TaskStatus {
     Crashed
 };
 
-class GSTaskBase {
-protected:
+class GSTaskBase
+{
+  protected:
     std::string task_name_;
     std::string task_id_;
     TaskStatus status_;
-    
+
     pid_t child_pid_;
     std::atomic<bool> should_stop_;
-    
+
     // IPC configuration
     std::string ipc_endpoint_;
-    
+
     // Monitoring
     std::chrono::steady_clock::time_point start_time_;
     std::shared_ptr<GSLogger> logger_;
     mutable std::mutex status_mutex_;
-    
+
     // Callbacks
     std::function<void(TaskStatus)> status_change_callback_;
     std::function<void(pid_t, int)> process_exit_callback_;
-    
-public:
-    GSTaskBase(const std::string& name);
+
+  public:
+    GSTaskBase(const std::string &name);
     virtual ~GSTaskBase();
-    
+
     // Pure virtual methods for task-specific behavior
-    virtual bool setupChildProcess() = 0;      // Called in child process before task start
+    virtual bool setupChildProcess() = 0;      // Called in child process before
+                                               // task start
     virtual void childProcessMain() = 0;       // Main loop for child process
-    virtual void cleanupChildProcess() = 0;    // Called in child process on shutdown
-    
+    virtual void cleanupChildProcess() = 0;    // Called in child process on
+                                               // shutdown
+
     // Task lifecycle (can be overridden but has default implementation)
     virtual bool start();
     virtual void stop();
     virtual bool waitForExit(int timeout_seconds = 30);
     virtual void forceKill();
-    
+
     // Status and monitoring
     TaskStatus getStatus() const;
-    pid_t getProcessId() const { return child_pid_; }
-    const std::string& getTaskName() const { return task_name_; }
-    const std::string& getTaskId() const { return task_id_; }
+    pid_t getProcessId() const
+    {
+        return child_pid_;
+    }
+
+    const std::string &getTaskName() const
+    {
+        return task_name_;
+    }
+
+    const std::string &getTaskId() const
+    {
+        return task_id_;
+    }
+
     virtual bool isRunning() const;
-    
+
     // Configuration
-    void setIPCEndpoint(const std::string& endpoint) { ipc_endpoint_ = endpoint; }
-    void setStatusChangeCallback(std::function<void(TaskStatus)> callback) { 
-        status_change_callback_ = callback; 
+    void setIPCEndpoint(const std::string &endpoint)
+    {
+        ipc_endpoint_ = endpoint;
     }
-    void setProcessExitCallback(std::function<void(pid_t, int)> callback) { 
-        process_exit_callback_ = callback; 
+
+    void setStatusChangeCallback(std::function<void(TaskStatus)> callback)
+    {
+        status_change_callback_ = callback;
     }
-    
+
+    void setProcessExitCallback(std::function<void(pid_t, int)> callback)
+    {
+        process_exit_callback_ = callback;
+    }
+
     // Utility methods for derived classes
-    void logInfo(const std::string& message);
-    void logWarning(const std::string& message);
-    void logError(const std::string& message);
-    
-protected:
+    void logInfo(const std::string &message);
+    void logWarning(const std::string &message);
+    void logError(const std::string &message);
+
+  protected:
     // Internal methods available to derived classes
     void changeStatus(TaskStatus new_status);
     std::string generateTaskId();
-    
+
     // Process management helpers
     bool isChildProcessAlive() const;
     void setupSignalHandlers();
     static void signalHandler(int signal);
-    
+
     // Child process entry point
     void childProcessEntryPoint();
-    
-    // Hook methods that derived classes can override
-    virtual bool preStartHook() { return true; }      // Called before fork
-    virtual void postStartHook() {}                   // Called after successful fork
-    virtual void preStopHook() {}                     // Called before stop
-    virtual void postStopHook() {}                    // Called after stop
-};
 
+    // Hook methods that derived classes can override
+    virtual bool preStartHook()
+    {
+        return true;
+    }                                                 // Called before fork
+
+    virtual void postStartHook()
+    {
+    }                                                 // Called after successful
+                                                      // fork
+
+    virtual void preStopHook()
+    {
+    }                                                 // Called before stop
+
+    virtual void postStopHook()
+    {
+    }                                                 // Called after stop
+};
 } // namespace PiTrac
 
 #endif // GSTASKBASE_H
