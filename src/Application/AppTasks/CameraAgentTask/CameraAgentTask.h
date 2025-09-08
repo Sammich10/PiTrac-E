@@ -24,7 +24,7 @@ bool preAgentStartHook() override;
 void postAgentStartHook() override;
 void onAgentFailedHook(std::shared_ptr<GSAgentBase> agent) override;
 void agentMonitoringLoopHook() override;
-bool setupChildProcess() override;
+bool setupProcess() override;
 void preStopHook() override;
 
 private:

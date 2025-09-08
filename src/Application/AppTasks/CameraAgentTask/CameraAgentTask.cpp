@@ -10,9 +10,9 @@ CameraAgentTask::CameraAgentTask() : GSAgentTask("CameraAgentTask") {
     setIPCEndpoint("ipc://camera_agent_task_endpoint");
 }
 
-bool CameraAgentTask::setupChildProcess() {
+bool CameraAgentTask::setupProcess() {
     logger_ = GSLogger::getInstance();
-    logInfo("CameraAgentTask child process setup complete.");
+    logInfo("CameraAgentTask process setup complete.");
     return true;
 }
 

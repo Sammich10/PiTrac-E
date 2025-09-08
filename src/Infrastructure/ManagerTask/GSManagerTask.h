@@ -88,8 +88,8 @@ class GSManagerTask : public GSTaskBase
     bool start() override;
 
   protected:
-    // Default implementation of childProcessMain for manager tasks
-    void childProcessMain() override;
+    // Default implementation of processMain for manager tasks
+    void processMain() override;
 
     // Manager-specific process management
     bool startManager();

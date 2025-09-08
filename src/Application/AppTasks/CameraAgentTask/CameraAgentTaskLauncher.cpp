@@ -12,31 +12,22 @@ std::atomic<bool> g_shutdown_requested(false);
 PiTrac::CameraAgentTask* g_camera_task = nullptr;
 std::shared_ptr<PiTrac::GSLogger> logger = PiTrac::GSLogger::getInstance();
 
-// Signal handler for graceful shutdown
-void signalHandler(int signal) {
-    // Add immediate output that bypasses logger buffering
-    fprintf(stderr, "\n*** SIGNAL %d RECEIVED ***\n", signal);
-    fflush(stderr);
-    
-    logger->error("Signal received: " + std::to_string(signal));
-    g_shutdown_requested = true;
-    
-    if (g_camera_task) {
-        fprintf(stderr, "Calling stop() on camera task...\n");
-        fflush(stderr);
-        g_camera_task->stop();
-    } else {
-        fprintf(stderr, "ERROR: No camera task reference!\n");
-        fflush(stderr);
+void signalHandler(int signal)
+{
+    if (signal == SIGINT || signal == SIGTERM)
+    {
+        logger->info("Shutdown signal received, requesting graceful shutdown...");
+        g_shutdown_requested.store(true);
+        if (g_camera_task)
+        {
+            g_camera_task->stop();
+        }
     }
 }
 
 int main(int argc, char* argv[]) {
-    // Set up signal handlers for graceful shutdown
-    signal(SIGINT, signalHandler);   // Ctrl+C
-    signal(SIGTERM, signalHandler);  // Termination request
-    signal(SIGUSR1, signalHandler);  // User signal for graceful shutdown
-    
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
     try {
         logger->info("Starting Camera Agent Task Launcher");
         
@@ -49,34 +40,12 @@ int main(int argc, char* argv[]) {
             return EXIT_FAILURE;
         }
 
-        logger->info("Camera Agent Task started successfully (PID: " + std::to_string(camera_agent_task.getProcessId()) + ")");
-        logger->info("Press Ctrl+C to stop...");
-        
-        // Keep the main thread alive while the agent task is running
-        while (!g_shutdown_requested.load() && camera_agent_task.isRunning()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
-        
-        logger->info("Shutdown requested, stopping Camera Agent Task...");
-        
-        // Stop the task gracefully
-        camera_agent_task.stop();
-        
-        // Wait for task to exit
-        if (!camera_agent_task.waitForExit(10)) {
-            logger->error("Task did not exit gracefully, force killing...");
-            camera_agent_task.forceKill();
-        }
-        
-        logger->info("Camera Agent Task stopped");
-        
+        logger->info("Camera Agent Task started successfully");   
+    
     } catch (const std::exception& e) {
         logger->error("Exception occurred in Camera Agent Task Launcher: " + std::string(e.what()));
         return EXIT_FAILURE;
-    } catch (...) {
-        logger->error("Unknown exception occurred");
-        return EXIT_FAILURE;
     }
-    
+    logger->info("Camera Agent Task Launcher exiting normally");
     return EXIT_SUCCESS;
 }

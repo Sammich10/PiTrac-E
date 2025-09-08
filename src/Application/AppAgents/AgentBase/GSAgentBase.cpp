@@ -33,8 +33,6 @@ GSAgentBase::~GSAgentBase()
 
 bool GSAgentBase::start()
 {
-    std::lock_guard<std::mutex> lock(status_mutex_);
-
     if (status_ == AgentStatus::Running)
     {
         logWarning("Agent already running: " + agent_name_);
@@ -68,14 +66,11 @@ bool GSAgentBase::start()
 void GSAgentBase::stop()
 {
     logger_->info("Stopping agent: " + agent_name_);
+    if (status_ == AgentStatus::NotStarted || status_ == AgentStatus::Completed ||
+        status_ == AgentStatus::Failed)
     {
-        std::lock_guard<std::mutex> lock(status_mutex_);
-        if (status_ == AgentStatus::NotStarted || status_ == AgentStatus::Completed ||
-            status_ == AgentStatus::Failed)
-        {
-            logger_->info("Agent already in terminal state: " + agent_name_);
-            return;
-        }
+        logger_->info("Agent already in terminal state: " + agent_name_);
+        return;
     }
     
     should_stop_ = true;
@@ -95,7 +90,6 @@ void GSAgentBase::stop()
 
 void GSAgentBase::pause()
 {
-    std::lock_guard<std::mutex> lock(status_mutex_);
     if (status_ == AgentStatus::Running)
     {
         should_pause_ = true;
@@ -106,7 +100,6 @@ void GSAgentBase::pause()
 
 void GSAgentBase::resume()
 {
-    std::lock_guard<std::mutex> lock(status_mutex_);
     if (status_ == AgentStatus::Paused)
     {
         should_pause_ = false;
@@ -140,7 +133,6 @@ bool GSAgentBase::waitForCompletion(std::chrono::milliseconds timeout)
 
 AgentStatus GSAgentBase::getStatus() const
 {
-    std::lock_guard<std::mutex> lock(status_mutex_);
     return status_;
 }
 
@@ -280,11 +272,8 @@ void GSAgentBase::agentWrapper()
 void GSAgentBase::changeStatus(AgentStatus new_status)
 {
     AgentStatus old_status;
-    {
-        std::lock_guard<std::mutex> lock(status_mutex_);
-        old_status = status_;
-        status_ = new_status;
-    }
+    old_status = status_;
+    status_ = new_status;
 
     if (status_change_callback_)
     {
@@ -294,7 +283,7 @@ void GSAgentBase::changeStatus(AgentStatus new_status)
     // Log status changes
     if (old_status != new_status)
     {
-        logInfo("Status changed: " + std::to_string(static_cast<int>(old_status)) +
+        logInfo("Agent status changed: " + std::to_string(static_cast<int>(old_status)) +
                 " -> " + std::to_string(static_cast<int>(new_status)));
     }
 }

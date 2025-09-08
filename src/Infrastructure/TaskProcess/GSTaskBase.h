@@ -34,7 +34,6 @@ class GSTaskBase
     std::string task_id_;
     TaskStatus status_;
 
-    pid_t child_pid_;
     std::atomic<bool> should_stop_;
 
     // IPC configuration
@@ -43,7 +42,6 @@ class GSTaskBase
     // Monitoring
     std::chrono::steady_clock::time_point start_time_;
     std::shared_ptr<GSLogger> logger_;
-    mutable std::mutex status_mutex_;
 
     // Callbacks
     std::function<void(TaskStatus)> status_change_callback_;
@@ -54,24 +52,19 @@ class GSTaskBase
     virtual ~GSTaskBase();
 
     // Pure virtual methods for task-specific behavior
-    virtual bool setupChildProcess() = 0;      // Called in child process before
+    virtual bool setupProcess() = 0;      // Called in child process before
                                                // task start
-    virtual void childProcessMain() = 0;       // Main loop for child process
-    virtual void cleanupChildProcess() = 0;    // Called in child process on
+    virtual void processMain() = 0;       // Main loop for child process
+    virtual void cleanupProcess() = 0;    // Called in child process on
                                                // shutdown
 
     // Task lifecycle (can be overridden but has default implementation)
     virtual bool start();
     virtual void stop();
-    virtual bool waitForExit(int timeout_seconds = 30);
     virtual void forceKill();
 
     // Status and monitoring
     TaskStatus getStatus() const;
-    pid_t getProcessId() const
-    {
-        return child_pid_;
-    }
 
     const std::string &getTaskName() const
     {
@@ -111,13 +104,8 @@ class GSTaskBase
     void changeStatus(TaskStatus new_status);
     std::string generateTaskId();
 
-    // Process management helpers
-    bool isChildProcessAlive() const;
-    void setupSignalHandlers();
-    static void signalHandler(int signal);
-
-    // Child process entry point
-    void childProcessEntryPoint();
+    // Process entry point
+    void processEntryPoint();
 
     // Hook methods that derived classes can override
     virtual bool preStartHook()

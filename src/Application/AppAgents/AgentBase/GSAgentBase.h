@@ -45,7 +45,6 @@ class GSAgentBase
     std::atomic<bool> is_running_;
 
     std::thread agent_thread_;
-    mutable std::mutex status_mutex_;
 
     // Timing and performance
     std::chrono::steady_clock::time_point start_time_;

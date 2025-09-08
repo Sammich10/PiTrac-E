@@ -56,12 +56,12 @@ class GSAgentTask : public GSTaskBase
     bool areAllAgentsRunning();
     void restartFailedAgents();
 
-    // Default implementation of childProcessMain for agent tasks
-    void childProcessMain() override;
-    // Default implementation of setupChildProcess for agent tasks
-    bool setupChildProcess() override {return true;} 
-    // Default implementation of cleanupChildProcess for agent tasks
-    void cleanupChildProcess() override {} 
+    // Default implementation of processMain for agent tasks
+    void processMain() override;
+    // Default implementation of setupProcess for agent tasks
+    bool setupProcess() override {return true;} 
+    // Default implementation of cleanupProcess for agent tasks
+    void cleanupProcess() override {} 
 
     // Hook methods for agent-specific customization
     virtual bool preAgentStartHook()

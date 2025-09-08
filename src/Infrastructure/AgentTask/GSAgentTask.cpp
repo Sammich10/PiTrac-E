@@ -26,7 +26,7 @@ bool GSAgentTask::preStartHook()
     return true;
 }
 
-void GSAgentTask::childProcessMain()
+void GSAgentTask::processMain()
 {
     logInfo("Starting agent task main loop");
 
@@ -45,6 +45,8 @@ void GSAgentTask::childProcessMain()
     }
 
     postAgentStartHook();
+
+    changeStatus(TaskStatus::Running);
 
     // Main monitoring loop
     while (!should_stop_)
