@@ -3,15 +3,17 @@
 
 #include "Application/AppAgents/CameraAgent/CameraAgent.h"
 
-namespace PiTrac {
-
-class CameraAgentFactory {
-public:
-    static CameraAgent createCameraAgent(GSCameraInterface* const &camera, const std::string& endpoint) {
+namespace PiTrac
+{
+class CameraAgentFactory
+{
+  public:
+    static CameraAgent createCameraAgent(GSCameraInterface *const &camera,
+                                         const std::string &endpoint)
+    {
         return CameraAgent(camera, endpoint);
     }
 };
-
 } // namespace PiTrac
 
 #endif // CAMERA_AGENT_FACTORY_H

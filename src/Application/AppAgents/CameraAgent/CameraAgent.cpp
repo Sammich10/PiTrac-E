@@ -5,7 +5,7 @@ namespace PiTrac
 CameraAgent::CameraAgent(std::unique_ptr<GSCameraInterface> camera_,
                          const std::string &camera_id,
                          const std::string &endpoint)
-    : GSTask("CameraAgent_" + camera_id, TaskPriority::High),
+    : GSAgentBase("CameraAgent_" + camera_id, AgentPriority::High),
     camera_(std::move(camera_)),
     camera_id_(camera_id),
     endpoint_(endpoint),

@@ -1,5 +1,5 @@
-#ifndef GSTASK_H
-#define GSTASK_H
+#ifndef GSAgent_H
+#define GSAgent_H
 
 #include "Common/Utils/Logging/GSLogger.h"
 #include <string>
@@ -12,7 +12,7 @@
 
 namespace PiTrac
 {
-enum class TaskStatus
+enum class AgentStatus
 {
     NotStarted,
     Initializing,
@@ -24,7 +24,7 @@ enum class TaskStatus
     Timeout
 };
 
-enum class TaskPriority
+enum class AgentPriority
 {
     Low = 0,
     Normal = 1,
@@ -32,19 +32,19 @@ enum class TaskPriority
     Critical = 3
 };
 
-class GSTask
+class GSAgentBase
 {
   protected:
-    std::string task_name_;
-    std::string task_id_;
-    TaskStatus status_;
-    TaskPriority priority_;
+    std::string agent_name_;
+    std::string agent_id_;
+    AgentStatus status_;
+    AgentPriority priority_;
 
     std::atomic<bool> should_stop_;
     std::atomic<bool> should_pause_;
     std::atomic<bool> is_running_;
 
-    std::thread task_thread_;
+    std::thread agent_thread_;
     mutable std::mutex status_mutex_;
 
     // Timing and performance
@@ -57,22 +57,22 @@ class GSTask
     std::atomic<uint64_t> errors_count_;
 
     // Callbacks
-    std::function<void(TaskStatus)> status_change_callback_;
+    std::function<void(AgentStatus)> status_change_callback_;
     std::function<void(const std::string &)> error_callback_;
 
     // Logger
     std::shared_ptr<GSLogger> logger_;
 
   public:
-    GSTask(const std::string &name, TaskPriority priority = TaskPriority::Normal);
-    virtual ~GSTask();
+    GSAgentBase(const std::string &name, AgentPriority priority = AgentPriority::Normal);
+    virtual ~GSAgentBase();
 
     // Core lifecycle methods (pure virtual)
     virtual bool initialize() = 0;
     virtual void execute() = 0;
     virtual void cleanup() = 0;
 
-    // Task control methods
+    // Agent control methods
     bool start();
     void stop();
     void pause();
@@ -80,18 +80,18 @@ class GSTask
     bool waitForCompletion(std::chrono::milliseconds timeout = std::chrono::milliseconds::max());
 
     // Status and info methods
-    TaskStatus getStatus() const;
-    TaskPriority getPriority() const;
-    void setPriority(TaskPriority priority);
+    AgentStatus getStatus() const;
+    AgentPriority getPriority() const;
+    void setPriority(AgentPriority priority);
 
-    const std::string &getTaskName() const
+    const std::string &getAgentName() const
     {
-        return task_name_;
+        return agent_name_;
     }
 
-    const std::string &getTaskId() const
+    const std::string &getAgentId() const
     {
-        return task_id_;
+        return agent_id_;
     }
 
     // Performance metrics
@@ -114,7 +114,7 @@ class GSTask
         timeout_duration_ = timeout;
     }
 
-    void setStatusChangeCallback(std::function<void(TaskStatus)> callback)
+    void setStatusChangeCallback(std::function<void(AgentStatus)> callback)
     {
         status_change_callback_ = callback;
     }
@@ -155,16 +155,16 @@ class GSTask
     void logWarning(const std::string &message);
     void logError(const std::string &message);
 
-    // Task state management for derived classes
-    void setStatus(TaskStatus status);
+    // Agent state management for derived classes
+    void setStatus(AgentStatus status);
     void handlePause();
     bool checkTimeout();
 
   private:
-    void taskWrapper();
-    void changeStatus(TaskStatus new_status);
-    std::string generateTaskId();
+    void agentWrapper();
+    void changeStatus(AgentStatus new_status);
+    std::string generateAgentId();
 };
 } // namespace PiTrac
 
-#endif // GSTASK_H
+#endif // GSAgent_H

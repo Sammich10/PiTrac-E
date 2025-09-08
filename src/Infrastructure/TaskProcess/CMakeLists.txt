@@ -1,4 +1,4 @@
-project(GSTask)
+project(GSTaskBase)
 
 file(GLOB TASK_PROCESS_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp

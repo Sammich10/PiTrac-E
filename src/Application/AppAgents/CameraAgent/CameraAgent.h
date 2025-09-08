@@ -4,7 +4,7 @@
 #include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
 #include "Infrastructure/Messaging/Messages/GSCameraFrameRawMsg.h"
 #include "Interfaces/Camera/GSCameraInterface.h"
-#include "Infrastructure/TaskProcess/GSTask.h"
+#include "Application/AppAgents/AgentBase/GSAgentBase.h"
 #include "Common/System/SystemModes.h"
 #include <opencv2/opencv.hpp>
 #include <thread>
@@ -12,21 +12,21 @@
 
 namespace PiTrac
 {
-class CameraAgent : public GSTask
+class CameraAgent : public GSAgentBase
 {
     /**
      * @brief The CameraAgent class is responsible for operating a camera
-     *through the Camera Interface and publishing raw camera frames to a
-     *messaging system.
+     * through the Camera Interface and publishing raw camera frames to a
+     * messaging system.
      *
      * At it's core, it will implement different camera operations such as
-     *opening, initializing, capturing frames, and closing the camera.
+     * opening, initializing, capturing frames, and closing the camera.
      * The CameraAgent will also handle the messaging of captured frames to
-     *other components in the system (when in the appropriate mode).
+     * other components in the system (when in the appropriate mode).
      *
      * On top of this, it will support different modes of operation to support
-     *the functionality of the launch monitor system, be able to notify other
-     *tasks
+     * the functionality of the launch monitor system, be able to notify other
+     * tasks
      * when events occur, and manage the lifecycle of the camera interface.
      */
 

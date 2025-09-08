@@ -1,14 +1,14 @@
-#include "GSTask.h"
+#include "Application/AppAgents/AgentBase/GSAgentBase.h"
 #include <sstream>
 #include <iomanip>
 #include <random>
 
 namespace PiTrac
 {
-GSTask::GSTask(const std::string &name, TaskPriority priority)
-    : task_name_(name)
-    , task_id_(generateTaskId())
-    , status_(TaskStatus::NotStarted)
+GSAgentBase::GSAgentBase(const std::string &name, AgentPriority priority)
+    : agent_name_(name)
+    , agent_id_(generateAgentId())
+    , status_(AgentStatus::NotStarted)
     , priority_(priority)
     , should_stop_(false)
     , should_pause_(false)
@@ -18,30 +18,30 @@ GSTask::GSTask(const std::string &name, TaskPriority priority)
     , errors_count_(0)
     , logger_(std::make_shared<GSLogger>(logger_level::info))
 {
-    logInfo("Task created: " + task_name_ + " [" + task_id_ + "]");
+    logInfo("Agent created: " + agent_name_ + " [" + agent_id_ + "]");
 }
 
-GSTask::~GSTask()
+GSAgentBase::~GSAgentBase()
 {
-    if (task_thread_.joinable())
+    if (agent_thread_.joinable())
     {
         stop();
-        task_thread_.join();
+        agent_thread_.join();
     }
-    logInfo("Task destroyed: " + task_name_);
+    logInfo("Agent destroyed: " + agent_name_);
 }
 
-bool GSTask::start()
+bool GSAgentBase::start()
 {
     std::lock_guard<std::mutex> lock(status_mutex_);
 
-    if (status_ == TaskStatus::Running)
+    if (status_ == AgentStatus::Running)
     {
-        logWarning("Task already running: " + task_name_);
+        logWarning("Agent already running: " + agent_name_);
         return false;
     }
 
-    if (status_ == TaskStatus::Paused)
+    if (status_ == AgentStatus::Paused)
     {
         resume();
         return true;
@@ -54,70 +54,70 @@ bool GSTask::start()
     errors_count_ = 0;
 
     try {
-        // Start task thread
-        task_thread_ = std::thread(&GSTask::taskWrapper, this);
-        logInfo("Task started: " + task_name_);
+        // Start agent thread
+        agent_thread_ = std::thread(&GSAgentBase::agentWrapper, this);
+        logInfo("Agent started: " + agent_name_);
         return true;
     } catch (const std::exception &e) {
-        logError("Failed to start task: " + std::string(e.what()));
-        changeStatus(TaskStatus::Failed);
+        logError("Failed to start agent: " + std::string(e.what()));
+        changeStatus(AgentStatus::Failed);
         return false;
     }
 }
 
-void GSTask::stop()
+void GSAgentBase::stop()
 {
     {
         std::lock_guard<std::mutex> lock(status_mutex_);
-        if (status_ == TaskStatus::NotStarted || status_ == TaskStatus::Completed ||
-            status_ == TaskStatus::Failed)
+        if (status_ == AgentStatus::NotStarted || status_ == AgentStatus::Completed ||
+            status_ == AgentStatus::Failed)
         {
             return;
         }
 
-        changeStatus(TaskStatus::Stopping);
+        changeStatus(AgentStatus::Stopping);
     }
 
     should_stop_ = true;
     should_pause_ = false;
 
-    if (task_thread_.joinable())
+    if (agent_thread_.joinable())
     {
-        task_thread_.join();
+        agent_thread_.join();
     }
 
-    logInfo("Task stopped: " + task_name_);
+    logInfo("Agent stopped: " + agent_name_);
 }
 
-void GSTask::pause()
+void GSAgentBase::pause()
 {
     std::lock_guard<std::mutex> lock(status_mutex_);
-    if (status_ == TaskStatus::Running)
+    if (status_ == AgentStatus::Running)
     {
         should_pause_ = true;
-        changeStatus(TaskStatus::Paused);
-        logInfo("Task paused: " + task_name_);
+        changeStatus(AgentStatus::Paused);
+        logInfo("Agent paused: " + agent_name_);
     }
 }
 
-void GSTask::resume()
+void GSAgentBase::resume()
 {
     std::lock_guard<std::mutex> lock(status_mutex_);
-    if (status_ == TaskStatus::Paused)
+    if (status_ == AgentStatus::Paused)
     {
         should_pause_ = false;
-        changeStatus(TaskStatus::Running);
-        logInfo("Task resumed: " + task_name_);
+        changeStatus(AgentStatus::Running);
+        logInfo("Agent resumed: " + agent_name_);
     }
 }
 
-bool GSTask::waitForCompletion(std::chrono::milliseconds timeout)
+bool GSAgentBase::waitForCompletion(std::chrono::milliseconds timeout)
 {
-    if (task_thread_.joinable())
+    if (agent_thread_.joinable())
     {
         if (timeout == std::chrono::milliseconds::max())
         {
-            task_thread_.join();
+            agent_thread_.join();
             return true;
         }
         else
@@ -134,30 +134,30 @@ bool GSTask::waitForCompletion(std::chrono::milliseconds timeout)
     return true;
 }
 
-TaskStatus GSTask::getStatus() const
+AgentStatus GSAgentBase::getStatus() const
 {
     std::lock_guard<std::mutex> lock(status_mutex_);
     return status_;
 }
 
-TaskPriority GSTask::getPriority() const
+AgentPriority GSAgentBase::getPriority() const
 {
     return priority_;
 }
 
-void GSTask::setPriority(TaskPriority priority)
+void GSAgentBase::setPriority(AgentPriority priority)
 {
     priority_ = priority;
-    logInfo("Task priority changed to: " + std::to_string(static_cast<int>(priority)));
+    logInfo("Agent priority changed to: " + std::to_string(static_cast<int>(priority)));
 }
 
-std::chrono::duration<double> GSTask::getRuntime() const
+std::chrono::duration<double> GSAgentBase::getRuntime() const
 {
-    auto end = (status_ == TaskStatus::Running) ? std::chrono::steady_clock::now() : end_time_;
+    auto end = (status_ == AgentStatus::Running) ? std::chrono::steady_clock::now() : end_time_;
     return end - start_time_;
 }
 
-double GSTask::getIterationsPerSecond() const
+double GSAgentBase::getIterationsPerSecond() const
 {
     auto runtime = getRuntime();
     if (runtime.count() > 0)
@@ -167,12 +167,12 @@ double GSTask::getIterationsPerSecond() const
     return 0.0;
 }
 
-void GSTask::setStatus(TaskStatus status)
+void GSAgentBase::setStatus(AgentStatus status)
 {
     changeStatus(status);
 }
 
-void GSTask::handlePause()
+void GSAgentBase::handlePause()
 {
     while (should_pause_.load() && !should_stop_.load())
     {
@@ -180,42 +180,42 @@ void GSTask::handlePause()
     }
 }
 
-bool GSTask::checkTimeout()
+bool GSAgentBase::checkTimeout()
 {
     if (timeout_duration_ != std::chrono::milliseconds::max())
     {
         auto elapsed = std::chrono::steady_clock::now() - start_time_;
         if (elapsed > timeout_duration_)
         {
-            logError("Task timeout exceeded: " + task_name_);
-            changeStatus(TaskStatus::Timeout);
+            logError("Agent timeout exceeded: " + agent_name_);
+            changeStatus(AgentStatus::Timeout);
             return true;
         }
     }
     return false;
 }
 
-void GSTask::logInfo(const std::string &message)
+void GSAgentBase::logInfo(const std::string &message)
 {
     if (logger_)
     {
-        logger_->info("[" + task_name_ + "] " + message);
+        logger_->info("[" + agent_name_ + "] " + message);
     }
 }
 
-void GSTask::logWarning(const std::string &message)
+void GSAgentBase::logWarning(const std::string &message)
 {
     if (logger_)
     {
-        logger_->warning("[" + task_name_ + "] " + message);
+        logger_->warning("[" + agent_name_ + "] " + message);
     }
 }
 
-void GSTask::logError(const std::string &message)
+void GSAgentBase::logError(const std::string &message)
 {
     if (logger_)
     {
-        logger_->error("[" + task_name_ + "] " + message);
+        logger_->error("[" + agent_name_ + "] " + message);
     }
 
     if (error_callback_)
@@ -224,58 +224,58 @@ void GSTask::logError(const std::string &message)
     }
 }
 
-void GSTask::taskWrapper()
+void GSAgentBase::agentWrapper()
 {
     start_time_ = std::chrono::steady_clock::now();
     is_running_ = true;
 
     try {
         // Initialize
-        changeStatus(TaskStatus::Initializing);
+        changeStatus(AgentStatus::Initializing);
         if (!initialize())
         {
-            logError("Task initialization failed");
-            changeStatus(TaskStatus::Failed);
+            logError("Agent initialization failed");
+            changeStatus(AgentStatus::Failed);
             is_running_ = false;
             return;
         }
 
-        // Execute main task
-        changeStatus(TaskStatus::Running);
+        // Execute main agent 
+        changeStatus(AgentStatus::Running);
         execute();
 
         // Normal completion
         if (!should_stop_.load())
         {
-            changeStatus(TaskStatus::Completed);
+            changeStatus(AgentStatus::Completed);
         }
     } catch (const std::exception &e) {
-        logError("Task execution failed: " + std::string(e.what()));
-        changeStatus(TaskStatus::Failed);
+        logError("Agent execution failed: " + std::string(e.what()));
+        changeStatus(AgentStatus::Failed);
     } catch (...) {
-        logError("Task execution failed with unknown exception");
-        changeStatus(TaskStatus::Failed);
+        logError("Agent execution failed with unknown exception");
+        changeStatus(AgentStatus::Failed);
     }
 
     // Cleanup
     try {
         cleanup();
     } catch (const std::exception &e) {
-        logError("Task cleanup failed: " + std::string(e.what()));
+        logError("Agent cleanup failed: " + std::string(e.what()));
     }
 
     end_time_ = std::chrono::steady_clock::now();
     is_running_ = false;
 
-    logInfo("Task execution completed. Runtime: " +
+    logInfo("Agent execution completed. Runtime: " +
             std::to_string(getRuntime().count()) + "s, " +
             "Iterations: " + std::to_string(iterations_completed_.load()) + ", " +
             "Errors: " + std::to_string(errors_count_.load()));
 }
 
-void GSTask::changeStatus(TaskStatus new_status)
+void GSAgentBase::changeStatus(AgentStatus new_status)
 {
-    TaskStatus old_status;
+    AgentStatus old_status;
     {
         std::lock_guard<std::mutex> lock(status_mutex_);
         old_status = status_;
@@ -295,7 +295,7 @@ void GSTask::changeStatus(TaskStatus new_status)
     }
 }
 
-std::string GSTask::generateTaskId()
+std::string GSAgentBase::generateAgentId()
 {
     static std::random_device rd;
     static std::mt19937 gen(rd());
@@ -305,7 +305,7 @@ std::string GSTask::generateTaskId()
     auto time_t = std::chrono::system_clock::to_time_t(now);
 
     std::stringstream ss;
-    ss << task_name_ << "_" << std::put_time(std::localtime(&time_t), "%Y%m%d_%H%M%S")
+    ss << agent_name_ << "_" << std::put_time(std::localtime(&time_t), "%Y%m%d_%H%M%S")
        << "_" << dis(gen);
 
     return ss.str();
