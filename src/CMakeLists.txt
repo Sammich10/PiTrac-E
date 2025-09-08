@@ -24,6 +24,16 @@ find_package(Boost REQUIRED
     log_setup
 )
 
+set(BOOST_LIBS
+    Boost::system
+    Boost::filesystem
+    Boost::thread
+    Boost::chrono
+    Boost::atomic
+    Boost::log
+    Boost::log_setup
+)
+
 # Define LIBAV_PRESENT if libav libraries are found
 find_library(LIBAV avcodec QUIET)
 if(LIBAV)
@@ -68,14 +78,22 @@ else()
     set(LIBCAMERA_LIBS ${LIBCAMERA_LIBRARIES})
 endif()
 
-# Find rpicam-apps
-
+# Find msgpack headers
+find_package(msgpack-cxx REQUIRED)
+if(NOT msgpack-cxx_FOUND)
+    message(FATAL_ERROR "msgpack-cxx not found. Please install msgpack-cxx or set the MSGPACK_CXX_DIR environment variable.")
+    return()
+else()
+    include_directories(${msgpack-cxx_INCLUDE_DIRS})
+    set(MSGPACK_CXX_LIBS ${msgpack-cxx_LIBRARIES})
+endif()
 
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/startapp)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Calibration)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Common)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Interfaces)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Infrastructure)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Application)
 
 option(BUILD_TESTS "Build unit tests" ON)
 

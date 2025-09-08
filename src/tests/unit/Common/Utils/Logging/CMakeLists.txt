@@ -5,18 +5,14 @@ add_executable(test_gslogger
 
 # Link against the colorsys library, gtest, and OpenCV
 target_link_libraries(test_gslogger
-    PRIVATE
-    Logging # Link to the Logging library
+    PUBLIC
+    Logging
     CVUtils
     GTest::gtest_main
+    ${OpenCV_LIBS}
+    ${BOOST_LIBS}
     Boost::log
     Boost::log_setup
-    Boost::system
-    Boost::filesystem
-    Boost::thread
-    Boost::chrono
-    Boost::atomic
-    ${OpenCV_LIBS}
 )
 
 # Register the test with CTest

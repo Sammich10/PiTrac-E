@@ -4,6 +4,7 @@
 .gitattributes
 *.unc-backup*
 *.uncrustify
+*.log
 .lesshst
 
 build

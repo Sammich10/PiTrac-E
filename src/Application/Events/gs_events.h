@@ -253,7 +253,7 @@ class Camera2ImageReceived : public GolfSimEventBase
         return "Camera2ImageReceived";
     };
 
-    const cv::Mat& GetBallFlightImage() const
+    const cv::Mat &GetBallFlightImage() const
     {
         return ball_flight_image_;
     };
@@ -278,7 +278,7 @@ class Camera2PreImageReceived : public GolfSimEventBase
         return "Camera2PreImageReceived";
     };
 
-    const cv::Mat& GetBallFlightPreImage() const
+    const cv::Mat &GetBallFlightPreImage() const
     {
         return ball_pre_image_;
     };
@@ -326,7 +326,7 @@ class Camera2Triggered : public GolfSimEventBase
         return "Camera2Triggered";
     };
 
-    const cv::Mat& GetBallFlightImage() const
+    const cv::Mat &GetBallFlightImage() const
     {
         return ball_flight_image_;
     };

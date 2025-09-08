@@ -84,7 +84,7 @@ class GSCameraInterface
 
     virtual ~GSCameraInterface() = default;
 
-/** Pure virtual methods to be implemented by derived classes **/
+    /** Pure virtual methods to be implemented by derived classes **/
     virtual bool openCamera(int cameraIndex) = 0;
     virtual bool initializeCamera() = 0;
     virtual void closeCamera() = 0;
@@ -97,7 +97,7 @@ class GSCameraInterface
     virtual bool switchStream(StreamType newStream) = 0;
     virtual std::string toString() const = 0;
 
-/** Accessor methods **/
+    /** Accessor methods **/
     int getResolutionX() const
     {
         return resolutionX_;
@@ -168,12 +168,22 @@ class GSCameraInterface
         return isCameraOpen_;
     }
 
+    bool isCameraConfigured() const
+    {
+        return isConfigured_;
+    }
+
+    bool isCameraCapturing() const
+    {
+        return isCapturing_;
+    }
+
     bool isUsingCalibrationMatrix() const
     {
         return useCalibrationMatrix_;
     }
 
-/** Mutator methods **/
+    /** Mutator methods **/
     void setResolution
     (
         int resX, int resY

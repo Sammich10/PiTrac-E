@@ -48,10 +48,18 @@ enum class logger_level
 class GSLogger
 {
   public:
-    explicit GSLogger
+
+    static std::shared_ptr<GSLogger> getInstance();
+
+    GSLogger
     (
-        const logger_level logLevel = logger_level::info
-    );
+        const GSLogger &
+    ) = delete;
+
+    GSLogger &operator=
+    (
+        const GSLogger &
+    ) = delete;
 
     ~GSLogger
     (
@@ -125,6 +133,10 @@ class GSLogger
     void setLogLevel(logger_level level);
 
   private:
+    explicit GSLogger
+    (
+        const logger_level logLevel = logger_level::info
+    );
     void Init();
     std::string formatMessage(const char *format, va_list args);
     void logMessage(boost::log::trivial::severity_level severity, const std::string &message);
@@ -138,6 +150,9 @@ class GSLogger
     boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> >
     consoleSink_;
     boost::log::sources::severity_logger<boost::log::trivial::severity_level> logger_;
+
+    static std::shared_ptr<GSLogger> instance_;
+    static std::mutex instance_mutex_;
 };
 }
 

@@ -1,5 +1,4 @@
 #include "Interfaces/Camera/GSCameraBase/GSCameraBase.h"
-#include "Common/Utils/Logging/GSLogger.h"
 #include <iostream>
 #include <fstream>
 #include <thread>
@@ -15,17 +14,17 @@ bool GSCameraBase::openCamera(int cameraIndex)
 {
     if(isCameraOpen_)
     {
-        std::cerr << "Camera already open" << std::endl;
+        logger_->error("Camera already open");
         return true;
     }
-    std::cout << "Opening IMX296 camera at index " << cameraIndex << std::endl;
+    logger_->info("Opening IMX296 camera at index " + std::to_string(cameraIndex));
     try {
         // Initialize camera manager
         cameraManager_ = std::make_unique<libcamera::CameraManager>();
         int ret = cameraManager_->start();
         if (ret)
         {
-            std::cerr << "Failed to start camera manager" << std::endl;
+            logger_->error("Failed to start camera manager");
             return false;
         }
 
@@ -33,14 +32,14 @@ bool GSCameraBase::openCamera(int cameraIndex)
         auto cameras = cameraManager_->cameras();
         if (cameras.empty())
         {
-            std::cerr << "No cameras found" << std::endl;
+            logger_->error("No cameras found");
             return false;
         }
 
         // Find IMX296 camera (or use the specified index)
         if (cameraIndex >= cameras.size())
         {
-            std::cerr << "Camera index " << cameraIndex << " out of range" << std::endl;
+            logger_->error("Camera index " + std::to_string(cameraIndex) + " out of range");
             return false;
         }
 
@@ -54,7 +53,7 @@ bool GSCameraBase::openCamera(int cameraIndex)
         ret = camera_->acquire();
         if (ret)
         {
-            std::cerr << "Failed to acquire camera" << std::endl;
+            logger_->error("Failed to acquire camera");
             return false;
         }
 
@@ -62,7 +61,7 @@ bool GSCameraBase::openCamera(int cameraIndex)
 
         return isCameraOpen_;
     } catch (const std::exception &e) {
-        std::cerr << "Exception in openCamera: " << e.what() << std::endl;
+        logger_->error("Exception in openCamera: " + std::string(e.what()));
         return false;
     }
 }
@@ -71,19 +70,19 @@ bool GSCameraBase::initializeCamera()
 {
     if (!isCameraOpen_)
     {
-        std::cerr << "Camera not open, cannot initialize" << std::endl;
+        logger_->error("Camera not open, cannot initialize");
         return false;
     }
 
     if (!configureCamera())
     {
-        std::cerr << "Failed to configure camera during initialization" << std::endl;
+        logger_->error("Failed to configure camera during initialization");
         return false;
     }
 
     if (!configureTriggerMode(triggerMode_))
     {
-        std::cerr << "Failed to configure trigger mode" << std::endl;
+        logger_->error("Failed to configure trigger mode");
         return false;
     }
 
@@ -148,7 +147,7 @@ cv::Mat GSCameraBase::captureFrame()
         // Original free-running implementation
         if (!isCameraOpen_ || !isConfigured_)
         {
-            std::cerr << "Camera not open or configured" << std::endl;
+            logger_->error("Camera not open or configured");
             return cv::Mat();
         }
 
@@ -158,7 +157,7 @@ cv::Mat GSCameraBase::captureFrame()
                 int ret = camera_->start();
                 if (ret)
                 {
-                    std::cerr << "Failed to start camera" << std::endl;
+                    logger_->error("Failed to start camera");
                     return cv::Mat();
                 }
                 cameraStarted_ = true;
@@ -181,12 +180,12 @@ cv::Mat GSCameraBase::captureFrame()
             }
             else
             {
-                std::cerr << "Timeout waiting for frame in captureFrame()" << std::endl;
+                logger_->error("Timeout waiting for frame in captureFrame()");
             }
 
             return cv::Mat();
         } catch (const std::exception &e) {
-            std::cerr << "Exception in captureFrame: " << e.what() << std::endl;
+            logger_->error("Exception in captureFrame: " + std::string(e.what()));
             return cv::Mat();
         }
     }
@@ -201,7 +200,7 @@ bool GSCameraBase::setTriggerMode(TriggerMode mode)
 {
     if (isCapturing_)
     {
-        std::cerr << "Cannot change trigger mode while capturing" << std::endl;
+        logger_->error("Cannot change trigger mode while capturing");
         return false;
     }
 
@@ -219,7 +218,7 @@ bool GSCameraBase::startContinuousCapture()
 {
     if (!isCameraOpen_ || !isConfigured_)
     {
-        std::cerr << "Camera not open or configured" << std::endl;
+        logger_->error("Camera not open or configured");
         return false;
     }
 
@@ -235,7 +234,7 @@ bool GSCameraBase::startContinuousCapture()
             int ret = camera_->start();
             if (ret)
             {
-                std::cerr << "Failed to start camera" << std::endl;
+                logger_->error("Failed to start camera");
                 return false;
             }
             cameraStarted_ = true;
@@ -250,7 +249,7 @@ bool GSCameraBase::startContinuousCapture()
         isCapturing_ = true;
         return true;
     } catch (const std::exception &e) {
-        std::cerr << "Exception in startContinuousCapture: " << e.what() << std::endl;
+        logger_->error("Exception in startContinuousCapture: " + std::string(e.what()));
         return false;
     }
 }
@@ -275,15 +274,15 @@ bool GSCameraBase::switchStream(StreamType newStream)
         return true; // Already using this stream
     }
 
-    std::cout << "Switching from stream " << static_cast<int>(activeStream_)
-              << " to stream " << static_cast<int>(newStream) << std::endl;
+    logger_->info("Switching from stream " + std::to_string(static_cast<int>(activeStream_))
+                  + " to stream " + std::to_string(static_cast<int>(newStream)));
 
     bool wasCapturing = isCapturing_;
 
     // Step 1: Completely stop capture and camera
     if (wasCapturing)
     {
-        std::cout << "Stopping continuous capture..." << std::endl;
+        logger_->info("Stopping continuous capture...");
         isCapturing_ = false;
 
         // Wait for pending requests to complete
@@ -295,11 +294,11 @@ bool GSCameraBase::switchStream(StreamType newStream)
         int ret = camera_->stop();
         if (ret)
         {
-            std::cerr << "Failed to stop camera: " << ret << std::endl;
+            logger_->error("Failed to stop camera: " + std::to_string(ret));
             return false;
         }
         cameraStarted_ = false;
-        std::cout << "Camera stopped for stream switch" << std::endl;
+        logger_->info("Camera stopped for stream switch");
     }
 
     // Step 2: Disconnect callback and clear requests
@@ -317,7 +316,7 @@ bool GSCameraBase::switchStream(StreamType newStream)
             if (!buffers.empty())
             {
                 allocator_->free(stream);
-                std::cout << "Freed buffers for stream " << i << std::endl;
+                logger_->info("Freed buffers for stream " + std::to_string(i));
             }
         }
         allocator_.reset();
@@ -329,16 +328,17 @@ bool GSCameraBase::switchStream(StreamType newStream)
     // Step 5: Create new single-stream configuration for the active stream
     if (!reconfigureForActiveStream())
     {
-        std::cerr << "Failed to reconfigure for active stream" << std::endl;
+        logger_->error("Failed to reconfigure for active stream");
         return false;
     }
 
-    std::cout << "Successfully switched to stream " << static_cast<int>(activeStream_) << std::endl;
+    logger_->info("Successfully switched to stream " +
+                  std::to_string(static_cast<int>(activeStream_)));
 
     // Step 6: Resume capture if it was running
     if (wasCapturing)
     {
-        std::cout << "Restarting capture for new stream..." << std::endl;
+        logger_->info("Restarting capture for new stream...");
         return startContinuousCapture();
     }
 
@@ -415,20 +415,20 @@ bool GSCameraBase::allocateBuffersForStream(libcamera::Stream *stream)
 {
     if (!allocator_)
     {
-        std::cerr << "Allocator not initialized" << std::endl;
+        logger_->error("Allocator not initialized");
         return false;
     }
 
     int ret = allocator_->allocate(stream);
     if (ret < 0)
     {
-        std::cerr << "Failed to allocate buffers for stream" << std::endl;
+        logger_->error("Failed to allocate buffers for stream");
         return false;
     }
 
     size_t allocated = allocator_->buffers(stream).size();
-    std::cout << "Allocated " << allocated << " buffers for stream " <<
-        static_cast<int>(activeStream_) << std::endl;
+    logger_->info("Allocated " + std::to_string(allocated) + " buffers for stream " +
+                  std::to_string(static_cast<int>(activeStream_)));
 
     // Clear any existing requests
     requests_.clear();
@@ -440,14 +440,14 @@ bool GSCameraBase::allocateBuffersForStream(libcamera::Stream *stream)
         std::unique_ptr<libcamera::Request> request = camera_->createRequest();
         if (!request)
         {
-            std::cerr << "Failed to create request" << std::endl;
+            logger_->error("Failed to create request");
             return false;
         }
 
         ret = request->addBuffer(stream, buffers[i].get());
         if (ret < 0)
         {
-            std::cerr << "Failed to add buffer to request" << std::endl;
+            logger_->error("Failed to add buffer to request");
             return false;
         }
 
@@ -474,7 +474,7 @@ bool GSCameraBase::configureTriggerMode(const TriggerMode &mode)
 
     if (mode == TriggerMode::EXTERNAL_TRIGGER)
     {
-        std::cout << "GSCameraBase does not support external trigger mode" << std::endl;
+        logger_->error("GSCameraBase does not support external trigger mode");
         return false;
     }
     else
@@ -503,7 +503,7 @@ cv::Mat GSCameraBase::convertBufferToMat(libcamera::FrameBuffer *buffer)
 
     if (data == MAP_FAILED)
     {
-        std::cerr << "Failed to map buffer" << std::endl;
+        logger_->error("Failed to map buffer");
         return cv::Mat();
     }
 
@@ -524,8 +524,7 @@ cv::Mat GSCameraBase::convertBufferToMat(libcamera::FrameBuffer *buffer)
     }
     else
     {
-        std::cerr << "Unsupported pixel format: " << streamConfig.pixelFormat.toString() <<
-            std::endl;
+        logger_->error("Unsupported pixel format: " + streamConfig.pixelFormat.toString());
     }
 
     munmap(data, plane.length);
@@ -555,8 +554,8 @@ void GSCameraBase::requestComplete(libcamera::Request *request)
         libcamera::FrameBuffer *buffer = request->findBuffer(config_->at(0).stream());
         if (buffer)
         {
-            std::cout << "Received frame from stream " << static_cast<int>(activeStream_) <<
-                std::endl;
+            // logger_->info("Received frame from stream " +
+            // std::to_string(static_cast<int>(activeStream_)));
 
             cv::Mat frame = convertBufferToMat(buffer);
 
@@ -576,7 +575,7 @@ void GSCameraBase::requestComplete(libcamera::Request *request)
         }
         else
         {
-            std::cerr << "Failed to find buffer for completed request" << std::endl;
+            logger_->error("Failed to find buffer for completed request");
         }
 
         if (isCapturing_)
@@ -587,7 +586,7 @@ void GSCameraBase::requestComplete(libcamera::Request *request)
     }
     else
     {
-        std::cerr << "Request completed with error status: " << request->status() << std::endl;
+        logger_->error("Request completed with error status: " + std::to_string(request->status()));
     }
 }
 
@@ -654,7 +653,7 @@ bool GSCameraBase::reconfigureForActiveStream()
             role = libcamera::StreamRole::Raw;
             break;
         default:
-            std::cerr << "Invalid stream type" << std::endl;
+            logger_->error("Invalid stream type");
             return false;
     }
 
@@ -662,8 +661,8 @@ bool GSCameraBase::reconfigureForActiveStream()
     config_ = camera_->generateConfiguration({role});
     if (!config_)
     {
-        std::cerr << "Failed to generate configuration for stream " <<
-            static_cast<int>(activeStream_) << std::endl;
+        logger_->error("Failed to generate configuration for stream " +
+                       std::to_string(static_cast<int>(activeStream_)));
         return false;
     }
 
@@ -694,7 +693,7 @@ bool GSCameraBase::reconfigureForActiveStream()
     libcamera::CameraConfiguration::Status validation = config_->validate();
     if (validation == libcamera::CameraConfiguration::Invalid)
     {
-        std::cerr << "Stream configuration invalid" << std::endl;
+        logger_->error("Stream configuration invalid");
         return false;
     }
 
@@ -702,20 +701,21 @@ bool GSCameraBase::reconfigureForActiveStream()
     int ret = camera_->configure(config_.get());
     if (ret)
     {
-        std::cerr << "Failed to configure camera for stream " << static_cast<int>(activeStream_) <<
-            std::endl;
+        logger_->error("Failed to configure camera for stream " +
+                       std::to_string(static_cast<int>(activeStream_)));
         return false;
     }
 
-    std::cout << "Configured stream " << static_cast<int>(activeStream_) << ": "
-              << streamConfig.size.width << "x" << streamConfig.size.height
-              << "-" << streamConfig.pixelFormat.toString() << std::endl;
+    logger_->info("Configured stream " + std::to_string(static_cast<int>(activeStream_)) + ": "
+                  + std::to_string(streamConfig.size.width) + "x" +
+                  std::to_string(streamConfig.size.height)
+                  + "-" + streamConfig.pixelFormat.toString());
 
     // Create new allocator
     allocator_ = std::make_unique<libcamera::FrameBufferAllocator>(camera_);
     if (!allocator_)
     {
-        std::cerr << "Failed to create frame buffer allocator" << std::endl;
+        logger_->error("Failed to create frame buffer allocator");
         return false;
     }
 
@@ -723,7 +723,7 @@ bool GSCameraBase::reconfigureForActiveStream()
     // stream)
     if (!allocateBuffersForStream(config_->at(0).stream()))
     {
-        std::cerr << "Failed to allocate buffers for active stream" << std::endl;
+        logger_->error("Failed to allocate buffers for active stream");
         return false;
     }
 
