@@ -59,34 +59,44 @@ class GSAgentTask : public GSTaskBase
     // Default implementation of processMain for agent tasks
     void processMain() override;
     // Default implementation of setupProcess for agent tasks
-    bool setupProcess() override {return true;} 
+    bool setupProcess() override
+    {
+        return true;
+    }
+
     // Default implementation of cleanupProcess for agent tasks
-    void cleanupProcess() override {} 
+    void cleanupProcess() override
+    {
+    }
 
     // Hook methods for agent-specific customization
     virtual bool preAgentStartHook()
     {
         return true;
     }                                                     // Called before
-                                                          // starting agents
+
+    // starting agents
 
     virtual void postAgentStartHook()
     {
     }                                                     // Called after agents
-                                                          // started
+
+    // started
 
     virtual void onAgentFailedHook(std::shared_ptr<GSAgentBase> agent)
     {
     }                                                                      // Called
-                                                                           // when
-                                                                           // agent
-                                                                           // fails
+
+    // when
+    // agent
+    // fails
 
     virtual void agentMonitoringLoopHook()
     {
     }                                                     // Called in each
-                                                          // monitoring loop
-                                                          // iteration
+
+    // monitoring loop
+    // iteration
 
     // Override base hooks to include agent configuration
     bool preStartHook() override;

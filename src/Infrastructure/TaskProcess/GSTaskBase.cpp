@@ -9,7 +9,6 @@
 
 namespace PiTrac
 {
-
 GSTaskBase::GSTaskBase(const std::string &name)
     : task_name_(name)
     , task_id_(generateTaskId())
@@ -31,7 +30,6 @@ GSTaskBase::~GSTaskBase()
 
 bool GSTaskBase::start()
 {
-    
     if (status_ == TaskStatus::Running)
     {
         logWarning("Task already running: " + task_name_);
@@ -48,7 +46,7 @@ bool GSTaskBase::start()
         changeStatus(TaskStatus::Failed);
         return false;
     }
-    
+
     start_time_ = std::chrono::steady_clock::now();
     processEntryPoint();
 
@@ -107,7 +105,8 @@ void GSTaskBase::processEntryPoint()
         // Run main loop
         processMain();
     } catch (const std::exception &e) {
-        logError("Exception in process main for task: " + task_name_ + " - " + std::string(e.what()));
+        logError("Exception in process main for task: " + task_name_ + " - " +
+                 std::string(e.what()));
         exit(1);
     } catch (...) {
         logError("Unknown exception in process main for task: " + task_name_);
@@ -124,9 +123,9 @@ void GSTaskBase::processEntryPoint()
 void GSTaskBase::changeStatus(TaskStatus new_status)
 {
     TaskStatus old_status = status_;
-    
+
     old_status = status_;
-    
+
     if (status_change_callback_)
     {
         status_change_callback_(new_status);
@@ -135,7 +134,8 @@ void GSTaskBase::changeStatus(TaskStatus new_status)
     if (old_status != new_status)
     {
         status_ = new_status;
-        logger_->info("[" + task_name_ + "] Task status changed: " + std::to_string(static_cast<int>(old_status)) +
+        logger_->info("[" + task_name_ + "] Task status changed: " +
+                      std::to_string(static_cast<int>(old_status)) +
                       " -> " + std::to_string(static_cast<int>(new_status)));
     }
 }

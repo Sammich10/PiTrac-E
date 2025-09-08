@@ -72,13 +72,13 @@ void GSAgentBase::stop()
         logger_->info("Agent already in terminal state: " + agent_name_);
         return;
     }
-    
+
     should_stop_ = true;
     should_pause_ = false;
-    
+
     logger_->info("Changing agent status to Stopping: " + agent_name_);
     changeStatus(AgentStatus::Stopping);
-    
+
     if (agent_thread_.joinable())
     {
         logger_->info("Joining agent execution thread for: " + agent_name_);

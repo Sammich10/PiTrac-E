@@ -102,23 +102,27 @@ class GSManagerTask : public GSTaskBase
     {
         return true;
     }                                                     // Called before
-                                                          // starting manager
+
+    // starting manager
 
     virtual void postManagerStartHook()
     {
     }                                                     // Called after
-                                                          // manager started
+
+    // manager started
 
     virtual void onManagerFailedHook()
     {
     }                                                     // Called when manager
-                                                          // fails
+
+    // fails
 
     virtual void managerMonitoringLoopHook()
     {
     }                                                     // Called in each
-                                                          // monitoring loop
-                                                          // iteration
+
+    // monitoring loop
+    // iteration
 
     // Override base hooks to include manager configuration
     bool preStartHook() override;

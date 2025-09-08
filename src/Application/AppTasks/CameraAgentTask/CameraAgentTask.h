@@ -8,32 +8,29 @@
 
 namespace PiTrac
 {
-
 class CameraAgentTask : public GSAgentTask
 {
-public:
+  public:
 
-CameraAgentTask();
-~CameraAgentTask() override = default;
+    CameraAgentTask();
+    ~CameraAgentTask() override = default;
 
-void configureAgents() override;
+    void configureAgents() override;
 
-protected:
+  protected:
 
-bool preAgentStartHook() override;
-void postAgentStartHook() override;
-void onAgentFailedHook(std::shared_ptr<GSAgentBase> agent) override;
-void agentMonitoringLoopHook() override;
-bool setupProcess() override;
-void preStopHook() override;
+    bool preAgentStartHook() override;
+    void postAgentStartHook() override;
+    void onAgentFailedHook(std::shared_ptr<GSAgentBase> agent) override;
+    void agentMonitoringLoopHook() override;
+    bool setupProcess() override;
+    void preStopHook() override;
 
-private:
+  private:
 
-std::array<std::shared_ptr<CameraAgent>, 2> camera_agents_;
-std::shared_ptr<GSLogger> logger_;
-
+    std::array<std::shared_ptr<CameraAgent>, 2> camera_agents_;
+    std::shared_ptr<GSLogger> logger_;
 }; // class CameraAgentTask
-
 } // namespace PiTrac
 
 #endif // CAMERA_AGENT_TASK_H

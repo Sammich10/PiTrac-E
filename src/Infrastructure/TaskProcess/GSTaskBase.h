@@ -53,10 +53,10 @@ class GSTaskBase
 
     // Pure virtual methods for task-specific behavior
     virtual bool setupProcess() = 0;      // Called in child process before
-                                               // task start
+    // task start
     virtual void processMain() = 0;       // Main loop for child process
     virtual void cleanupProcess() = 0;    // Called in child process on
-                                               // shutdown
+    // shutdown
 
     // Task lifecycle (can be overridden but has default implementation)
     virtual bool start();
@@ -116,7 +116,8 @@ class GSTaskBase
     virtual void postStartHook()
     {
     }                                                 // Called after successful
-                                                      // fork
+
+    // fork
 
     virtual void preStopHook()
     {

@@ -10,9 +10,9 @@ class CameraAgentFactory
   public:
     static std::shared_ptr<CameraAgent> createCameraAgent
     (
-      std::unique_ptr<GSCameraInterface> camera,
-      const std::string &id,
-      const std::string &endpoint
+        std::unique_ptr<GSCameraInterface> camera,
+        const std::string &id,
+        const std::string &endpoint
     )
     {
         return std::make_shared<CameraAgent>(std::move(camera), id, endpoint);

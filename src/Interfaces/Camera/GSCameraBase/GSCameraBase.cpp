@@ -275,7 +275,7 @@ bool GSCameraBase::switchStream(StreamType newStream)
     }
 
     logger_->info("Switching from stream " + std::to_string(static_cast<int>(activeStream_))
-              + " to stream " + std::to_string(static_cast<int>(newStream)));
+                  + " to stream " + std::to_string(static_cast<int>(newStream)));
 
     bool wasCapturing = isCapturing_;
 
@@ -332,7 +332,8 @@ bool GSCameraBase::switchStream(StreamType newStream)
         return false;
     }
 
-    logger_->info("Successfully switched to stream " + std::to_string(static_cast<int>(activeStream_)));
+    logger_->info("Successfully switched to stream " +
+                  std::to_string(static_cast<int>(activeStream_)));
 
     // Step 6: Resume capture if it was running
     if (wasCapturing)
@@ -553,7 +554,8 @@ void GSCameraBase::requestComplete(libcamera::Request *request)
         libcamera::FrameBuffer *buffer = request->findBuffer(config_->at(0).stream());
         if (buffer)
         {
-            // logger_->info("Received frame from stream " + std::to_string(static_cast<int>(activeStream_)));
+            // logger_->info("Received frame from stream " +
+            // std::to_string(static_cast<int>(activeStream_)));
 
             cv::Mat frame = convertBufferToMat(buffer);
 
@@ -660,7 +662,7 @@ bool GSCameraBase::reconfigureForActiveStream()
     if (!config_)
     {
         logger_->error("Failed to generate configuration for stream " +
-                      std::to_string(static_cast<int>(activeStream_)));
+                       std::to_string(static_cast<int>(activeStream_)));
         return false;
     }
 
@@ -700,13 +702,14 @@ bool GSCameraBase::reconfigureForActiveStream()
     if (ret)
     {
         logger_->error("Failed to configure camera for stream " +
-                      std::to_string(static_cast<int>(activeStream_)));
+                       std::to_string(static_cast<int>(activeStream_)));
         return false;
     }
 
     logger_->info("Configured stream " + std::to_string(static_cast<int>(activeStream_)) + ": "
-              + std::to_string(streamConfig.size.width) + "x" + std::to_string(streamConfig.size.height)
-              + "-" + streamConfig.pixelFormat.toString());
+                  + std::to_string(streamConfig.size.width) + "x" +
+                  std::to_string(streamConfig.size.height)
+                  + "-" + streamConfig.pixelFormat.toString());
 
     // Create new allocator
     allocator_ = std::make_unique<libcamera::FrameBufferAllocator>(camera_);

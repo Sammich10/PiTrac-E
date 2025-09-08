@@ -9,7 +9,7 @@
 
 // Global flag for graceful shutdown
 std::atomic<bool> g_shutdown_requested(false);
-PiTrac::CameraAgentTask* g_camera_task = nullptr;
+PiTrac::CameraAgentTask *g_camera_task = nullptr;
 std::shared_ptr<PiTrac::GSLogger> logger = PiTrac::GSLogger::getInstance();
 
 void signalHandler(int signal)
@@ -25,24 +25,25 @@ void signalHandler(int signal)
     }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
     try {
         logger->info("Starting Camera Agent Task Launcher");
-        
+
         // Create and start the camera agent task
         PiTrac::CameraAgentTask camera_agent_task;
         g_camera_task = &camera_agent_task;
 
-        if (!camera_agent_task.start()) {
+        if (!camera_agent_task.start())
+        {
             logger->error("Failed to start camera agent task");
             return EXIT_FAILURE;
         }
 
-        logger->info("Camera Agent Task started successfully");   
-    
-    } catch (const std::exception& e) {
+        logger->info("Camera Agent Task started successfully");
+    } catch (const std::exception &e) {
         logger->error("Exception occurred in Camera Agent Task Launcher: " + std::string(e.what()));
         return EXIT_FAILURE;
     }

@@ -56,7 +56,7 @@ class GSLogger
         const GSLogger &
     ) = delete;
 
-    GSLogger& operator=
+    GSLogger &operator=
     (
         const GSLogger &
     ) = delete;

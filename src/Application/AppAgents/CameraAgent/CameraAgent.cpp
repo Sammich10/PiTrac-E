@@ -48,7 +48,7 @@ bool CameraAgent::initialize()
     try {
         publisher_->bind(endpoint_);
         subscriber_->connect(endpoint_);
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
         logger_->error("ZMQ initialization failed: " + std::string(e.what()));
         return false;
     }
@@ -85,7 +85,8 @@ void CameraAgent::captureLoop()
         GSCameraFrameRawMessage message(camera_id_, frame, frame_counter_++);
         publisher_->sendMessage(message, "CameraFrameRaw");
         // logger_->info("Published frame number " + std::to_string(
-        //                   frame_counter_ - 1) + " from CameraAgent with ID: " + camera_id_);
+        //                   frame_counter_ - 1) + " from CameraAgent with ID: "
+        // + camera_id_);
     }
 
     logger_->info("CameraAgent capture loop exiting for camera ID: " + camera_id_);

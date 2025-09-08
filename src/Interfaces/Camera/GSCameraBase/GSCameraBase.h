@@ -29,7 +29,7 @@ class GSCameraBase : public GSCameraInterface
                  float focalLength,
                  TriggerMode mode = TriggerMode::FREE_RUNNING)
         : GSCameraInterface(width, height, focalLength, mode),
-          logger_(GSLogger::getInstance())
+        logger_(GSLogger::getInstance())
     {
     }
 
@@ -282,7 +282,6 @@ class GSCameraBase : public GSCameraInterface
     cv::Mat unpack10BitBayer(void *data, int width, int height, size_t stride);
 
     std::shared_ptr<GSLogger> logger_;
-
 }; // class GSCameraBase
 } // namespace PiTrac
 

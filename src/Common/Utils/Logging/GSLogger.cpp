@@ -18,20 +18,21 @@
 #include <climits>
 namespace PiTrac
 {
-
 std::shared_ptr<GSLogger> GSLogger::instance_ = nullptr;
 std::mutex GSLogger::instance_mutex_;
 
 std::shared_ptr<GSLogger> GSLogger::getInstance()
 {
     std::lock_guard<std::mutex> lock(instance_mutex_);
-    
-    if (instance_ == nullptr) {
+
+    if (instance_ == nullptr)
+    {
         // Create instance using private constructor
-        // Note: We need to use a workaround since make_shared can't access private constructor
+        // Note: We need to use a workaround since make_shared can't access
+        // private constructor
         instance_ = std::shared_ptr<GSLogger>(new GSLogger(logger_level::info));
     }
-    
+
     return instance_;
 }
 
