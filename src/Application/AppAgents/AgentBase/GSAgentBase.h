@@ -159,6 +159,31 @@ class GSAgentBase
     void handlePause();
     bool checkTimeout();
 
+    static std::string agentStatusToString(const AgentStatus &status)
+    {
+        switch (status)
+        {
+            case AgentStatus::NotStarted:
+                return "NotStarted";
+            case AgentStatus::Initializing:
+                return "Initializing";
+            case AgentStatus::Running:
+                return "Running";
+            case AgentStatus::Paused:
+                return "Paused";
+            case AgentStatus::Stopping:
+                return "Stopping";
+            case AgentStatus::Completed:
+                return "Completed";
+            case AgentStatus::Failed:
+                return "Failed";
+            case AgentStatus::Timeout:
+                return "Timeout";
+            default:
+                return "Unknown";
+        }
+    }
+
   private:
     void agentWrapper();
     void changeStatus(AgentStatus new_status);

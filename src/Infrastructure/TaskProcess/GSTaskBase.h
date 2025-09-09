@@ -48,7 +48,10 @@ class GSTaskBase
     std::function<void(pid_t, int)> process_exit_callback_;
 
   public:
-    GSTaskBase(const std::string &name);
+    GSTaskBase
+    (
+        const std::string &name
+    );
     virtual ~GSTaskBase();
 
     // Pure virtual methods for task-specific behavior
@@ -94,38 +97,165 @@ class GSTaskBase
         process_exit_callback_ = callback;
     }
 
-    // Utility methods for derived classes
-    void logInfo(const std::string &message);
-    void logWarning(const std::string &message);
-    void logError(const std::string &message);
-
   protected:
-    // Internal methods available to derived classes
-    void changeStatus(TaskStatus new_status);
-    std::string generateTaskId();
 
-    // Process entry point
-    void processEntryPoint();
+    /**
+     * @brief Logs an informational message.
+     *
+     * This function records the provided message as an informational log entry.
+     *
+     * @param message The message to be logged.
+     */
+    void logInfo
+    (
+        const std::string &message
+    );
 
-    // Hook methods that derived classes can override
-    virtual bool preStartHook()
+    /**
+     * @brief Logs a warning message.
+     *
+     * This function records a warning message, typically used to indicate
+     * non-critical issues or unexpected behavior that does not prevent
+     * program execution.
+     *
+     * @param message The warning message to be logged.
+     */
+    void logWarning
+    (
+        const std::string &message
+    );
+
+    /**
+     * @brief Logs an error message.
+     *
+     * This function records the provided error message for diagnostic or
+     * debugging purposes.
+     *
+     * @param message The error message to be logged.
+     */
+    void logError
+    (
+        const std::string &message
+    );
+
+    /**
+     * @brief Changes the status of the task to the specified new status.
+     *
+     * This method updates the current status of the task. It may trigger
+     * additional actions or notifications depending on the implementation.
+     *
+     * @param new_status The new status to set for the task.
+     */
+    void changeStatus
+    (
+        TaskStatus new_status
+    );
+
+    /**
+     * @brief Generates a unique identifier for a task.
+     *
+     * @return std::string A unique task identifier.
+     */
+    std::string generateTaskId
+    (
+        void
+    );
+
+    /**
+     * @brief Entry point for processing tasks.
+     *
+     * This method serves as the main entry point for executing the task's
+     * processing logic.
+     * Override this function in derived classes to implement specific task
+     * behavior.
+     */
+    void processEntryPoint
+    (
+        void
+    );
+
+    /**
+     * @brief Hook method called before the process is forked.
+     *
+     * This virtual function can be overridden to perform any setup or checks
+     * required before the process starts. Returning false will prevent the
+     * process
+     * from starting.
+     *
+     * @return true if the process can proceed to start; false otherwise.
+     */
+    virtual bool preStartHook
+    (
+        void
+    )
     {
         return true;
-    }                                                 // Called before fork
+    }
 
-    virtual void postStartHook()
+    /**
+     * @brief Hook method called before the task is stopped.
+     *
+     * This virtual function can be overridden by derived classes to implement
+     * custom behavior that should occur immediately before the task stops.
+     * The default implementation does nothing and returns true.
+     *
+     * @return true if the pre-stop actions were successful; false otherwise.
+     */
+    virtual void preStopHook
+    (
+        void
+    )
     {
-    }                                                 // Called after successful
+        return true;
+    }
 
-    // fork
-
-    virtual void preStopHook()
+    /**
+     * @brief Hook method called after the task has started.
+     *
+     * This virtual function can be overridden by derived classes to implement
+     * custom behavior that should occur immediately after the task starts.
+     * The default implementation does nothing.
+     */
+    virtual void postStopHook
+    (
+        void
+    )
     {
-    }                                                 // Called before stop
+    }
 
-    virtual void postStopHook()
+    /**
+     * @brief Converts a TaskStatus enum value to its corresponding string
+     * representation.
+     *
+     * @param status The TaskStatus value to convert.
+     * @return A string representing the given TaskStatus value. Returns
+     *"Unknown" if the status is not recognized.
+     */
+    static std::string taskStatusToString
+    (
+        const TaskStatus &status
+    )
     {
-    }                                                 // Called after stop
+        switch (status)
+        {
+            case TaskStatus::NotStarted:
+                return "NotStarted";
+            case TaskStatus::Starting:
+                return "Starting";
+            case TaskStatus::Running:
+                return "Running";
+            case TaskStatus::Stopping:
+                return "Stopping";
+            case TaskStatus::Stopped:
+                return "Stopped";
+            case TaskStatus::Failed:
+                return "Failed";
+            case TaskStatus::Crashed:
+                return "Crashed";
+            default:
+                return "Unknown";
+        }
+    }
 };
 } // namespace PiTrac
 

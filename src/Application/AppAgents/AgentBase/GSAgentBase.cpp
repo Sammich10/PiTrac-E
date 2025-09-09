@@ -283,8 +283,8 @@ void GSAgentBase::changeStatus(AgentStatus new_status)
     // Log status changes
     if (old_status != new_status)
     {
-        logInfo("Agent status changed: " + std::to_string(static_cast<int>(old_status)) +
-                " -> " + std::to_string(static_cast<int>(new_status)));
+        logInfo("Agent status changed: " + agentStatusToString(old_status) +
+                " -> " + agentStatusToString(new_status));
     }
 }
 

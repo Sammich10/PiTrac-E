@@ -135,8 +135,8 @@ void GSTaskBase::changeStatus(TaskStatus new_status)
     {
         status_ = new_status;
         logger_->info("[" + task_name_ + "] Task status changed: " +
-                      std::to_string(static_cast<int>(old_status)) +
-                      " -> " + std::to_string(static_cast<int>(new_status)));
+                      taskStatusToString(old_status) +
+                      " -> " + taskStatusToString(new_status));
     }
 }
 
