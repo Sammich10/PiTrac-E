@@ -24,11 +24,8 @@ class GSCameraBase : public GSCameraInterface
      * @param[in] mode          Trigger mode for image acquisition (default:
      * FREE_RUNNING).
      */
-    GSCameraBase(int width,
-                 int height,
-                 float focalLength,
-                 TriggerMode mode = TriggerMode::FREE_RUNNING)
-        : GSCameraInterface(width, height, focalLength, mode),
+    GSCameraBase(const uint32_t &cameraIndex)
+        : GSCameraInterface(cameraIndex),
         logger_(GSLogger::getInstance())
     {
     }
@@ -49,10 +46,7 @@ class GSCameraBase : public GSCameraInterface
      * @param[in] cameraIndex Index of the camera to open.
      * @return True if the camera was opened successfully, false otherwise.
      */
-    bool openCamera
-    (
-        int cameraIndex
-    ) override;
+    bool openCamera() override;
 
     /**
      * @brief Initializes the camera after it has been opened.

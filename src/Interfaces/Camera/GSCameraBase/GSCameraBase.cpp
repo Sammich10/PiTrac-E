@@ -10,14 +10,14 @@ GSCameraBase::~GSCameraBase()
     closeCamera();
 }
 
-bool GSCameraBase::openCamera(int cameraIndex)
+bool GSCameraBase::openCamera()
 {
     if(isCameraOpen_)
     {
         logger_->error("Camera already open");
         return true;
     }
-    logger_->info("Opening IMX296 camera at index " + std::to_string(cameraIndex));
+    logger_->info("Opening camera at index " + std::to_string(cameraIndex_));
     try {
         // Initialize camera manager
         cameraManager_ = std::make_unique<libcamera::CameraManager>();
@@ -37,13 +37,13 @@ bool GSCameraBase::openCamera(int cameraIndex)
         }
 
         // Find IMX296 camera (or use the specified index)
-        if (cameraIndex >= cameras.size())
+        if (cameraIndex_ >= cameras.size())
         {
-            logger_->error("Camera index " + std::to_string(cameraIndex) + " out of range");
+            logger_->error("Camera index " + std::to_string(cameraIndex_) + " out of range");
             return false;
         }
 
-        camera_ = cameras[cameraIndex];
+        camera_ = cameras[cameraIndex_];
 
         // Verify this is an IMX296 (optional check)
         std::string cameraId = camera_->id();
@@ -133,6 +133,9 @@ void GSCameraBase::closeCamera()
 
     isCameraOpen_ = false;
     isConfigured_ = false;
+
+    // Attempt to give IPA processes time to cleanup after libcamera shutdown
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
 cv::Mat GSCameraBase::captureFrame()

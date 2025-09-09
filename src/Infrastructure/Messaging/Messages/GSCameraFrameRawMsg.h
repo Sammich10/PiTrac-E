@@ -11,7 +11,7 @@ class GSCameraFrameRawMessage : public GSMessageBase
 {
   private:
     cv::Mat frame_;
-    std::string camera_id_;
+    uint32_t camera_id_;
     uint64_t frame_number_;
     std::chrono::system_clock::time_point capture_timestamp_;
     double fps_;
@@ -25,7 +25,7 @@ class GSCameraFrameRawMessage : public GSMessageBase
   public:
     GSCameraFrameRawMessage() = default;
 
-    GSCameraFrameRawMessage(const std::string &camera_id,
+    GSCameraFrameRawMessage(const uint32_t &camera_id,
                             const cv::Mat &frame,
                             uint64_t frame_number)
         : camera_id_(camera_id),
@@ -72,12 +72,12 @@ class GSCameraFrameRawMessage : public GSMessageBase
         channels_ = frame.channels();
     }
 
-    const std::string &getCameraId() const
+    uint32_t getCameraId() const
     {
         return camera_id_;
     }
 
-    void setCameraId(const std::string &camera_id)
+    void setCameraId(const uint32_t &camera_id)
     {
         camera_id_ = camera_id;
     }

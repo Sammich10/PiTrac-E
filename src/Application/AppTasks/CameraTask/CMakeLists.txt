@@ -1,4 +1,4 @@
-project(CameraAgentTask)
+project(CameraTask)
 
 file(GLOB ${PROJECT_NAME}_SOURCES 
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp

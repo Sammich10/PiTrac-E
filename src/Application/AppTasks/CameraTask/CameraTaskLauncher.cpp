@@ -1,4 +1,4 @@
-#include "Application/AppTasks/CameraAgentTask/CameraAgentTask.h"
+#include "Application/AppTasks/CameraTask/CameraTask.h"
 #include "Common/Utils/Logging/GSLogger.h"
 #include <cstdlib>
 #include <thread>
@@ -9,7 +9,7 @@
 
 // Global flag for graceful shutdown
 std::atomic<bool> g_shutdown_requested(false);
-PiTrac::CameraAgentTask *g_camera_task = nullptr;
+PiTrac::CameraTask *g_camera_task = nullptr;
 std::shared_ptr<PiTrac::GSLogger> logger = PiTrac::GSLogger::getInstance();
 
 void signalHandler(int signal)
@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
         logger->info("Starting Camera Agent Task Launcher");
 
         // Create and start the camera agent task
-        PiTrac::CameraAgentTask camera_agent_task;
+        PiTrac::CameraTask camera_agent_task;
         g_camera_task = &camera_agent_task;
 
         if (!camera_agent_task.start())

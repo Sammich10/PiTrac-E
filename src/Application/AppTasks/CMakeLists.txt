@@ -1,1 +1,1 @@
-add_subdirectory(CameraAgentTask)
+add_subdirectory(CameraTask)

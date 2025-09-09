@@ -6,7 +6,10 @@ GSAgentTask::GSAgentTask(const std::string &name)
     : GSTaskBase(name)
     , restart_failed_agents_(false)
     , agent_check_interval_(std::chrono::milliseconds(1000))
+    , agent_ipc_endpoint_("ipc://agent_task")
+    , agent_ipc_subscriber_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Subscriber))
 {
+    logInfo("Agent task created: " + task_name_ + " [" + task_id_ + "]");
 }
 
 GSAgentTask::~GSAgentTask()
@@ -22,7 +25,9 @@ bool GSAgentTask::start()
 
 bool GSAgentTask::preStartHook()
 {
-    // This code will run before the child process is forked
+    // This code will run before the main process is started, allowing for any
+    // necessary setup.
+    agent_ipc_subscriber_->bind(agent_ipc_endpoint_);
     return true;
 }
 
@@ -34,6 +39,12 @@ void GSAgentTask::processMain()
     if (!preAgentStartHook())
     {
         logError("Pre-agent start hook failed");
+        return;
+    }
+
+    if(!setupAllAgents())
+    {
+        logError("Failed to setup all agents");
         return;
     }
 
@@ -73,6 +84,23 @@ void GSAgentTask::processMain()
 
     logInfo("Agent task main loop ended");
     stopAllAgents();
+}
+
+bool GSAgentTask::setupAllAgents()
+{
+    logInfo("Setting up all agents");
+
+    for (auto &agent : agents_)
+    {
+        if (!agent->setup())
+        {
+            logError("Failed to setup agent: " + agent->getAgentName());
+            return false;
+        }
+    }
+
+    logInfo("All agents set up successfully");
+    return true;
 }
 
 bool GSAgentTask::startAllAgents()

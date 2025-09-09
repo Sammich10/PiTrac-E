@@ -64,13 +64,12 @@ void GSLogger::Init()
     // Add common attributes
     boost::log::add_common_attributes();
 
-    // Add process ID and process name attributes
-    boost::log::core::get()->add_global_attribute("ProcessID",
-                                                  boost::log::attributes::current_process_id());
     boost::log::core::get()->add_global_attribute("ProcessName",
                                                   boost::log::attributes::current_process_name());
     boost::log::core::get()->add_global_attribute("Scope",
                                                   boost::log::attributes::named_scope());
+
+    int current_pid = static_cast<int>(getpid());
 
     // Set global filter based on log level
     boost::log::core::get()->set_filter(
@@ -91,15 +90,8 @@ void GSLogger::Init()
     boost::log::formatter logFmt =
         boost::log::expressions::stream
             << "[" << fmtTimeStamp << "] "
-            << "[PID:"
-            << boost::log::expressions::attr<boost::log::attributes::current_process_id::value_type>
-            ("ProcessID")
-            << "] "
+            << "[PID:" << current_pid << "] "
             << "[" << fmtProcessName << "] "
-            << "[TID:"
-            << boost::log::expressions::attr<boost::log::attributes::current_thread_id::value_type>(
-            "ThreadID")
-            << "] "
             << "[" << fmtSeverity << "] "
             << boost::log::expressions::smessage;
 

@@ -15,6 +15,7 @@ GSTaskBase::GSTaskBase(const std::string &name)
     , status_(TaskStatus::NotStarted)
     , should_stop_(false)
     , logger_(GSLogger::getInstance())
+    , ipc_endpoint_("ipc://gs_task")
 {
     logInfo("Task created: " + task_name_ + " [" + task_id_ + "]");
 }

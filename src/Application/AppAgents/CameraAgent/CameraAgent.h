@@ -34,25 +34,59 @@ class CameraAgent : public GSAgentBase
     CameraAgent
     (
         std::unique_ptr<GSCameraInterface> camera_,
-        const std::string &camera_id,
         const std::string &endpoint
     );
 
     ~CameraAgent();
 
+    /**
+     * @brief Sets up the camera agent.
+     *
+     * This method initializes the camera agent and prepares it for operation.
+     *
+     * @return true if setup was successful, false otherwise.
+     */
+    bool setup() override;
+
+    /**
+     * @brief Initializes the camera agent.
+     *
+     * This method sets up the necessary resources and configurations required
+     *for the camera agent to operate.
+     * It opens the camera, performs initial configuration, and prepares the
+     *messaging system for frame publishing.
+     *
+     * @return true if initialization was successful, false otherwise.
+     */
     bool initialize() override;
 
+    /**
+     * @brief Executes the main logic for the CameraAgent.
+     *
+     * This method starts the main capture loop for the camera agent, which
+     *continuously captures frames from the camera and publishes them to the
+     *messaging system.
+     */
     void execute() override;
 
+    /**
+     * @brief Cleans up resources used by the camera agent.
+     *
+     * This method releases any camera resources, and joins the capture thread.
+     */
     void cleanup() override;
 
   private:
+    /**
+     * @brief Continuously captures frames from the camera in a loop and
+     *publishes them to the messaging system.
+     */
     void captureLoop();
 
-    std::unique_ptr<GSMessagerBase> publisher_;
+    std::unique_ptr<GSMessagerBase> frame_publisher_;
     std::unique_ptr<GSMessagerBase> subscriber_;
     std::unique_ptr<GSCameraInterface> camera_;
-    std::string camera_id_;
+    uint32_t camera_id_;
     std::atomic<bool> running_;
     std::thread capture_thread_;
     uint64_t frame_counter_;

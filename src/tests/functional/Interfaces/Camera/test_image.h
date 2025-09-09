@@ -4,8 +4,7 @@ using namespace PiTrac;
 
 int test_open_camera
 (
-    GSCameraInterface *const &camera,
-    const uint32_t cameraIndex
+    GSCameraInterface *const &camera
 );
 
 int test_configure_camera

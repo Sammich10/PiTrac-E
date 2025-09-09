@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     // Instantiate the IMX296 camera interface with specific parameters for
     // testing
     const std::unique_ptr<PiTrac::GSCameraInterface> camera =
-        std::make_unique<PiTrac::GSCameraBase>(1456, 1088, 2.8f, PiTrac::TriggerMode::FREE_RUNNING);
+        std::make_unique<PiTrac::GSCameraBase>(0);
     // Test opening the camera
     if (test_open_camera(camera.get(), cameraIndex) != 0)
     {

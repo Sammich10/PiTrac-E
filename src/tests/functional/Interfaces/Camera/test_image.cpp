@@ -3,14 +3,14 @@
 #include <opencv4/opencv2/imgproc.hpp>
 
 using namespace PiTrac;
-int test_open_camera(GSCameraInterface *const &camera, const uint32_t cameraIndex)
+int test_open_camera(GSCameraInterface *const &camera)
 {
     int32_t result = 0;
     std::cout << "Testing camera: " << camera->toString() << std::endl;
-    const bool openSuccess = camera->openCamera(cameraIndex);
+    const bool openSuccess = camera->openCamera();
     if (!openSuccess)
     {
-        std::cerr << "Failed to open camera at index " << cameraIndex << std::endl;
+        std::cerr << "Failed to open camera at index " << camera->getCameraIndex() << std::endl;
         result = -1;
     }
     return result;

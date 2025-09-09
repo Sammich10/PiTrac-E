@@ -65,30 +65,25 @@ class GSCameraInterface
   public:
 
 // You can also provide a protected constructor with common parameters
-    GSCameraInterface(int resX,
-                      int resY,
-                      float focalLength = 0.0f,
-                      TriggerMode mode = TriggerMode::FREE_RUNNING)
-        : resolutionX_(resX),
-        resolutionY_(resY),
-        focalLength_mm_(focalLength),
-        cameraManager_(nullptr),
-        camera_(nullptr),
-        allocator_(nullptr),
-        isConfigured_(false),
-        triggerMode_(mode),
-        isCapturing_(false),
-        activeStream_(StreamType::STREAM_TYPE_MAIN)
+    GSCameraInterface(const uint32_t &cameraIndex)
+        : cameraIndex_(cameraIndex)
+        , resolutionX_(0)
+        , resolutionY_(0)
+        , focalLength_mm_(0)
+        , cameraManager_(nullptr)
+        , camera_(nullptr)
+        , allocator_(nullptr)
+        , isConfigured_(false)
+        , triggerMode_(TriggerMode::FREE_RUNNING)
+        , isCapturing_(false)
+        , activeStream_(StreamType::STREAM_TYPE_MAIN)
     {
     }
 
     virtual ~GSCameraInterface() = default;
 
     /** Pure virtual methods to be implemented by derived classes **/
-    virtual bool openCamera
-    (
-        int cameraIndex
-    ) = 0;
+    virtual bool openCamera() = 0;
     virtual bool initializeCamera() = 0;
     virtual void closeCamera() = 0;
     virtual cv::Mat captureFrame() = 0;
@@ -107,6 +102,11 @@ class GSCameraInterface
     virtual std::string toString() const = 0;
 
     /** Accessor methods **/
+    uint32_t getCameraIndex() const
+    {
+        return cameraIndex_;
+    }
+
     int getResolutionX() const
     {
         return resolutionX_;
@@ -312,8 +312,9 @@ class GSCameraInterface
         const cv::Mat &frame
     ) = 0;
 
+    uint32_t cameraIndex_;
 
-// Libcamera components
+    // Libcamera components
     std::unique_ptr<libcamera::CameraManager> cameraManager_;
     std::shared_ptr<libcamera::Camera> camera_;
     std::unique_ptr<libcamera::FrameBufferAllocator> allocator_;
@@ -325,7 +326,7 @@ class GSCameraInterface
     bool cameraStarted_ = false;
     TriggerMode triggerMode_;
 
-// Sensor specifications
+    // Sensor specifications
     uint32_t currentExposureUs_ = 10000;
     float currentGain_ = 1.0f;
     float currentFps_ = 30.0f;
@@ -352,7 +353,7 @@ class GSCameraInterface
 
     StreamType activeStream_;
 
-// Frame capture synchronization
+    // Frame capture synchronization
     std::mutex frameMutex_;
     std::condition_variable frameCondition_;
     cv::Mat latestFrame_;

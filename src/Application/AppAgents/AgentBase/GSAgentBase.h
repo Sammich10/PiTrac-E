@@ -71,6 +71,7 @@ class GSAgentBase
     virtual ~GSAgentBase();
 
     // Core lifecycle methods (pure virtual)
+    virtual bool setup() = 0;
     virtual bool initialize() = 0;
     virtual void execute() = 0;
     virtual void cleanup() = 0;
