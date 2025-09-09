@@ -30,10 +30,16 @@ class GolfSimConfiguration
         kRPiUnknown
     };
 
-    static bool Initialize(const std::string &configuration_filename = "gs_config.json");
+    static bool Initialize
+    (
+        const std::string &configuration_filename = "gs_config.json"
+    );
 
     // Uses a safer version of getenv when in Windows environment.
-    static std::string safe_getenv(const std::string &varname);
+    static std::string safe_getenv
+    (
+        const std::string &varname
+    );
 
     static PiModel GetPiModel();
 
@@ -44,36 +50,104 @@ class GolfSimConfiguration
     // e.g., there's not constructur that will be called.
     static bool ReadValues();
 
-    static bool PropertyExists(const std::string &value_tag);
+    static bool PropertyExists
+    (
+        const std::string &value_tag
+    );
 
-    static void SetConstant(const std::string &value_tag, bool &constant_value);
-    static void SetConstant(const std::string &value_tag, int &constant_value);
-    static void SetConstant(const std::string &value_tag, long &constant_value);
-    static void SetConstant(const std::string &value_tag, unsigned int &constant_value);
-    static void SetConstant(const std::string &value_tag, float &constant_value);
-    static void SetConstant(const std::string &value_tag, double &constant_value);
-    static void SetConstant(const std::string &value_tag, std::string &constant_value);
-    static void SetConstant(const std::string &tag_name, cv::Vec3d &vec);
-    static void SetConstant(const std::string &tag_name, cv::Vec2d &vec);
-    static void SetConstant(const std::string &tag_name, std::vector<cv::Vec3d> &vec);
-    static void SetConstant(const std::string &tag_name, std::vector<float> &vec);
-    static void SetConstant(const std::string &tag_name, cv::Mat &matrix);
+    static void SetConstant
+    (
+        const std::string &value_tag,
+        bool &constant_value
+    );
+    static void SetConstant
+    (
+        const std::string &value_tag,
+        int &constant_value
+    );
+    static void SetConstant
+    (
+        const std::string &value_tag,
+        long &constant_value
+    );
+    static void SetConstant
+    (
+        const std::string &value_tag,
+        unsigned int &constant_value
+    );
+    static void SetConstant
+    (
+        const std::string &value_tag,
+        float &constant_value
+    );
+    static void SetConstant
+    (
+        const std::string &value_tag,
+        double &constant_value
+    );
+    static void SetConstant
+    (
+        const std::string &value_tag,
+        std::string &constant_value
+    );
+    static void SetConstant
+    (
+        const std::string &tag_name,
+        cv::Vec3d &vec
+    );
+    static void SetConstant
+    (
+        const std::string &tag_name,
+        cv::Vec2d &vec
+    );
+    static void SetConstant
+    (
+        const std::string &tag_name,
+        std::vector<cv::Vec3d> &vec
+    );
+    static void SetConstant
+    (
+        const std::string &tag_name,
+        std::vector<float> &vec
+    );
+    static void SetConstant
+    (
+        const std::string &tag_name,
+        cv::Mat &matrix
+    );
 
 
-    static bool ReadShotInjectionData(std::vector<GsResults> &shots,
-                                      int &kInterShotInjectionPauseSeconds);
+    static bool ReadShotInjectionData
+    (
+        std::vector<GsResults> &shots,
+        int &kInterShotInjectionPauseSeconds
+    );
 
     // Set the specified value to the value.  The node will be created if
     // necessary
-    static bool SetTreeValue(const std::string &tag_name, const cv::Vec2d &vec);
-    static bool SetTreeValue(const std::string &tag_name, const double value);
+    static bool SetTreeValue
+    (
+        const std::string &tag_name,
+        const cv::Vec2d &vec
+    );
+    static bool SetTreeValue
+    (
+        const std::string &tag_name,
+        const double value
+    );
 
     // Write the current json tree to the specified file
-    static bool WriteTreeToFile(const std::string &file_name);
+    static bool WriteTreeToFile
+    (
+        const std::string &file_name
+    );
 
     // Remove the named node in the json tree if it exists.
     // Returns true if the node had previously existed, false if not
-    static bool RemoveTreeNode(const std::string &tag_name);
+    static bool RemoveTreeNode
+    (
+        const std::string &tag_name
+    );
 
     // Returns "LM_1" or "LM_2" based on the current process configuration
     // This string may be used, e.g., to identify the system to the ActiveMQ

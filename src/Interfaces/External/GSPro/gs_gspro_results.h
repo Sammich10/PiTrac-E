@@ -16,8 +16,14 @@ class GsGSProResults : public GsResults
 {
   public:
     GsGSProResults();
-    GsGSProResults(const GolfBall &ball);
-    GsGSProResults(const GsResults &results);
+    GsGSProResults
+    (
+        const GolfBall &ball
+    );
+    GsGSProResults
+    (
+        const GsResults &results
+    );
     virtual ~GsGSProResults();
     virtual std::string Format() const;
 };

@@ -75,14 +75,27 @@ float inline Slope(float x1, float y1, float x2, float y2)
 //				void* dxarr, void* dyarr,
 //                int aperture_size );
 
-void Canny2(InputArray image, OutputArray _edges,
-            OutputArray _sobel_x, OutputArray _sobel_y,
-            double threshold1, double threshold2,
-            int apertureSize, bool L2gradient);
+void Canny2
+(
+    InputArray image,
+    OutputArray _edges,
+    OutputArray _sobel_x,
+    OutputArray _sobel_y,
+    double threshold1,
+    double threshold2,
+    int apertureSize,
+    bool L2gradient
+);
 
-void Canny3(InputArray image, OutputArray _edges,
-            OutputArray _sobel_x, OutputArray _sobel_y,
-            int apertureSize, bool L2gradient);
+void Canny3
+(
+    InputArray image,
+    OutputArray _edges,
+    OutputArray _sobel_x,
+    OutputArray _sobel_y,
+    int apertureSize,
+    bool L2gradient
+);
 
 
 float inline ed2(const Point &A, const Point &B)
@@ -95,14 +108,42 @@ float inline ed2f(const Point2f &A, const Point2f &B)
     return (B.x - A.x) * (B.x - A.x) + (B.y - A.y) * (B.y - A.y);
 }
 
-void Labeling(cv::Mat &image, vector<vector<Point> > &segments, int iMinLength);
-void LabelingRect(cv::Mat &image, VVP &segments, int iMinLength, vector<Rect> &bboxes);
-void Thinning(cv::Mat &imgMask, uchar byF = 255, uchar byB = 0);
+void Labeling
+(
+    cv::Mat &image,
+    vector<vector<Point> > &segments,
+    int iMinLength
+);
+void LabelingRect
+(
+    cv::Mat &image,
+    VVP &segments,
+    int iMinLength,
+    vector<Rect> &bboxes
+);
+void Thinning
+(
+    cv::Mat &imgMask,
+    uchar byF = 255,
+    uchar byB = 0
+);
 
-bool SortBottomLeft2TopRight(const Point &lhs, const Point &rhs);
-bool SortTopLeft2BottomRight(const Point &lhs, const Point &rhs);
+bool SortBottomLeft2TopRight
+(
+    const Point &lhs,
+    const Point &rhs
+);
+bool SortTopLeft2BottomRight
+(
+    const Point &lhs,
+    const Point &rhs
+);
 
-bool SortBottomLeft2TopRight2f(const Point2f &lhs, const Point2f &rhs);
+bool SortBottomLeft2TopRight2f
+(
+    const Point2f &lhs,
+    const Point2f &rhs
+);
 
 
 struct Ellipse
@@ -114,13 +155,16 @@ struct Ellipse
     float _rad;
     float _score;
 
-    Ellipse() : _xc(0.f), _yc(0.f), _a(0.f), _b(0.f), _rad(0.f), _score(0.f) {
+    Ellipse() : _xc(0.f), _yc(0.f), _a(0.f), _b(0.f), _rad(0.f), _score(0.f)
+    {
     };
     Ellipse(float xc, float yc, float a, float b, float rad, float score = 0.f) : _xc(xc), _yc(yc),
-        _a(a), _b(b), _rad(rad), _score(score) {
+        _a(a), _b(b), _rad(rad), _score(score)
+    {
     };
     Ellipse(const Ellipse &other) : _xc(other._xc), _yc(other._yc), _a(other._a), _b(other._b),
-        _rad(other._rad), _score(other._score) {
+        _rad(other._rad), _score(other._score)
+    {
     };
 
     void Draw(Mat &img, const Scalar &color, const int thickness)
@@ -165,7 +209,11 @@ struct Ellipse
 };
 
 
-float GetMinAnglePI(float alpha, float beta);
+float GetMinAnglePI
+(
+    float alpha,
+    float beta
+);
 }
 
 #endif // ELLIPSE_DETECTOR_COMMON_H

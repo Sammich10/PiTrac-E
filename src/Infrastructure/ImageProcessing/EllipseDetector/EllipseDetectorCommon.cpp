@@ -897,7 +897,7 @@ void cvCanny3(const cv::Mat &srcarr, cv::Mat &dstarr,
     //cv::Ptr<cv::Mat> dx, dy;
     cv::AutoBuffer<char> buffer;
     std::vector<uchar *> stack;
-    uchar **stack_top = 0, **stack_bottom = 0;
+    uchar * *stack_top = 0, * *stack_bottom = 0;
 
     cv::Size size;
     int flags = aperture_size;

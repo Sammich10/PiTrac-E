@@ -59,18 +59,27 @@ class GolfSimIPCMessage : public activemq::commands::ActiveMQBytesMessage
     };
 
 
-    GolfSimIPCMessage(IPCMessageType message_type = IPCMessageType::kUnknown);
+    GolfSimIPCMessage
+    (
+        IPCMessageType message_type = IPCMessageType::kUnknown
+    );
     virtual ~GolfSimIPCMessage();
 
     // Returns a human-readable description of the message
     virtual std::string Format();
 
-    void SetMessageType(IPCMessageType &message_type);
+    void SetMessageType
+    (
+        IPCMessageType &message_type
+    );
     IPCMessageType GetMessageType() const;
 
     // A serialized copy of the Mat will be made and stored in the message
     // See setters/getters below
-    void SetImageMat(cv::Mat &mat);
+    void SetImageMat
+    (
+        cv::Mat &mat
+    );
 
     // A mat object will be (re)constructed from a serialized version stored in
     // the message
@@ -78,25 +87,32 @@ class GolfSimIPCMessage : public activemq::commands::ActiveMQBytesMessage
 
     // Returns a pointer to the serialized mat object, and returns the
     // length via image_mat_byte_length
-    unsigned char * GetImageMatBytePointer(size_t &image_mat_byte_length) const;
+    unsigned char *GetImageMatBytePointer
+    (
+        size_t &image_mat_byte_length
+    ) const;
 
     // Takes the data and unpacks it into the cv::Mat for this object.
-    bool UnpackMatData(char *data, size_t length);
+    bool UnpackMatData
+    (
+        char *data,
+        size_t length
+    );
 
-    const GsIPCResult& GetResults() const
+    const GsIPCResult &GetResults() const
     {
         return ipc_result_;
     };
-    GsIPCResult& GetResultsForModification()
+    GsIPCResult &GetResultsForModification()
     {
         return ipc_result_;
     };
 
-    const GsIPCControlMsg& GetControlMessage() const
+    const GsIPCControlMsg &GetControlMessage() const
     {
         return ipc_control_message_;
     };
-    GsIPCControlMsg& GetControlMessageForModification()
+    GsIPCControlMsg &GetControlMessageForModification()
     {
         return ipc_control_message_;
     };

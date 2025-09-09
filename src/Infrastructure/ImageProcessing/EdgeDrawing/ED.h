@@ -72,25 +72,37 @@ struct Chain
 class ED
 {
   public:
-    ED(cv::Mat _srcImage,
-       GradientOperator _op = PREWITT_OPERATOR,
-       int _gradThresh = 20,
-       int _anchorThresh = 0,
-       int _scanInterval = 1,
-       int _minPathLen = 10,
-       double _sigma = 1.0,
-       bool _sumFlag = true);
-    ED(const ED &cpyObj);
-    ED(short *gradImg,
-       uchar *dirImg,
-       int _width,
-       int _height,
-       int _gradThresh,
-       int _anchorThresh,
-       int _scanInterval = 1,
-       int _minPathLen = 10,
-       bool selectStableAnchors = true);
-    ED(EDColor &cpyObj);
+    ED
+    (
+        cv::Mat _srcImage,
+        GradientOperator _op = PREWITT_OPERATOR,
+        int _gradThresh = 20,
+        int _anchorThresh = 0,
+        int _scanInterval = 1,
+        int _minPathLen = 10,
+        double _sigma = 1.0,
+        bool _sumFlag = true
+    );
+    ED
+    (
+        const ED &cpyObj
+    );
+    ED
+    (
+        short *gradImg,
+        uchar *dirImg,
+        int _width,
+        int _height,
+        int _gradThresh,
+        int _anchorThresh,
+        int _scanInterval = 1,
+        int _minPathLen = 10,
+        bool selectStableAnchors = true
+    );
+    ED
+    (
+        EDColor &cpyObj
+    );
     ED();
 
     cv::Mat getEdgeImage();
@@ -105,7 +117,10 @@ class ED
     std::vector<std::vector<cv::Point> > getSegments();
     std::vector<std::vector<cv::Point> > getSortedSegments();
 
-    cv::Mat drawParticularSegments(std::vector<int> list);
+    cv::Mat drawParticularSegments
+    (
+        std::vector<int> list
+    );
 
   protected:
     int width; // width of source image
@@ -125,10 +140,19 @@ class ED
     void ComputeAnchorPoints();
     void JoinAnchorPointsUsingSortedAnchors();
     void sortAnchorsByGradValue();
-    int * sortAnchorsByGradValue1();
+    int *sortAnchorsByGradValue1();
 
-    static int LongestChain(Chain *chains, int root);
-    static int RetrieveChainNos(Chain *chains, int root, int chainNos[]);
+    static int LongestChain
+    (
+        Chain *chains,
+        int root
+    );
+    static int RetrieveChainNos
+    (
+        Chain *chains,
+        int root,
+        int chainNos[]
+    );
 
     int anchorNos;
     std::vector<cv::Point> anchorPoints;

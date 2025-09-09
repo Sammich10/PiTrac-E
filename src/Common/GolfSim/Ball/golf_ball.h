@@ -141,7 +141,10 @@ class GolfBall
     // more definitive x and y and radius_at_calibration_pixels_!
     cv::Vec3f ball_circle_;
 
-    void set_circle(const cv::Vec3f &c);
+    void set_circle
+    (
+        const cv::Vec3f &c
+    );
 
     // An ellipse is a more accurate way of representing the ball and is
     // preferred.
@@ -248,8 +251,14 @@ class GolfBall
 
     // Again, we're moving away from using the ball color for processing in most
     // instances
-    cv::Scalar GetBallLowerHSV(BallColor ball_color) const;
-    cv::Scalar GetBallUpperHSV(BallColor ball_color) const;
+    cv::Scalar GetBallLowerHSV
+    (
+        BallColor ball_color
+    ) const;
+    cv::Scalar GetBallUpperHSV
+    (
+        BallColor ball_color
+    ) const;
 
     // Return the expected ball color from the coarse ball color settings.
     // Returns RGB value from the BallHSVRangeDict
@@ -264,15 +273,29 @@ class GolfBall
     // center and
     // the radius) relative to the ball_to_compare.
     // Max-percent figures are 0 to 100, but can also be greater than 100%.
-    bool CheckIfBallMoved(const GolfBall &ball_to_compare,
-                          const int max_center_move_pixels,
-                          const int max_radius_change_percent);
+    bool CheckIfBallMoved
+    (
+        const GolfBall &ball_to_compare,
+        const int max_center_move_pixels,
+        const int max_radius_change_percent
+    );
 
-    double PixelDistanceFromBall(const GolfBall &ball2) const;
+    double PixelDistanceFromBall
+    (
+        const GolfBall &ball2
+    ) const;
 
-    static void AverageBalls(const std::vector<GolfBall> &ball_vector, GolfBall &averaged_ball);
+    static void AverageBalls
+    (
+        const std::vector<GolfBall> &ball_vector,
+        GolfBall &averaged_ball
+    );
 
-    bool PointIsInsideBall(const double x, const double y) const;
+    bool PointIsInsideBall
+    (
+        const double x,
+        const double y
+    ) const;
 
   private:
 

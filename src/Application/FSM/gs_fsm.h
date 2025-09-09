@@ -111,19 +111,31 @@ using GolfSimState = std::variant<  state::InitializingCamera1System,
 
 // Send an Active-MQ message to any listeners, such as the PiTrac GUI
 // Such messages can be states like "WaitingForBallStabilization"
-bool SendIPCStatusMessage(GsIPCResultType &message_type);
-void SendIPCErrorStatusMessage(const std::string &error_message);
+bool SendIPCStatusMessage
+(
+    GsIPCResultType &message_type
+);
+void SendIPCErrorStatusMessage
+(
+    const std::string &error_message
+);
 
 bool TestFsm();
 
 // The main system-loop.  It processes incoming events, changing states
 // accordingly
 // This function is really the brains of the operation.
-bool RunGolfSimFsm(const GolfSimState &starting_state);
+bool RunGolfSimFsm
+(
+    const GolfSimState &starting_state
+);
 
 // Control messages are external messages coming to the system.
 // Currently driver/putter changes are the only such messages.
-bool ProcessControlMessageEvent(GolfSimEvent::ControlMessage &event);
+bool ProcessControlMessageEvent
+(
+    GolfSimEvent::ControlMessage &event
+);
 
 bool PerformSystemStartupTasks();
 bool PerformSystemShutdownTasks();

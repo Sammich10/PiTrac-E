@@ -17,12 +17,21 @@ class GSMessageBase : public GSMessageInterface
     // Timestamp operations
     std::chrono::system_clock::time_point getTimestamp() const override;
 
-    void setTimestamp(const std::chrono::system_clock::time_point &timestamp) override;
+    void setTimestamp
+    (
+        const std::chrono::system_clock::time_point &timestamp
+    ) override;
 
     // ZMQ message operations implementation
-    void toZmqMessage(zmq_msg_t &msg) const override;
+    void toZmqMessage
+    (
+        zmq_msg_t &msg
+    ) const override;
 
-    void fromZmqMessage(zmq_msg_t &msg) override;
+    void fromZmqMessage
+    (
+        zmq_msg_t &msg
+    ) override;
 
     // Utility methods
     std::string toString() const override;

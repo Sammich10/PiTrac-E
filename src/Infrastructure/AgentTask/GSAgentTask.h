@@ -20,15 +20,24 @@ class GSAgentTask : public GSTaskBase
     std::chrono::milliseconds agent_check_interval_;
 
   public:
-    GSAgentTask(const std::string &name);
+    GSAgentTask
+    (
+        const std::string &name
+    );
     virtual ~GSAgentTask();
 
     // Pure virtual method for agent configuration
     virtual void configureAgents() = 0;        // Add agents to this task
 
     // Agent management
-    void addAgent(std::shared_ptr<GSAgentBase> agent);
-    void removeAgent(const std::string &agent_id);
+    void addAgent
+    (
+        std::shared_ptr<GSAgentBase> agent
+    );
+    void removeAgent
+    (
+        const std::string &agent_id
+    );
     std::vector<std::shared_ptr<GSAgentBase> > getAgents() const;
     size_t getAgentCount() const
     {

@@ -50,7 +50,7 @@ cv::Mat GolfSimIPCMessage::GetImageMat() const
     return ipc_mat_.GetImageMat();
 }
 
-unsigned char * GolfSimIPCMessage::GetImageMatBytePointer(size_t &image_mat_byte_length) const
+unsigned char *GolfSimIPCMessage::GetImageMatBytePointer(size_t &image_mat_byte_length) const
 {
     image_mat_byte_length = ipc_mat_.GetSerializedMat().size();
     return (unsigned char *)ipc_mat_.GetSerializedMat().data();

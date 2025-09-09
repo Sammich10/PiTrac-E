@@ -1372,7 +1372,7 @@ bool SetLibcameraTuningFileEnvVariable(const GolfSimCamera &camera)
     return true;
 }
 
-LibcameraJpegApp * ConfigureForLibcameraStill(const GolfSimCamera &camera)
+LibcameraJpegApp *ConfigureForLibcameraStill(const GolfSimCamera &camera)
 {
     const GsCameraNumber camera_number = camera.camera_hardware_.camera_number_;
     int hardware_camera_index = camera_number;

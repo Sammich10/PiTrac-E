@@ -75,7 +75,7 @@ void EDPF::validateEdgeSegments()
     delete[] gradImg;
 }
 
-short * EDPF::ComputePrewitt3x3()
+short *EDPF::ComputePrewitt3x3()
 {
     short *gradImg = new short[width * height];
     memset(gradImg, 0, sizeof(short) * width * height);

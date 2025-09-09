@@ -18,13 +18,19 @@ namespace PiTrac
 {
 class PulseStrobe
 {
-    typedef void (*GsSignalCallback) (int signal_number);
+    typedef void (*GsSignalCallback)
+    (
+        int signal_number
+    );
 
   public:
 
     static bool gpio_system_initialized_;
 
-    static bool InitGPIOSystem(GsSignalCallback callback_function = nullptr);
+    static bool InitGPIOSystem
+    (
+        GsSignalCallback callback_function = nullptr
+    );
     static bool DeinitGPIOSystem();
 
     // Example output:
@@ -33,19 +39,28 @@ class PulseStrobe
     static std::vector<double> GetPulseRatios();
 
     // Caller owns the byte buffer that is returned
-    static char * BuildPulseTrain(const unsigned long baud_rate,
-                                  const std::vector<float> &intervals,
-                                  const int number_bits_for_on_pulse,
-                                  const unsigned int kBitsPerWord,
-                                  unsigned long &result_length,
-                                  bool turn_off_strobes = false);
+    static char *BuildPulseTrain
+    (
+        const unsigned long baud_rate,
+        const std::vector<float> &intervals,
+        const int number_bits_for_on_pulse,
+        const unsigned int kBitsPerWord,
+        unsigned long &result_length,
+        bool turn_off_strobes = false
+    );
 
-    static int GetNextTwoPulseBytes(const int next_pattern_zero_bits_pad,
-                                    const int number_bits_for_on_pulse,
-                                    unsigned char &first_byte_bit_pattern,
-                                    unsigned char &second_byte_bit_pattern);
+    static int GetNextTwoPulseBytes
+    (
+        const int next_pattern_zero_bits_pad,
+        const int number_bits_for_on_pulse,
+        unsigned char &first_byte_bit_pattern,
+        unsigned char &second_byte_bit_pattern
+    );
 
-    static bool SendCameraPrimingPulses(bool use_high_speed);
+    static bool SendCameraPrimingPulses
+    (
+        bool use_high_speed
+    );
     static bool SendExternalTrigger();
 
     // Sends the already-created pulse buffer to the strobes via SPI, and also
@@ -55,26 +70,43 @@ class PulseStrobe
     // send_no_strobes can be set to true in order to get a "before" or "pre"
     // image
     // that shows just the ambient light.
-    static bool SendCameraStrobeTriggerAndShutter(int spiHandle, bool send_no_strobes = false);
+    static bool SendCameraStrobeTriggerAndShutter
+    (
+        int spiHandle,
+        bool send_no_strobes = false
+    );
 
     // Returns a handle to the now - open SPI channel,
     // or a negative value on failure
-    static int OpenSpi(const unsigned int baud, int wordSizeBits = 8);
+    static int OpenSpi
+    (
+        const unsigned int baud,
+        int wordSizeBits = 8
+    );
 
     // Deprecated, but keep around for now...
 
     static bool SendCameraSpiPrimingPulses();
 
-    static bool SendSpiMsg(const unsigned int baud,
-                           const unsigned long repeats,
-                           char *buf,
-                           int bufferLength);
+    static bool SendSpiMsg
+    (
+        const unsigned int baud,
+        const unsigned long repeats,
+        char *buf,
+        int bufferLength
+    );
 
-    static bool SendCameraTrigger(int handle);
+    static bool SendCameraTrigger
+    (
+        int handle
+    );
 
     static const std::vector<float> GetPulseIntervals();
 
-    static void SendOnOffPulse(long length_us);
+    static void SendOnOffPulse
+    (
+        long length_us
+    );
 
     static bool kRecordAllImages;
 
@@ -118,7 +150,11 @@ class PulseStrobe
     static int kLastPulsePutterRepeats;
     static unsigned long last_pulse_off_time;
 
-    static int AlignLengthToWordSize(int initialBufferLength, int wordSizeBits);
+    static int AlignLengthToWordSize
+    (
+        int initialBufferLength,
+        int wordSizeBits
+    );
 };
 }
 

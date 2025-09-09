@@ -480,7 +480,7 @@ bool GolfSimIpcSystem::DispatchCamera2PreImageMessage(const GolfSimIPCMessage &m
 }
 
 // Caller owns the resulting message.  Returns nullptr if an error.
-GolfSimIPCMessage * GolfSimIpcSystem::BuildIpcMessageFromBytesMessage(
+GolfSimIPCMessage *GolfSimIpcSystem::BuildIpcMessageFromBytesMessage(
     const BytesMessage &active_mq_message)
 {
     GS_LOG_TRACE_MSG(trace, "BuildIpcMessageFromBytesMessage called.");

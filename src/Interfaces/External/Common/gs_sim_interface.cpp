@@ -241,7 +241,7 @@ bool GsSimInterface::GetAllSystemsArmed()
     return all_systems_armed;
 }
 
-GsSimInterface * GsSimInterface::GetSimInterfaceByType(GolfSimulatorType sim_type)
+GsSimInterface *GsSimInterface::GetSimInterfaceByType(GolfSimulatorType sim_type)
 {
     // Loop through any interfaces that we are configured for and send the
     // results

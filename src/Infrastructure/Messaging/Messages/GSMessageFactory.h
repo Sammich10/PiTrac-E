@@ -21,7 +21,10 @@ class GSMessageFactory
                           };
     }
 
-    std::unique_ptr<GSMessageInterface> createFromZmqMessage(zmq_msg_t &msg);
+    std::unique_ptr<GSMessageInterface> createFromZmqMessage
+    (
+        zmq_msg_t &msg
+    );
 
   private:
 

@@ -128,7 +128,7 @@ CameraHardware::CameraModel GolfSimCamera::kSystemSlot1CameraType =
 CameraHardware::CameraModel GolfSimCamera::kSystemSlot2CameraType =
     CameraHardware::CameraModel::PiGSCam6mmWideLens;
 
-BallImageProc * get_image_processor()
+BallImageProc *get_image_processor()
 {
     static BallImageProc *ip = nullptr;
 
@@ -2486,7 +2486,7 @@ void GolfSimCamera::RemoveTooSmallOrBigBalls(std::vector<GolfBall> &initial_ball
 
     // Identify any balls that are outside the expected radius range by
     // retaining them only in the initial ball vector
-    for (int i = (int)initial_balls.size() - 1; i >= 0 ; i--)
+    for (int i = (int)initial_balls.size() - 1; i >= 0; i--)
     {
         GolfBall &b = initial_balls[i];
 
@@ -3872,7 +3872,7 @@ bool GolfSimCamera::DetermineStrobeIntervals(std::vector<GolfBall> &input_balls,
 
         // Start with an all-false vector
         // The - 1 is because there are 1 fewer intervals than strobes
-        for (int i = 0 ; i < (int)number_of_strobes - 1; i++)
+        for (int i = 0; i < (int)number_of_strobes - 1; i++)
         {
             combinations_vector.push_back(false);
         }

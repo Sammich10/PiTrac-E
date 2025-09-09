@@ -1281,7 +1281,7 @@ void ED::sortAnchorsByGradValue()
      */
 }
 
-int * ED::sortAnchorsByGradValue1()
+int *ED::sortAnchorsByGradValue1()
 {
     int SIZE = 128 * 256;
     int *C = new int[SIZE];

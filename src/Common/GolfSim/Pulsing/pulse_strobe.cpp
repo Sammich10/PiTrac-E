@@ -96,12 +96,12 @@ int PulseStrobe::AlignLengthToWordSize(int initialBufferLength, int wordSizeBits
     }
 }
 
-char * PulseStrobe::BuildPulseTrain(const unsigned long baud_rate,
-                                    const std::vector<float> &intervals,
-                                    int number_bits_for_on_pulse_input,
-                                    const unsigned int kBitsPerWord,
-                                    unsigned long &result_length,
-                                    bool turn_off_strobes)
+char *PulseStrobe::BuildPulseTrain(const unsigned long baud_rate,
+                                   const std::vector<float> &intervals,
+                                   int number_bits_for_on_pulse_input,
+                                   const unsigned int kBitsPerWord,
+                                   unsigned long &result_length,
+                                   bool turn_off_strobes)
 {
     // TBD - All this setup needs to be done prior to the triggering so as not
     // to waste time

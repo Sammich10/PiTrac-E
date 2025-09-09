@@ -49,7 +49,10 @@ class GSCameraBase : public GSCameraInterface
      * @param[in] cameraIndex Index of the camera to open.
      * @return True if the camera was opened successfully, false otherwise.
      */
-    bool openCamera(int cameraIndex) override;
+    bool openCamera
+    (
+        int cameraIndex
+    ) override;
 
     /**
      * @brief Initializes the camera after it has been opened.
@@ -99,7 +102,10 @@ class GSCameraBase : public GSCameraInterface
      * EXTERNAL_TRIGGER).
      * @return True if the trigger mode was set successfully, false otherwise.
      */
-    bool setTriggerMode(TriggerMode mode) override;
+    bool setTriggerMode
+    (
+        TriggerMode mode
+    ) override;
 
     /**
      * @brief Starts continuous image capture.
@@ -153,7 +159,10 @@ class GSCameraBase : public GSCameraInterface
      *
      * @return true if buffer allocation was successful, false otherwise.
      */
-    bool allocateBuffersForStream(libcamera::Stream *stream) override;
+    bool allocateBuffersForStream
+    (
+        libcamera::Stream *stream
+    ) override;
 
     /**
      * @brief Configures the camera to operate in trigger mode.
@@ -161,7 +170,10 @@ class GSCameraBase : public GSCameraInterface
      * @return true if the trigger mode was successfully configured; false
      * otherwise.
      */
-    bool configureTriggerMode(const TriggerMode &mode) override;
+    bool configureTriggerMode
+    (
+        const TriggerMode &mode
+    ) override;
 
     /**
      * @brief Converts a libcamera::FrameBuffer to an OpenCV cv::Mat object.
@@ -170,21 +182,30 @@ class GSCameraBase : public GSCameraInterface
      * data.
      * @return cv::Mat The resulting OpenCV matrix containing the image.
      */
-    cv::Mat convertBufferToMat(libcamera::FrameBuffer *buffer) override;
+    cv::Mat convertBufferToMat
+    (
+        libcamera::FrameBuffer *buffer
+    ) override;
 
     /**
      * @brief Handles the completion of a camera request.
      *
      * @param request Pointer to the completed libcamera::Request object.
      */
-    void requestComplete(libcamera::Request *request) override;
+    void requestComplete
+    (
+        libcamera::Request *request
+    ) override;
 
     /**
      * @brief Adds a frame to the internal buffer.
      *
      * @param frame The image frame to be added to the buffer.
      */
-    void addFrameToBuffer(const cv::Mat &frame) override;
+    void addFrameToBuffer
+    (
+        const cv::Mat &frame
+    ) override;
 
     /**
      * @brief Switches the camera stream to the specified stream type.
@@ -193,7 +214,10 @@ class GSCameraBase : public GSCameraInterface
      *
      * @return true if the stream was successfully switched; false otherwise.
      */
-    bool switchStream(StreamType streamType) override;
+    bool switchStream
+    (
+        StreamType streamType
+    ) override;
     /**
      * @brief Reconfigures the camera settings for an active streaming session.
      *
@@ -279,7 +303,13 @@ class GSCameraBase : public GSCameraInterface
      *
      * @return cv::Mat The unpacked image as an OpenCV matrix.
      */
-    cv::Mat unpack10BitBayer(void *data, int width, int height, size_t stride);
+    cv::Mat unpack10BitBayer
+    (
+        void *data,
+        int width,
+        int height,
+        size_t stride
+    );
 
     std::shared_ptr<GSLogger> logger_;
 }; // class GSCameraBase

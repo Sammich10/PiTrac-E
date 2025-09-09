@@ -179,7 +179,7 @@ inline std::string ToString(BallState state)
 /**
  * @brief Stream operator for BallState (required by Boost Test)
  */
-inline std::ostream& operator<<(std::ostream &os, BallState state)
+inline std::ostream &operator<<(std::ostream &os, BallState state)
 {
     return os << ToString(state);
 }
@@ -243,7 +243,7 @@ inline std::string ToString(ConfidenceLevel level)
 /**
  * @brief Stream operator for ConfidenceLevel (required by Boost Test)
  */
-inline std::ostream& operator<<(std::ostream &os, ConfidenceLevel level)
+inline std::ostream &operator<<(std::ostream &os, ConfidenceLevel level)
 {
     return os << ToString(level);
 }

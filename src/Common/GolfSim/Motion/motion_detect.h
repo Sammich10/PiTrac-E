@@ -24,13 +24,19 @@ class MotionDetectStage : public PostProcessingStage
     {
     }
 
-    char const * Name() const override;
+    char const *Name() const override;
 
-    void Read(boost::property_tree::ptree const &params) override;
+    void Read
+    (
+        boost::property_tree::ptree const &params
+    ) override;
 
     void Configure() override;
 
-    bool Process(CompletedRequestPtr &completed_request) override;
+    bool Process
+    (
+        CompletedRequestPtr &completed_request
+    ) override;
 
 
     // In the Config, dimensions are given as fractions of the image size.

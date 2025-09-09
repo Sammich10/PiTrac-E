@@ -206,7 +206,10 @@ class GSTaskBase
         void
     )
     {
+<<<<<<< HEAD
         return true;
+=======
+>>>>>>> develop
     }
 
     /**

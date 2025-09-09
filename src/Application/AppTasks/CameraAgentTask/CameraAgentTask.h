@@ -21,7 +21,10 @@ class CameraAgentTask : public GSAgentTask
 
     bool preAgentStartHook() override;
     void postAgentStartHook() override;
-    void onAgentFailedHook(std::shared_ptr<GSAgentBase> agent) override;
+    void onAgentFailedHook
+    (
+        std::shared_ptr<GSAgentBase> agent
+    ) override;
     void agentMonitoringLoopHook() override;
     bool setupProcess() override;
     void preStopHook() override;

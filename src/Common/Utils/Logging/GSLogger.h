@@ -69,33 +69,45 @@ class GSLogger
     // Printf-style logging methods for each severity level
     void trace
     (
-        const char *format, ...) __attribute__((format(printf, 2, 3))
-                                               );
+        const char *format,
+        ...
+    ) __attribute__((format(printf, 2, 3))
+                    );
 
     void debug
     (
-        const char *format, ...) __attribute__((format(printf, 2, 3))
-                                               );
+        const char *format,
+        ...
+    ) __attribute__((format(printf, 2, 3))
+                    );
 
     void info
     (
-        const char *format, ...) __attribute__((format(printf, 2, 3))
-                                               );
+        const char *format,
+        ...
+    ) __attribute__((format(printf, 2, 3))
+                    );
 
     void warning
     (
-        const char *format, ...) __attribute__((format(printf, 2, 3))
-                                               );
+        const char *format,
+        ...
+    ) __attribute__((format(printf, 2, 3))
+                    );
 
     void error
     (
-        const char *format, ...) __attribute__((format(printf, 2, 3))
-                                               );
+        const char *format,
+        ...
+    ) __attribute__((format(printf, 2, 3))
+                    );
 
     void fatal
     (
-        const char *format, ...) __attribute__((format(printf, 2, 3))
-                                               );
+        const char *format,
+        ...
+    ) __attribute__((format(printf, 2, 3))
+                    );
 
     // String-based logging methods (for compatibility)
     void trace
@@ -130,7 +142,10 @@ class GSLogger
 
 
     // Set log level at runtime
-    void setLogLevel(logger_level level);
+    void setLogLevel
+    (
+        logger_level level
+    );
 
   private:
     explicit GSLogger
@@ -138,8 +153,16 @@ class GSLogger
         const logger_level logLevel = logger_level::info
     );
     void Init();
-    std::string formatMessage(const char *format, va_list args);
-    void logMessage(boost::log::trivial::severity_level severity, const std::string &message);
+    std::string formatMessage
+    (
+        const char *format,
+        va_list args
+    );
+    void logMessage
+    (
+        boost::log::trivial::severity_level severity,
+        const std::string &message
+    );
     std::string getProcessName();
 
     logger_level logLevel_;

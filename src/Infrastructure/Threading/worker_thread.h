@@ -23,7 +23,10 @@ class GsThread
 {
   public:
     // Constructor
-    GsThread(const std::string &threadName);
+    GsThread
+    (
+        const std::string &threadName
+    );
 
     // Destructor
     virtual ~GsThread();
@@ -52,8 +55,14 @@ class GsThread
 
   private:
 
-    GsThread(const GsThread &) = delete;
-    GsThread& operator=(const GsThread &) = delete;
+    GsThread
+    (
+        const GsThread &
+    ) = delete;
+    GsThread &operator=
+    (
+        const GsThread &
+    ) = delete;
 };
 
 
@@ -61,10 +70,13 @@ class GsThread
 class TimedCallbackThread : public GsThread
 {
   public:
-    TimedCallbackThread(const std::string &threadName,
-                        long wait_time_ms,
-                        void(*callback_function_)(),
-                        bool repeat_timer = false );
+    TimedCallbackThread
+    (
+        const std::string &threadName,
+        long wait_time_ms,
+        void(*callback_function_)(),
+        bool repeat_timer = false
+    );
 
     ~TimedCallbackThread();
 
@@ -97,7 +109,10 @@ struct ThreadMsg;
 class WorkerThread : public GsThread
 {
   public:
-    WorkerThread(const std::string &threadName);
+    WorkerThread
+    (
+        const std::string &threadName
+    );
 
     ~WorkerThread();
 
@@ -106,7 +121,10 @@ class WorkerThread : public GsThread
 
     // Add a message to the thread queue
     // @param[in] data - thread specific message information
-    void PostMsg(std::shared_ptr<UserData> msg);
+    void PostMsg
+    (
+        std::shared_ptr<UserData> msg
+    );
 
     // Entry point for the worker thread
     void Process() override;

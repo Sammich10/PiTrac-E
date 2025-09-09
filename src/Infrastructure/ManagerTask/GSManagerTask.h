@@ -36,7 +36,10 @@ class GSManagerTask : public GSTaskBase
     bool auto_restart_on_failure_;
 
   public:
-    GSManagerTask(const std::string &name);
+    GSManagerTask
+    (
+        const std::string &name
+    );
     virtual ~GSManagerTask();
 
     // Pure virtual method for manager configuration
@@ -46,7 +49,10 @@ class GSManagerTask : public GSTaskBase
                                                // infrastructure
 
     // Manager management
-    void setManager(std::unique_ptr<GSManagerInterface> manager);
+    void setManager
+    (
+        std::unique_ptr<GSManagerInterface> manager
+    );
     GSManagerInterface *getManager() const
     {
         return manager_.get();

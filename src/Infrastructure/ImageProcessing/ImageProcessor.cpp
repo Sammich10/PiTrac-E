@@ -912,10 +912,10 @@ bool BallImageProc::GetBall(const cv::Mat &rgbImg,
         }
 
         case kUnknown: {
-                default:
-                    GS_LOG_MSG(error, "BallImageProc::GetBall called with invalid search_mode");
-                    return false;
-                    break;
+            default:
+                GS_LOG_MSG(error, "BallImageProc::GetBall called with invalid search_mode");
+                return false;
+                break;
         }
     }
 
@@ -5094,7 +5094,9 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
                                                                                                      *Negative
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *
@@ -5110,7 +5112,9 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
                                                                                                      *to
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *
@@ -5126,7 +5130,9 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
                                                                                                      *in
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *
@@ -5142,6 +5148,7 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
                                                                                                      *axis
                                                                                                      *
                                                                                                      *
@@ -5150,7 +5157,9 @@ cv::Mat BallImageProc::Project2dImageTo3dBall(const cv::Mat &image_gray,
                                                                                                      *
                                                                                                      *
                                                                                                      *
+                                                                                                     *
                                                                                                      *being
+                                                                                                     *
                                                                                                      *
                                                                                                      *
                                                                                                      *

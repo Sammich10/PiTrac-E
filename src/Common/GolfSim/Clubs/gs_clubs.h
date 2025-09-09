@@ -26,7 +26,10 @@ class GolfSimClubs
     static GsClubType current_club_;
 
     static GsClubType GetCurrentClubType();
-    static void SetCurrentClubType(GsClubType club_type);
+    static void SetCurrentClubType
+    (
+        GsClubType club_type
+    );
 };
 }
 

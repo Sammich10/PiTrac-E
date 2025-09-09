@@ -32,15 +32,27 @@ class GsGSProInterface : public GsSimSocketInterface
     // Deals with, for example, shutting down any socket connection
     virtual void DeInitialize();
 
-    virtual bool SendResults(const GsResults &results);
+    virtual bool SendResults
+    (
+        const GsResults &results
+    );
 
-    virtual void SetSimSystemArmed(const bool is_armed);
+    virtual void SetSimSystemArmed
+    (
+        const bool is_armed
+    );
     virtual bool GetSimSystemArmed();
 
   protected:
 
-    virtual std::string GenerateResultsDataToSend(const GsResults &results);
+    virtual std::string GenerateResultsDataToSend
+    (
+        const GsResults &results
+    );
 
-    virtual bool ProcessReceivedData(const std::string received_data);
+    virtual bool ProcessReceivedData
+    (
+        const std::string received_data
+    );
 };
 }

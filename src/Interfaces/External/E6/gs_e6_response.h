@@ -39,11 +39,17 @@ class GsE6Response
 
     // If e6_response_string is not empty, it should be sent back to the
     // E6 system's socket by the caller
-    bool ProcessJson(const std::string &e6_json_string,
-                     std::string &e6_response_string);
+    bool ProcessJson
+    (
+        const std::string &e6_json_string,
+        std::string &e6_response_string
+    );
 
     // NOTE - Should NOT be called.  This isn't used in the E6 system
-    bool ParseJson(const std::string &gspro_json_string);
+    bool ParseJson
+    (
+        const std::string &gspro_json_string
+    );
 
     std::string message_ = "Not Set";
     PlayerHandedness player_handed_ = PlayerHandedness::kRightHanded;
@@ -54,19 +60,62 @@ class GsE6Response
     // Each 'ProcessXXX' method will return a response string, which
     // if not empty, should be sent back to the E6 system's socket by
     // the caller
-    bool ProcessAuthentication(boost::property_tree::ptree &pt, std::string &e6_response_string);
-    bool ProcessChallenge(boost::property_tree::ptree &pt, std::string &e6_response_string);
-    bool ProcessSimCommand(boost::property_tree::ptree &pt, std::string &e6_response_string);
-    bool ProcessPing(boost::property_tree::ptree &pt, std::string &e6_response_string);
-    bool ProcessArm(boost::property_tree::ptree &pt, std::string &e6_response_string);
-    bool ProcessDisarm(boost::property_tree::ptree &pt, std::string &e6_response_string);
-    bool ProcessShotComplete(boost::property_tree::ptree &pt, std::string &e6_response_string);
-    bool ProcessAck(boost::property_tree::ptree &pt, std::string &e6_response_string);
-    bool ProcessWarning(boost::property_tree::ptree &pt, std::string &e6_response_string);
-    bool ProcessError(boost::property_tree::ptree &pt, std::string &e6_response_string);
+    bool ProcessAuthentication
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
+    bool ProcessChallenge
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
+    bool ProcessSimCommand
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
+    bool ProcessPing
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
+    bool ProcessArm
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
+    bool ProcessDisarm
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
+    bool ProcessShotComplete
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
+    bool ProcessAck
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
+    bool ProcessWarning
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
+    bool ProcessError
+    (
+        boost::property_tree::ptree &pt,
+        std::string &e6_response_string
+    );
 
     std::string GetKey();
     std::string GetID();
-    std::string GenerateSHA256String(const std::string &s);
+    std::string GenerateSHA256String
+    (
+        const std::string &s
+    );
 };
 }

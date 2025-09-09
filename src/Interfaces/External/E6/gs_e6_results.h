@@ -22,8 +22,14 @@ class GsE6Results : public GsResults
 {
   public:
     GsE6Results();
-    GsE6Results(const GolfBall &ball);
-    GsE6Results(const GsResults &results);
+    GsE6Results
+    (
+        const GolfBall &ball
+    );
+    GsE6Results
+    (
+        const GsResults &results
+    );
     virtual ~GsE6Results();
     // Will enforce range limits
     virtual std::string Format() const;
