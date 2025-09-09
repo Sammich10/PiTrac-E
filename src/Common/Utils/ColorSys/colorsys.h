@@ -35,19 +35,42 @@ struct colorsys
  */
 {
   public:
-    static cv::Scalar rgb_to_yiq(const cv::Scalar &rgb);
-    static cv::Scalar yiq_to_rgb(const cv::Scalar &yiq);
-    static cv::Scalar rgb_to_hls(const cv::Scalar &rgb);
-    static cv::Scalar hls_to_rgb(const cv::Scalar &hls);
-    static cv::Scalar rgb_to_hsv(const cv::Scalar &rgb);
-    static cv::Scalar hsv_to_rgb(const cv::Scalar &hsv);
+    static cv::Scalar rgb_to_yiq
+    (
+        const cv::Scalar &rgb
+    );
+    static cv::Scalar yiq_to_rgb
+    (
+        const cv::Scalar &yiq
+    );
+    static cv::Scalar rgb_to_hls
+    (
+        const cv::Scalar &rgb
+    );
+    static cv::Scalar hls_to_rgb
+    (
+        const cv::Scalar &hls
+    );
+    static cv::Scalar rgb_to_hsv
+    (
+        const cv::Scalar &rgb
+    );
+    static cv::Scalar hsv_to_rgb
+    (
+        const cv::Scalar &hsv
+    );
 
   private:
     static constexpr float ONE_THIRD = (1.0f / 3.0f);
     static constexpr float ONE_SIXTH = (1.0f / 6.0f);
     static constexpr float TWO_THIRD = (2.0f / 3.0f);
 
-    static float _v(float m1, float m2, float hue);
+    static float _v
+    (
+        float m1,
+        float m2,
+        float hue
+    );
 
     /**
      * @brief Computes the floating-point modulus of two numbers, ensuring a

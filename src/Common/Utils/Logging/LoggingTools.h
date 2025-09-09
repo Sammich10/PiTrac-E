@@ -40,25 +40,57 @@ struct LoggingTools
     static void InitLogging();
 
     // Shohrtcut calls for debug and error messages
-    static void Debug(std::string msg);
-    static void Warning(std::string msg);
-    static void Error(std::string msg);
+    static void Debug
+    (
+        std::string msg
+    );
+    static void Warning
+    (
+        std::string msg
+    );
+    static void Error
+    (
+        std::string msg
+    );
 
     // Vector debug-print methods
     // TBD - Refactor all the repeated code
-    static void Debug(const std::string msg, const std::vector<unsigned int> list);
-    static void Debug(const std::string msg, const std::vector<int> list);
-    static void Debug(const std::string msg, const std::vector<double> list);
-    static void Debug(const std::string msg, const std::vector<float> list);
+    static void Debug
+    (
+        const std::string msg,
+        const std::vector<unsigned int> list
+    );
+    static void Debug
+    (
+        const std::string msg,
+        const std::vector<int> list
+    );
+    static void Debug
+    (
+        const std::string msg,
+        const std::vector<double> list
+    );
+    static void Debug
+    (
+        const std::string msg,
+        const std::vector<float> list
+    );
 
 
     static bool DisplayIntermediateImages();
 
-    static cv::Vec2i GetImageWindowSize(const cv::Mat &img);
+    static cv::Vec2i GetImageWindowSize
+    (
+        const cv::Mat &img
+    );
 
-    static void ShowImage(std::string name,
-                          const cv::Mat &img,
-                          const std::vector < cv::Point > &pointFeatures = {});
+    static void ShowImage
+    (
+        std::string name,
+        const cv::Mat &img,
+        const std::vector < cv::Point > &pointFeatures = {}
+
+    );
 
     // Save the image (possibly with some pointFeatures) to a timestamped file
     // whose name
@@ -67,11 +99,14 @@ struct LoggingTools
     // If forceFixedFileName is true, the logged image filename will be
     // fixedFileName
     // Otherwise, the file name will have a date &
-    static bool LogImage(const std::string &fileNameTag,
-                         const cv::Mat &img,
-                         const std::vector < cv::Point > &pointFeatures,
-                         bool forceFixedFileName = false,
-                         const std::string &fixedFileName = std::string(""));
+    static bool LogImage
+    (
+        const std::string &fileNameTag,
+        const cv::Mat &img,
+        const std::vector < cv::Point > &pointFeatures,
+        bool forceFixedFileName = false,
+        const std::string &fixedFileName = std::string("")
+    );
 
     // Create a unique, seconds-based date-time string
     static std::string GetUniqueLogName();
@@ -79,48 +114,88 @@ struct LoggingTools
 
     // Creates its own copy of the image, so does not affect the original
     // start/endPoints are (x,y) tuples
-    static void ShowRectangleOnImage(std::string name,
-                                     const cv::Mat &baseImage,
-                                     cv::Point startPoint,
-                                     cv::Point endPoint);
+    static void ShowRectangleOnImage
+    (
+        std::string name,
+        const cv::Mat &baseImage,
+        cv::Point startPoint,
+        cv::Point endPoint
+    );
 
-    static void DebugShowColorSwatch(std::string name, cv::Scalar bgr);
+    static void DebugShowColorSwatch
+    (
+        std::string name,
+        cv::Scalar bgr
+    );
 
     // Creates its own copy of the image, so does not affect the original
-    static void ShowContours(std::string name, const cv::Mat &baseImage,
-                             std::vector<std::vector<cv::Point> > contours);
+    static void ShowContours
+    (
+        std::string name,
+        const cv::Mat &baseImage,
+        std::vector<std::vector<cv::Point> > contours
+    );
 
     // Only shows the image if the logging level is at or below debug
-    static void DebugShowContours(std::string name, const cv::Mat &baseImage,
-                                  std::vector<std::vector<cv::Point> > contours);
+    static void DebugShowContours
+    (
+        std::string name,
+        const cv::Mat &baseImage,
+        std::vector<std::vector<cv::Point> > contours
+    );
 
-    static void GetOneImage(std::vector<cv::Mat> images);
+    static void GetOneImage
+    (
+        std::vector<cv::Mat> images
+    );
 
     // The ordinal value provides a mechanism to adjust the outline and
     // colors a little to make them easier to see for each (ordinal) circle
     // Ordinals must start at 1 to be used
-    static void DrawCircleOutlineAndCenter(cv::Mat &img,
-                                           cv::Vec3f circle,
-                                           std::string label,
-                                           int ordinal = 0,
-                                           bool de_emphasize = false);
+    static void DrawCircleOutlineAndCenter
+    (
+        cv::Mat &img,
+        cv::Vec3f circle,
+        std::string label,
+        int ordinal = 0,
+        bool de_emphasize = false
+    );
 
 
     // Only shows the image if the logging level is at or below debug
-    static void DebugShowImage(std::string name,
-                               const cv::Mat &img,
-                               const std::vector < cv::Point > &pointFeatures = {});
+    static void DebugShowImage
+    (
+        std::string name,
+        const cv::Mat &img,
+        const std::vector < cv::Point > &pointFeatures = {}
+
+    );
 
     // Prints out theh basic information about an image, but not all the data
-    static std::string SummarizeImage(const cv::Mat &img);
+    static std::string SummarizeImage
+    (
+        const cv::Mat &img
+    );
 
     // The following format_xxx functions prepare a human-readable output that
     // represents the given object
-    static std::string FormatCircle(const cv::Vec3f &c);
-    static std::string FormatCircleList(const std::vector<cv::Vec3f> &cList);
+    static std::string FormatCircle
+    (
+        const cv::Vec3f &c
+    );
+    static std::string FormatCircleList
+    (
+        const std::vector<cv::Vec3f> &cList
+    );
 
-    static std::string FormatVec3f(const cv::Vec3f &v);
-    static std::string FormatGsColorTriplet(const cv::Scalar &v);
+    static std::string FormatVec3f
+    (
+        const cv::Vec3f &v
+    );
+    static std::string FormatGsColorTriplet
+    (
+        const cv::Scalar &v
+    );
 };
 
 // Used as a define so that we can get file/line-numbers in our tracing if we

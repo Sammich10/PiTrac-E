@@ -32,26 +32,41 @@ class GsUISystem
     static std::string kWebServerErrorExposuresImage;
     static std::string kWebServerBallSearchAreaImage;
 
-    static void SendIPCErrorStatusMessage(const std::string &error_message);
+    static void SendIPCErrorStatusMessage
+    (
+        const std::string &error_message
+    );
 
-    static bool SendIPCStatusMessage(const GsIPCResultType message_type,
-                                     const std::string &custom_message = "");
+    static bool SendIPCStatusMessage
+    (
+        const GsIPCResultType message_type,
+        const std::string &custom_message = ""
+    );
 
-    static void SendIPCHitMessage(const GolfBall &result_ball,
-                                  const std::string &secondary_message = "");
+    static void SendIPCHitMessage
+    (
+        const GolfBall &result_ball,
+        const std::string &secondary_message = ""
+    );
 
     // Save the image into the shared web-server directory so that the web-based
     // golf-sim user interface can access it.
     // Also save a uniquely-named copy to the usual images directory unless
     // suppressed.
 
-    static bool SaveWebserverImage(const std::string &file_name,
-                                   const cv::Mat &img,
-                                   bool suppress_diagnostic_saving = false);
-    static bool SaveWebserverImage(const std::string &file_name,
-                                   const cv::Mat &img,
-                                   const std::vector<GolfBall> &balls,
-                                   bool suppress_diagnostic_saving = false);
+    static bool SaveWebserverImage
+    (
+        const std::string &file_name,
+        const cv::Mat &img,
+        bool suppress_diagnostic_saving = false
+    );
+    static bool SaveWebserverImage
+    (
+        const std::string &file_name,
+        const cv::Mat &img,
+        const std::vector<GolfBall> &balls,
+        bool suppress_diagnostic_saving = false
+    );
 
     static void ClearWebserverImages();
 };

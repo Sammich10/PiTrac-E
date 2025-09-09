@@ -63,7 +63,11 @@ class GSAgentBase
     std::shared_ptr<GSLogger> logger_;
 
   public:
-    GSAgentBase(const std::string &name, AgentPriority priority = AgentPriority::Normal);
+    GSAgentBase
+    (
+        const std::string &name,
+        AgentPriority priority = AgentPriority::Normal
+    );
     virtual ~GSAgentBase();
 
     // Core lifecycle methods (pure virtual)
@@ -76,12 +80,18 @@ class GSAgentBase
     void stop();
     void pause();
     void resume();
-    bool waitForCompletion(std::chrono::milliseconds timeout = std::chrono::milliseconds::max());
+    bool waitForCompletion
+    (
+        std::chrono::milliseconds timeout = std::chrono::milliseconds::max()
+    );
 
     // Status and info methods
     AgentStatus getStatus() const;
     AgentPriority getPriority() const;
-    void setPriority(AgentPriority priority);
+    void setPriority
+    (
+        AgentPriority priority
+    );
 
     const std::string &getAgentName() const
     {
@@ -150,18 +160,33 @@ class GSAgentBase
         errors_count_++;
     }
 
-    void logInfo(const std::string &message);
-    void logWarning(const std::string &message);
-    void logError(const std::string &message);
+    void logInfo
+    (
+        const std::string &message
+    );
+    void logWarning
+    (
+        const std::string &message
+    );
+    void logError
+    (
+        const std::string &message
+    );
 
     // Agent state management for derived classes
-    void setStatus(AgentStatus status);
+    void setStatus
+    (
+        AgentStatus status
+    );
     void handlePause();
     bool checkTimeout();
 
   private:
     void agentWrapper();
-    void changeStatus(AgentStatus new_status);
+    void changeStatus
+    (
+        AgentStatus new_status
+    );
     std::string generateAgentId();
 };
 } // namespace PiTrac

@@ -18,9 +18,15 @@ class GolfSimClubData
 
     // Create a video of the club strike, detect club face information,
     // perform analysis, etc.
-    static bool ProcessClubStrikeData(boost::circular_buffer<RecentFrameInfo> &frame_info);
+    static bool ProcessClubStrikeData
+    (
+        boost::circular_buffer<RecentFrameInfo> &frame_info
+    );
 
-    static bool CreateClubStrikeVideo(boost::circular_buffer<RecentFrameInfo> &frame_info);
+    static bool CreateClubStrikeVideo
+    (
+        boost::circular_buffer<RecentFrameInfo> &frame_info
+    );
 
 
   public:

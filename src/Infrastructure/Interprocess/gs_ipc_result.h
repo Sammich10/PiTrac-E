@@ -47,7 +47,10 @@ class GsIPCResult
     // Returns a string representation of this result
     std::string Format() const;
 
-    std::string FormatResultType(const GsIPCResultType t) const;
+    std::string FormatResultType
+    (
+        const GsIPCResultType t
+    ) const;
 
   public:
     int carry_meters_ = 0;

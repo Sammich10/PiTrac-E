@@ -141,33 +141,52 @@ class CEllipseDetectorYaed
   public:
 
     //Constructor and Destructor
-    CEllipseDetectorYaed(void);
-    ~CEllipseDetectorYaed(void);
+    CEllipseDetectorYaed
+    (
+        void
+    );
+    ~CEllipseDetectorYaed
+    (
+        void
+    );
 
-    void DetectAfterPreProcessing(vector<Ellipse> &ellipses, cv::Mat &E,
-                                  Mat1f &PHI /* TBD =Mat1f()*/ );
+    void DetectAfterPreProcessing
+    (
+        vector<Ellipse> &ellipses,
+        cv::Mat &E,
+        Mat1f &PHI                           /* TBD =Mat1f()*/
+    );
 
     //Detect the ellipses in the gray image
-    void Detect(cv::Mat &gray, vector<Ellipse> &ellipses);
+    void Detect
+    (
+        cv::Mat &gray,
+        vector<Ellipse> &ellipses
+    );
 
     //Draw the first iTopN ellipses on output
-    void DrawDetectedEllipses(Mat3b &output,
-                              vector<Ellipse> &ellipses,
-                              int iTopN = 0,
-                              int thickness = 2);
+    void DrawDetectedEllipses
+    (
+        Mat3b &output,
+        vector<Ellipse> &ellipses,
+        int iTopN = 0,
+        int thickness = 2
+    );
 
     //Set the parameters of the detector
-    void SetParameters  (   Size szPreProcessingGaussKernelSize,
-                            double dPreProcessingGaussSigma,
-                            float fThPosition,
-                            float fMaxCenterDistance,
-                            int iMinEdgeLength,
-                            float fMinOrientedRectSide,
-                            float fDistanceToEllipseContour,
-                            float fMinScore,
-                            float fMinReliability,
-                            int iNs
-                            );
+    void SetParameters
+    (
+        Size szPreProcessingGaussKernelSize,
+        double dPreProcessingGaussSigma,
+        float fThPosition,
+        float fMaxCenterDistance,
+        int iMinEdgeLength,
+        float fMinOrientedRectSide,
+        float fDistanceToEllipseContour,
+        float fMinScore,
+        float fMinReliability,
+        int iNs
+    );
 
     // Return the execution time
     double GetExecTime()
@@ -189,70 +208,143 @@ class CEllipseDetectorYaed
     static const ushort PAIR_14 = 0x03;
 
     //generate keys from pair and indicse
-    uint inline GenerateKey(uchar pair, ushort u, ushort v);
+    uint inline GenerateKey
+    (
+        uchar pair,
+        ushort u,
+        ushort v
+    );
 
-    void PreProcessing(cv::Mat &I, cv::Mat &DP, cv::Mat &DN);
+    void PreProcessing
+    (
+        cv::Mat &I,
+        cv::Mat &DP,
+        cv::Mat &DN
+    );
 
-    void RemoveShortEdges(cv::Mat &edges, cv::Mat &clean);
+    void RemoveShortEdges
+    (
+        cv::Mat &edges,
+        cv::Mat &clean
+    );
 
-    void ClusterEllipses(vector<Ellipse> &ellipses);
+    void ClusterEllipses
+    (
+        vector<Ellipse> &ellipses
+    );
 
-    int FindMaxK(const vector<int> &v) const;
-    int FindMaxN(const vector<int> &v) const;
-    int FindMaxA(const vector<int> &v) const;
+    int FindMaxK
+    (
+        const vector<int> &v
+    ) const;
+    int FindMaxN
+    (
+        const vector<int> &v
+    ) const;
+    int FindMaxA
+    (
+        const vector<int> &v
+    ) const;
 
-    int FindMaxK(const int *v) const;
-    int FindMaxN(const int *v) const;
-    int FindMaxA(const int *v) const;
+    int FindMaxK
+    (
+        const int *v
+    ) const;
+    int FindMaxN
+    (
+        const int *v
+    ) const;
+    int FindMaxA
+    (
+        const int *v
+    ) const;
 
-    float GetMedianSlope(vector<Point2f> &med, Point2f &M, vector<float> &slopes);
-    void GetFastCenter  (vector<Point> &e1, vector<Point> &e2, EllipseData &data);
+    float GetMedianSlope
+    (
+        vector<Point2f> &med,
+        Point2f &M,
+        vector<float> &slopes
+    );
+    void GetFastCenter
+    (
+        vector<Point> &e1,
+        vector<Point> &e2,
+        EllipseData &data
+    );
 
 
-    void DetectEdges13(cv::Mat &DP, VVP &points_1, VVP &points_3);
-    void DetectEdges24(cv::Mat &DN, VVP &points_2, VVP &points_4);
+    void DetectEdges13
+    (
+        cv::Mat &DP,
+        VVP &points_1,
+        VVP &points_3
+    );
+    void DetectEdges24
+    (
+        cv::Mat &DN,
+        VVP &points_2,
+        VVP &points_4
+    );
 
-    void FindEllipses   (   Point2f &center,
-                            VP &edge_i,
-                            VP &edge_j,
-                            VP &edge_k,
-                            EllipseData &data_ij,
-                            EllipseData &data_ik,
-                            vector<Ellipse> &ellipses
-                            );
+    void FindEllipses
+    (
+        Point2f &center,
+        VP &edge_i,
+        VP &edge_j,
+        VP &edge_k,
+        EllipseData &data_ij,
+        EllipseData &data_ik,
+        vector<Ellipse> &ellipses
+    );
 
-    Point2f GetCenterCoordinates(EllipseData &data_ij, EllipseData &data_ik);
-    Point2f _GetCenterCoordinates(EllipseData &data_ij, EllipseData &data_ik);
+    Point2f GetCenterCoordinates
+    (
+        EllipseData &data_ij,
+        EllipseData &data_ik
+    );
+    Point2f _GetCenterCoordinates
+    (
+        EllipseData &data_ij,
+        EllipseData &data_ik
+    );
 
 
 
-    void Triplets124    (   VVP &pi,
-                            VVP &pj,
-                            VVP &pk,
-                            unordered_map<uint, EllipseData> &data,
-                            vector<Ellipse> &ellipses
-                            );
+    void Triplets124
+    (
+        VVP &pi,
+        VVP &pj,
+        VVP &pk,
+        unordered_map<uint, EllipseData> &data,
+        vector<Ellipse> &ellipses
+    );
 
-    void Triplets231    (   VVP &pi,
-                            VVP &pj,
-                            VVP &pk,
-                            unordered_map<uint, EllipseData> &data,
-                            vector<Ellipse> &ellipses
-                            );
+    void Triplets231
+    (
+        VVP &pi,
+        VVP &pj,
+        VVP &pk,
+        unordered_map<uint, EllipseData> &data,
+        vector<Ellipse> &ellipses
+    );
 
-    void Triplets342    (   VVP &pi,
-                            VVP &pj,
-                            VVP &pk,
-                            unordered_map<uint, EllipseData> &data,
-                            vector<Ellipse> &ellipses
-                            );
+    void Triplets342
+    (
+        VVP &pi,
+        VVP &pj,
+        VVP &pk,
+        unordered_map<uint, EllipseData> &data,
+        vector<Ellipse> &ellipses
+    );
 
-    void Triplets413    (   VVP &pi,
-                            VVP &pj,
-                            VVP &pk,
-                            unordered_map<uint, EllipseData> &data,
-                            vector<Ellipse> &ellipses
-                            );
+    void Triplets413
+    (
+        VVP &pi,
+        VVP &pj,
+        VVP &pk,
+        unordered_map<uint, EllipseData> &data,
+        vector<Ellipse> &ellipses
+    );
 
     void Tic(unsigned idx) //start
     {

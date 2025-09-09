@@ -34,15 +34,23 @@ class LibcameraJpegApp : public RPiCamApp
     {
     }
 
-    StillOptions * GetOptions() const
+    StillOptions *GetOptions() const
     {
         return static_cast<StillOptions *>(options_.get());
     }
 };
 
 // The main event loops for the camera 1 and 2 systems
-bool still_image_event_loop(LibcameraJpegApp &app, cv::Mat &returnImg);
+bool still_image_event_loop
+(
+    LibcameraJpegApp &app,
+    cv::Mat &returnImg
+);
 
-bool ball_flight_camera_event_loop(LibcameraJpegApp &app, cv::Mat &returnImg);
+bool ball_flight_camera_event_loop
+(
+    LibcameraJpegApp &app,
+    cv::Mat &returnImg
+);
 
 #endif // #ifdef __unix__  // Ignore in Windows environment

@@ -58,11 +58,14 @@
 class EDColor
 {
   public:
-    EDColor(cv::Mat srcImage,
-            int gradThresh = 20,
-            int anchor_thresh = 4,
-            double sigma = 1.5,
-            bool validateSegments = false);
+    EDColor
+    (
+        cv::Mat srcImage,
+        int gradThresh = 20,
+        int anchor_thresh = 4,
+        double sigma = 1.5,
+        bool validateSegments = false
+    );
     cv::Mat getEdgeImage();
     std::vector<std::vector<cv::Point> > getSegments();
     int getSegmentNo();
@@ -106,13 +109,31 @@ class EDColor
 
     void MyRGB2LabFast();
     void ComputeGradientMapByDiZenzo();
-    void smoothChannel(uchar *src, uchar *smooth, double sigma);
+    void smoothChannel
+    (
+        uchar *src,
+        uchar *smooth,
+        double sigma
+    );
     void validateEdgeSegments();
-    void testSegment(int i, int index1, int index2);
+    void testSegment
+    (
+        int i,
+        int index1,
+        int index2
+    );
     void extractNewSegments();
-    double NFA(double prob, int len);
+    double NFA
+    (
+        double prob,
+        int len
+    );
 
-    static void fixEdgeSegments(std::vector<std::vector<cv::Point> > map, int noPixels);
+    static void fixEdgeSegments
+    (
+        std::vector<std::vector<cv::Point> > map,
+        int noPixels
+    );
 
     static void InitColorEDLib();
 };

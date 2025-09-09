@@ -38,7 +38,7 @@ void GsIPCMat::SetAndPackMat(cv::Mat &mat)
                   mat_holder_);
 }
 
-const msgpack::sbuffer& GsIPCMat::GetSerializedMat() const
+const msgpack::sbuffer &GsIPCMat::GetSerializedMat() const
 {
     return serialized_image_;
 }

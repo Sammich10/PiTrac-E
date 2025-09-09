@@ -13,5 +13,9 @@ namespace PiTrac
 // The main event loop
 // Returns true if function ran as expected, and without error
 // motion_detected will be set true only if motion was successfully detected.
-bool ball_watcher_event_loop(RPiCamEncoder &app, bool &motion_detected);
+bool ball_watcher_event_loop
+(
+    RPiCamEncoder &app,
+    bool &motion_detected
+);
 }

@@ -36,7 +36,10 @@ class GsGSProResponse
 
   public:
     GsGSProResponse();
-    bool ParseJson(const std::string &gspro_json_string);
+    bool ParseJson
+    (
+        const std::string &gspro_json_string
+    );
     virtual ~GsGSProResponse();
     virtual std::string Format() const;
 

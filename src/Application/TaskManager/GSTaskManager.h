@@ -13,8 +13,14 @@ class AppLauncher
     AppLauncher();
     ~AppLauncher();
 
-    void launchApp(const std::string &appName);
-    void closeApp(const std::string &appName);
+    void launchApp
+    (
+        const std::string &appName
+    );
+    void closeApp
+    (
+        const std::string &appName
+    );
 
   private:
     std::unique_ptr<GSMessagerBase> messager_;

@@ -413,18 +413,34 @@ class GolfSimEventQueue
   public:
     static const int kMaxQueueSize = 20;
 
-    static bool QueueEvent(GolfSimEventElement &event);
+    static bool QueueEvent
+    (
+        GolfSimEventElement &event
+    );
 
     // Caller is responsible for deleting the event element's event pointer
-    static bool DeQueueEvent(GolfSimEventElement &event, unsigned int time_out_ms = 0);
+    static bool DeQueueEvent
+    (
+        GolfSimEventElement &event,
+        unsigned int time_out_ms = 0
+    );
 
     // Cast a specific derived event type into the PossibleEvent variant type
     // TBD - Seems really clunky - how to improve?
-    static PossibleEvent ConvertEventToPossibleEvent(GolfSimEventBase *event);
+    static PossibleEvent ConvertEventToPossibleEvent
+    (
+        GolfSimEventBase *event
+    );
 
-    static bool EventIsShutdownEvent(GolfSimEventBase *event);
+    static bool EventIsShutdownEvent
+    (
+        GolfSimEventBase *event
+    );
 
-    static bool EventIsControlEvent(GolfSimEventBase *event);
+    static bool EventIsControlEvent
+    (
+        GolfSimEventBase *event
+    );
 
     // Not thread safe
     static int GetQueueLength();

@@ -12,7 +12,7 @@ namespace PiTrac
 {
 GolfSimOptions GolfSimOptions::the_command_line_options_;
 
-GolfSimOptions& GolfSimOptions::GetCommandLineOptions()
+GolfSimOptions &GolfSimOptions::GetCommandLineOptions()
 {
     return the_command_line_options_;
 }

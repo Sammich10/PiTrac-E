@@ -49,7 +49,10 @@ class GsIPCControlMsg
     // Returns a string representation of this result
     std::string Format() const;
 
-    static std::string FormatControlMessageType(const GsIPCControlMsgType t);
+    static std::string FormatControlMessageType
+    (
+        const GsIPCControlMsgType t
+    );
 
   public:
     GsIPCControlMsgType control_type_ = GsIPCControlMsgType::kUnknown;

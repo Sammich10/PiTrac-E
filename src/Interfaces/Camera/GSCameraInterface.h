@@ -85,16 +85,25 @@ class GSCameraInterface
     virtual ~GSCameraInterface() = default;
 
     /** Pure virtual methods to be implemented by derived classes **/
-    virtual bool openCamera(int cameraIndex) = 0;
+    virtual bool openCamera
+    (
+        int cameraIndex
+    ) = 0;
     virtual bool initializeCamera() = 0;
     virtual void closeCamera() = 0;
     virtual cv::Mat captureFrame() = 0;
     virtual cv::Mat getNextFrame() = 0;
     virtual CAMERA_TYPE getCameraType() const = 0;
-    virtual bool setTriggerMode(TriggerMode mode) = 0;
+    virtual bool setTriggerMode
+    (
+        TriggerMode mode
+    ) = 0;
     virtual bool startContinuousCapture() = 0;
     virtual bool stopContinuousCapture() = 0;
-    virtual bool switchStream(StreamType newStream) = 0;
+    virtual bool switchStream
+    (
+        StreamType newStream
+    ) = 0;
     virtual std::string toString() const = 0;
 
     /** Accessor methods **/
@@ -282,11 +291,26 @@ class GSCameraInterface
   protected:
 
     virtual bool configureCamera() = 0;
-    virtual bool allocateBuffersForStream(libcamera::Stream *stream) = 0;
-    virtual bool configureTriggerMode(const TriggerMode &mode) = 0;
-    virtual cv::Mat convertBufferToMat(libcamera::FrameBuffer *buffer) = 0;
-    virtual void requestComplete(libcamera::Request *request) = 0;
-    virtual void addFrameToBuffer(const cv::Mat &frame) = 0;
+    virtual bool allocateBuffersForStream
+    (
+        libcamera::Stream *stream
+    ) = 0;
+    virtual bool configureTriggerMode
+    (
+        const TriggerMode &mode
+    ) = 0;
+    virtual cv::Mat convertBufferToMat
+    (
+        libcamera::FrameBuffer *buffer
+    ) = 0;
+    virtual void requestComplete
+    (
+        libcamera::Request *request
+    ) = 0;
+    virtual void addFrameToBuffer
+    (
+        const cv::Mat &frame
+    ) = 0;
 
 
 // Libcamera components

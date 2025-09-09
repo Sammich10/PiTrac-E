@@ -38,25 +38,29 @@ class OpenCVImageAnalyzer : public domain::IImageAnalyzer
     ~OpenCVImageAnalyzer() override = default;
 
     // Domain interface implementation
-    domain::TeedBallResult AnalyzeTeedBall(
+    domain::TeedBallResult AnalyzeTeedBall
+    (
         const domain::ImageBuffer &image,
         const std::optional<domain::BallPosition> &expected_position = std::nullopt
-        ) override;
+    ) override;
 
-    domain::MovementResult DetectMovement(
+    domain::MovementResult DetectMovement
+    (
         const std::vector<domain::ImageBuffer> &image_sequence,
         const domain::BallPosition &reference_ball_position
-        ) override;
+    ) override;
 
-    domain::FlightAnalysisResult AnalyzeBallFlight(
+    domain::FlightAnalysisResult AnalyzeBallFlight
+    (
         const domain::ImageBuffer &strobed_image,
         const domain::BallPosition &calibration_reference
-        ) override;
+    ) override;
 
-    domain::TeedBallResult DetectBallReset(
+    domain::TeedBallResult DetectBallReset
+    (
         const domain::ImageBuffer &current_image,
         const domain::BallPosition &previous_ball_position
-        ) override;
+    ) override;
 
     // Analyzer metadata
     std::string GetAnalyzerName() const override
@@ -75,8 +79,17 @@ class OpenCVImageAnalyzer : public domain::IImageAnalyzer
     }
 
     // OpenCV-specific configuration
-    void SetHoughParameters(double param1, double param2, double dp = 1.0);
-    void SetRadiusLimits(int min_radius, int max_radius);    private:
+    void SetHoughParameters
+    (
+        double param1,
+        double param2,
+        double dp = 1.0
+    );
+    void SetRadiusLimits
+    (
+        int min_radius,
+        int max_radius
+    );    private:
     // Configuration parameters for Hough Circle detection
     static constexpr double DEFAULT_HOUGH_PARAM1 = 100.0;
     static constexpr double DEFAULT_HOUGH_PARAM2 = 30.0;
@@ -95,24 +108,55 @@ class OpenCVImageAnalyzer : public domain::IImageAnalyzer
     int max_radius_ = DEFAULT_MAX_RADIUS;
 
     // Core detection methods
-    std::vector<domain::BallPosition> DetectCircles(const cv::Mat &image) const;
-    static domain::BallPosition SelectBestCandidate(
+    std::vector<domain::BallPosition> DetectCircles
+    (
+        const cv::Mat &image
+    ) const;
+    static domain::BallPosition SelectBestCandidate
+    (
         const std::vector<domain::BallPosition> &candidates,
-        const std::optional<domain::BallPosition> &expected_position);
+        const std::optional<domain::BallPosition> &expected_position
+    );
     // Helper methods
-    double CalculateConfidence(const domain::BallPosition &position, const cv::Mat &image) const;
-    static bool IsValidBallPosition(const domain::BallPosition &position, const cv::Mat &image);
-    static cv::Mat PreprocessImage(const cv::Mat &input);
+    double CalculateConfidence
+    (
+        const domain::BallPosition &position,
+        const cv::Mat &image
+    ) const;
+    static bool IsValidBallPosition
+    (
+        const domain::BallPosition &position,
+        const cv::Mat &image
+    );
+    static cv::Mat PreprocessImage
+    (
+        const cv::Mat &input
+    );
 
     // Movement detection helpers
-    static std::vector<cv::Point2f> CalculateOpticalFlow(
-        const cv::Mat &prev_frame, const cv::Mat &curr_frame);
-    static double CalculateMovementMagnitude(const std::vector<cv::Point2f> &flow);
+    static std::vector<cv::Point2f> CalculateOpticalFlow
+    (
+        const cv::Mat &prev_frame,
+        const cv::Mat &curr_frame
+    );
+    static double CalculateMovementMagnitude
+    (
+        const std::vector<cv::Point2f> &flow
+    );
 
     // Error result creators
-    static domain::TeedBallResult CreateErrorResult(const std::string &error_message);
-    static domain::MovementResult CreateMovementErrorResult(const std::string &error_message);
-    static domain::FlightAnalysisResult CreateFlightErrorResult(const std::string &error_message);
+    static domain::TeedBallResult CreateErrorResult
+    (
+        const std::string &error_message
+    );
+    static domain::MovementResult CreateMovementErrorResult
+    (
+        const std::string &error_message
+    );
+    static domain::FlightAnalysisResult CreateFlightErrorResult
+    (
+        const std::string &error_message
+    );
 };
 } // namespace PiTrac::image_analysis::infrastructure
 

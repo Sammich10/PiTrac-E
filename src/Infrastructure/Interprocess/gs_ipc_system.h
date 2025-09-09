@@ -37,14 +37,24 @@ class GolfSimIpcSystem
 
     static cv::Mat last_received_image_;
 
-    static bool DispatchReceivedIpcMessage(const BytesMessage &message);
-    static bool SendIpcMessage(const GolfSimIPCMessage &ipc_message);
+    static bool DispatchReceivedIpcMessage
+    (
+        const BytesMessage &message
+    );
+    static bool SendIpcMessage
+    (
+        const GolfSimIPCMessage &ipc_message
+    );
 
-    static GolfSimIPCMessage * BuildIpcMessageFromBytesMessage(
-        const BytesMessage &active_mq_message);
+    static GolfSimIPCMessage *BuildIpcMessageFromBytesMessage
+    (
+        const BytesMessage &active_mq_message
+    );
 
-    static std::unique_ptr<cms::BytesMessage> BuildBytesMessageObjectFromIpcMessage(
-        const GolfSimIPCMessage &ipc_message);
+    static std::unique_ptr<cms::BytesMessage> BuildBytesMessageObjectFromIpcMessage
+    (
+        const GolfSimIPCMessage &ipc_message
+    );
 
     static bool InitializeIPCSystem();
     static bool ShutdownIPCSystem();
@@ -52,13 +62,34 @@ class GolfSimIpcSystem
     // The following methods deal with what to do with received IPC messages and
     // are called
     // from the main DispatchReceivedIpcMessage method.
-    static bool DispatchRequestForCamera2ImageMessage(const GolfSimIPCMessage &message);
-    static bool DispatchCamera2ImageMessage(const GolfSimIPCMessage &message);
-    static bool DispatchCamera2PreImageMessage(const GolfSimIPCMessage &message);
-    static bool DispatchShutdownMessage(const GolfSimIPCMessage &message);
-    static bool DispatchRequestForCamera2TestStillImage(const GolfSimIPCMessage &message);
-    static bool DispatchResultsMessage(const GolfSimIPCMessage &message);
-    static bool DispatchControlMsgMessage(const GolfSimIPCMessage &message);
+    static bool DispatchRequestForCamera2ImageMessage
+    (
+        const GolfSimIPCMessage &message
+    );
+    static bool DispatchCamera2ImageMessage
+    (
+        const GolfSimIPCMessage &message
+    );
+    static bool DispatchCamera2PreImageMessage
+    (
+        const GolfSimIPCMessage &message
+    );
+    static bool DispatchShutdownMessage
+    (
+        const GolfSimIPCMessage &message
+    );
+    static bool DispatchRequestForCamera2TestStillImage
+    (
+        const GolfSimIPCMessage &message
+    );
+    static bool DispatchResultsMessage
+    (
+        const GolfSimIPCMessage &message
+    );
+    static bool DispatchControlMsgMessage
+    (
+        const GolfSimIPCMessage &message
+    );
 
     static bool SimulateCamera2ImageMessage();
   private:

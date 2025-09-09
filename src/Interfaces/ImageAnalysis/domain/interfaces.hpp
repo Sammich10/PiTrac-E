@@ -40,10 +40,11 @@ class IImageAnalyzer
      * @param expected_position Optional hint about where ball should be
      * @return Result indicating ball state and position
      */
-    [[nodiscard]] virtual TeedBallResult AnalyzeTeedBall(
+    [[nodiscard]] virtual TeedBallResult AnalyzeTeedBall
+    (
         const ImageBuffer &image,
         const std::optional<BallPosition> &expected_position = std::nullopt
-        ) = 0;
+    ) = 0;
 
     /**
      * @brief Detect movement indicating shot in progress
@@ -52,10 +53,11 @@ class IImageAnalyzer
      * @return Result indicating if movement was detected and its
      * characteristics
      */
-    [[nodiscard]] virtual MovementResult DetectMovement(
+    [[nodiscard]] virtual MovementResult DetectMovement
+    (
         const std::vector<ImageBuffer> &image_sequence,
         const BallPosition &reference_ball_position
-        ) = 0;
+    ) = 0;
 
     /**
      * @brief Analyze strobed ball flight image for multiple ball positions
@@ -63,10 +65,11 @@ class IImageAnalyzer
      * @param calibration_reference Reference ball for size/distance calibration
      * @return Analysis of ball positions, velocity, and spin
      */
-    [[nodiscard]] virtual FlightAnalysisResult AnalyzeBallFlight(
+    [[nodiscard]] virtual FlightAnalysisResult AnalyzeBallFlight
+    (
         const ImageBuffer &strobed_image,
         const BallPosition &calibration_reference
-        ) = 0;
+    ) = 0;
 
     /**
      * @brief Detect if ball has been reset on tee
@@ -74,10 +77,11 @@ class IImageAnalyzer
      * @param previous_ball_position Last known ball position
      * @return Result indicating if ball was reset
      */
-    [[nodiscard]] virtual TeedBallResult DetectBallReset(
+    [[nodiscard]] virtual TeedBallResult DetectBallReset
+    (
         const ImageBuffer &current_image,
         const BallPosition &previous_ball_position
-        ) = 0;
+    ) = 0;
 
     // Analyzer metadata and capabilities
     [[nodiscard]] virtual std::string GetAnalyzerName() const = 0;
@@ -99,13 +103,17 @@ class IImageAnalyzerFactory
   public:
     virtual ~IImageAnalyzerFactory() = default;
 
-    [[nodiscard]] virtual std::unique_ptr<IImageAnalyzer> CreateAnalyzer(
+    [[nodiscard]] virtual std::unique_ptr<IImageAnalyzer> CreateAnalyzer
+    (
         const std::string &analyzer_type = "opencv"
-        ) = 0;
+    ) = 0;
 
     [[nodiscard]] virtual std::vector<std::string> GetAvailableAnalyzers() const = 0;
 
-    [[nodiscard]] virtual bool IsAnalyzerAvailable(const std::string &analyzer_type) const = 0;
+    [[nodiscard]] virtual bool IsAnalyzerAvailable
+    (
+        const std::string &analyzer_type
+    ) const = 0;
 };
 
 /**
@@ -118,16 +126,27 @@ class IAnalysisResultRepository
 {
   public:
     virtual ~IAnalysisResultRepository() = default;
-    virtual void StoreTeedBallResult(const TeedBallResult &result,
-                                     const ImageBuffer &image) = 0;
-    virtual void StoreMovementResult(const MovementResult &result,
-                                     const std::vector<ImageBuffer> &images) = 0;
-    virtual void StoreFlightAnalysisResult(const FlightAnalysisResult &result,
-                                           const ImageBuffer &image) = 0;
+    virtual void StoreTeedBallResult
+    (
+        const TeedBallResult &result,
+        const ImageBuffer &image
+    ) = 0;
+    virtual void StoreMovementResult
+    (
+        const MovementResult &result,
+        const std::vector<ImageBuffer> &images
+    ) = 0;
+    virtual void StoreFlightAnalysisResult
+    (
+        const FlightAnalysisResult &result,
+        const ImageBuffer &image
+    ) = 0;
 
-    [[nodiscard]] virtual std::vector<TeedBallResult> GetTeedBallResults(
+    [[nodiscard]] virtual std::vector<TeedBallResult> GetTeedBallResults
+    (
         std::chrono::microseconds start_time,
-        std::chrono::microseconds end_time) = 0;
+        std::chrono::microseconds end_time
+    ) = 0;
 };
 
 /**
@@ -141,17 +160,29 @@ class IAnalyzerConfigRepository
   public:
     virtual ~IAnalyzerConfigRepository() = default;
 
-    virtual void SetAnalyzerType(const std::string &analyzer_type) = 0;
+    virtual void SetAnalyzerType
+    (
+        const std::string &analyzer_type
+    ) = 0;
     [[nodiscard]] virtual std::string GetAnalyzerType() const = 0;
 
-    virtual void SetConfidenceThreshold(double threshold) = 0;     // Should be
+    virtual void SetConfidenceThreshold
+    (
+        double threshold
+    ) = 0;                                                         // Should be
                                                                    // 0.0-1.0
     [[nodiscard]] virtual double GetConfidenceThreshold() const = 0;
 
-    virtual void SetDebugMode(bool enabled) = 0;
+    virtual void SetDebugMode
+    (
+        bool enabled
+    ) = 0;
     [[nodiscard]] virtual bool IsDebugModeEnabled() const = 0;
 
-    virtual void SetModelPath(const std::string &path) = 0;
+    virtual void SetModelPath
+    (
+        const std::string &path
+    ) = 0;
     [[nodiscard]] virtual std::string GetModelPath() const = 0;
 };
 } // namespace PiTrac::image_analysis::domain

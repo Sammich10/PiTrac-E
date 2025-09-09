@@ -41,7 +41,10 @@ class GsSimInterface
     static bool SimIsConnected();
 
     // To be called from the launch monitor
-    static bool SendResultsToGolfSims(const GsResults &results);
+    static bool SendResultsToGolfSims
+    (
+        const GsResults &results
+    );
 
     // If the interface is present (usually indicated in the config.json file),
     // this method returns true;
@@ -61,15 +64,24 @@ class GsSimInterface
     virtual void DeInitialize();
 
     // Base class behavior is to simply print out the JSON
-    virtual bool SendResults(const GsResults &results);
+    virtual bool SendResults
+    (
+        const GsResults &results
+    );
 
     // Sends a string without any other side-effects
     // Returns the number of bytes written
-    virtual int SendSimMessage(const std::string &message);
+    virtual int SendSimMessage
+    (
+        const std::string &message
+    );
 
     // Deals with whether or not ALL of the connected simulators are armed
     // (ready to take a shot).  Some sims just return true.
-    virtual void SetSimSystemArmed(const bool is_armed);
+    virtual void SetSimSystemArmed
+    (
+        const bool is_armed
+    );
     virtual bool GetSimSystemArmed();
 
     // These static functions operate at the collection level for all interfaces
@@ -79,7 +91,10 @@ class GsSimInterface
     };
 
     // Find the GSPro or E6 or whatever interface (if available) by type
-    static GsSimInterface *GetSimInterfaceByType(GolfSimulatorType sim_type);
+    static GsSimInterface *GetSimInterfaceByType
+    (
+        GolfSimulatorType sim_type
+    );
 
     // Returns true only if each of the available interfaces is armed
     static bool GetAllSystemsArmed();
@@ -88,10 +103,16 @@ class GsSimInterface
 
     // Typical derived-class behavior will be to convert the results into a
     // sim-specific data packet, such as a JSON string
-    virtual std::string GenerateResultsDataToSend(const GsResults &results);
+    virtual std::string GenerateResultsDataToSend
+    (
+        const GsResults &results
+    );
 
     // Called when the LM receives data
-    virtual bool ProcessReceivedData(const std::string received_data);
+    virtual bool ProcessReceivedData
+    (
+        const std::string received_data
+    );
 
   protected:
 

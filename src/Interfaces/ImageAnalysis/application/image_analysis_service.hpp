@@ -66,15 +66,19 @@ struct ServiceConfig
 class ImageAnalysisService
 {
   public:
-    ImageAnalysisService(
+    ImageAnalysisService
+    (
         std::unique_ptr<domain::IImageAnalyzerFactory> factory,
         std::unique_ptr<domain::IAnalyzerConfigRepository> config_repo = nullptr,
         std::unique_ptr<domain::IAnalysisResultRepository> result_repo = nullptr
-        );
+    );
 
     ~ImageAnalysisService() = default;
     // Configuration management
-    [[nodiscard]] bool Configure(const AnalyzerConfig &config);
+    [[nodiscard]] bool Configure
+    (
+        const AnalyzerConfig &config
+    );
     [[nodiscard]] AnalyzerConfig GetCurrentConfig() const
     {
         return current_analyzer_config_;
@@ -86,35 +90,48 @@ class ImageAnalysisService
     }
 
     // Analyzer management
-    [[nodiscard]] bool SetAnalyzerType(const std::string &analyzer_type);
+    [[nodiscard]] bool SetAnalyzerType
+    (
+        const std::string &analyzer_type
+    );
     [[nodiscard]] std::string GetCurrentAnalyzerType() const;
     [[nodiscard]] std::vector<std::string> GetAvailableAnalyzers() const;
     [[nodiscard]] std::string GetCurrentAnalyzerInfo() const;
 
     // Main analysis operations - delegate to configured analyzer
-    [[nodiscard]] domain::TeedBallResult AnalyzeTeedBall(
+    [[nodiscard]] domain::TeedBallResult AnalyzeTeedBall
+    (
         const domain::ImageBuffer &image,
         const std::optional<domain::BallPosition> &expected_position = std::nullopt
-        );
+    );
 
-    [[nodiscard]] domain::MovementResult DetectMovement(
+    [[nodiscard]] domain::MovementResult DetectMovement
+    (
         const std::vector<domain::ImageBuffer> &image_sequence,
         const domain::BallPosition &reference_ball_position
-        );
+    );
 
-    [[nodiscard]] domain::FlightAnalysisResult AnalyzeBallFlight(
+    [[nodiscard]] domain::FlightAnalysisResult AnalyzeBallFlight
+    (
         const domain::ImageBuffer &strobed_image,
         const domain::BallPosition &calibration_reference
-        );
+    );
 
-    [[nodiscard]] domain::TeedBallResult DetectBallReset(
+    [[nodiscard]] domain::TeedBallResult DetectBallReset
+    (
         const domain::ImageBuffer &current_image,
         const domain::BallPosition &previous_ball_position
-        );
+    );
 
     // Service-level operations
-    void SetConfidenceThreshold(double threshold);
-    void SetDebugMode(bool enabled);
+    void SetConfidenceThreshold
+    (
+        double threshold
+    );
+    void SetDebugMode
+    (
+        bool enabled
+    );
     void ClearResultCache();
 
     // Performance and diagnostics
@@ -166,22 +183,48 @@ class ImageAnalysisService
                                                                 // results
     // Helper methods
     bool InitializeAnalyzer();
-    void UpdateStats(bool success, std::chrono::milliseconds processing_time) const;
-    void LogOperation(const std::string &operation, bool success,
-                      std::chrono::milliseconds processing_time) const;
-    void StoreResultIfEnabled(const std::string &operation,
-                              const std::string &result_json,
-                              const domain::ImageBuffer &image) const;
+    void UpdateStats
+    (
+        bool success,
+        std::chrono::milliseconds processing_time
+    ) const;
+    void LogOperation
+    (
+        const std::string &operation,
+        bool success,
+        std::chrono::milliseconds processing_time
+    ) const;
+    void StoreResultIfEnabled
+    (
+        const std::string &operation,
+        const std::string &result_json,
+        const domain::ImageBuffer &image
+    ) const;
 
     // Input validation methods
-    void ValidateConfidenceThreshold(double threshold) const;
-    void ValidateAnalyzerConfig(const AnalyzerConfig &config) const;
-    void ValidateAnalyzerType(const std::string &analyzer_type) const;
+    void ValidateConfidenceThreshold
+    (
+        double threshold
+    ) const;
+    void ValidateAnalyzerConfig
+    (
+        const AnalyzerConfig &config
+    ) const;
+    void ValidateAnalyzerType
+    (
+        const std::string &analyzer_type
+    ) const;
     void ValidateServiceConfigured() const;
 
     // Cache helpers
-    CacheKey CreateCacheKey(const domain::ImageBuffer &image,
-                            const std::string &operation) const;
-    size_t HashImage(const domain::ImageBuffer &image) const;
+    CacheKey CreateCacheKey
+    (
+        const domain::ImageBuffer &image,
+        const std::string &operation
+    ) const;
+    size_t HashImage
+    (
+        const domain::ImageBuffer &image
+    ) const;
 };
 } // namespace PiTrac::image_analysis::application

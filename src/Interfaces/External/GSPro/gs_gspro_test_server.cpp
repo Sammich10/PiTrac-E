@@ -27,7 +27,7 @@ GsGSProConnection::pointer GsGSProConnection::Create(boost::asio::io_context &io
     return pointer(new GsGSProConnection(io_context, port_number));
 }
 
-tcp::socket& GsGSProConnection::GsGSProConnection::GetSocket()
+tcp::socket &GsGSProConnection::GsGSProConnection::GetSocket()
 {
     return socket_;
 }

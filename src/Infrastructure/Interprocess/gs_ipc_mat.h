@@ -41,9 +41,12 @@ class GsIPCMat
     GsIPCMat();
     virtual ~GsIPCMat();
 
-    void SetAndPackMat(cv::Mat &mat);
+    void SetAndPackMat
+    (
+        cv::Mat &mat
+    );
 
-    const msgpack::sbuffer& GetSerializedMat() const;
+    const msgpack::sbuffer &GetSerializedMat() const;
 
     // Retrieves the image from the internal msgpack buffer
     cv::Mat GetImageMat() const;
@@ -55,7 +58,11 @@ class GsIPCMat
     // Useful when a serialized GsIPCMat has been received from, e.g., an
     // ActiveMQ message consumer.
     // Returns true if successful, false otherwise.
-    bool UnpackMatData(char *data, size_t length);
+    bool UnpackMatData
+    (
+        char *data,
+        size_t length
+    );
 
   private:
     GsIPCMatHolder mat_holder_;

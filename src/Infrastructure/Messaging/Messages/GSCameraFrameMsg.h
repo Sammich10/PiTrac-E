@@ -36,8 +36,15 @@ class GSCameraFrameMessage : public GSMessageBase
         return "CameraFrame";
     }
 
-    void serialize(msgpack::sbuffer &buffer) const override;
-    void deserialize(const char *data, size_t size) override;
+    void serialize
+    (
+        msgpack::sbuffer &buffer
+    ) const override;
+    void deserialize
+    (
+        const char *data,
+        size_t size
+    ) override;
     std::unique_ptr<GSMessageInterface> clone() const override;
 
     // Camera frame specific methods
@@ -124,8 +131,15 @@ class GSCameraFrameMessage : public GSMessageBase
     int jpeg_quality_ = 95; // JPEG compression quality (0-100)
 
     // Helper methods for cv::Mat serialization
-    void serializeMatToBuffer(const cv::Mat &mat, std::vector<uint8_t> &buffer) const;
-    cv::Mat deserializeMatFromBuffer(const std::vector<uint8_t> &buffer) const;
+    void serializeMatToBuffer
+    (
+        const cv::Mat &mat,
+        std::vector<uint8_t> &buffer
+    ) const;
+    cv::Mat deserializeMatFromBuffer
+    (
+        const std::vector<uint8_t> &buffer
+    ) const;
 };
 } // namespace PiTrac
 

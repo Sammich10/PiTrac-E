@@ -48,7 +48,10 @@ class GSTaskBase
     std::function<void(pid_t, int)> process_exit_callback_;
 
   public:
-    GSTaskBase(const std::string &name);
+    GSTaskBase
+    (
+        const std::string &name
+    );
     virtual ~GSTaskBase();
 
     // Pure virtual methods for task-specific behavior
@@ -95,13 +98,25 @@ class GSTaskBase
     }
 
     // Utility methods for derived classes
-    void logInfo(const std::string &message);
-    void logWarning(const std::string &message);
-    void logError(const std::string &message);
+    void logInfo
+    (
+        const std::string &message
+    );
+    void logWarning
+    (
+        const std::string &message
+    );
+    void logError
+    (
+        const std::string &message
+    );
 
   protected:
     // Internal methods available to derived classes
-    void changeStatus(TaskStatus new_status);
+    void changeStatus
+    (
+        TaskStatus new_status
+    );
     std::string generateTaskId();
 
     // Process entry point
@@ -115,7 +130,7 @@ class GSTaskBase
 
     virtual void postStartHook()
     {
-    }                                                 // Called after successful
+    }
 
     // fork
 

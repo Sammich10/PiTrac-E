@@ -48,7 +48,10 @@ class IMX296Camera : public GSCameraBase
      *
      * @return True if the trigger mode was set successfully, false otherwise.
      */
-    bool configureTriggerMode(const TriggerMode &mode) final;
+    bool configureTriggerMode
+    (
+        const TriggerMode &mode
+    ) final;
 
     /**
      * @brief Provides a string representation of the camera and its current

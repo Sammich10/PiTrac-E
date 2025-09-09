@@ -46,8 +46,15 @@ class GSCameraFrameRawMessage : public GSMessageBase
         return "CameraFrameRaw";
     }
 
-    void serialize(msgpack::sbuffer &buffer) const override;
-    void deserialize(const char *data, size_t size) override;
+    void serialize
+    (
+        msgpack::sbuffer &buffer
+    ) const override;
+    void deserialize
+    (
+        const char *data,
+        size_t size
+    ) override;
     std::unique_ptr<GSMessageInterface> clone() const override;
 
     // Camera frame specific methods
@@ -135,9 +142,18 @@ class GSCameraFrameRawMessage : public GSMessageBase
 
   private:
     // Helper methods for raw cv::Mat serialization (no compression)
-    void serializeMatRawToBuffer(const cv::Mat &mat, std::vector<uint8_t> &buffer) const;
-    cv::Mat deserializeMatRawFromBuffer(const std::vector<uint8_t> &buffer,
-                                        int rows, int cols, int type) const;
+    void serializeMatRawToBuffer
+    (
+        const cv::Mat &mat,
+        std::vector<uint8_t> &buffer
+    ) const;
+    cv::Mat deserializeMatRawFromBuffer
+    (
+        const std::vector<uint8_t> &buffer,
+        int rows,
+        int cols,
+        int type
+    ) const;
 };
 } // namespace PiTrac
 

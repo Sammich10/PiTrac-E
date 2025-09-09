@@ -26,11 +26,12 @@ namespace pitrac
 {
 class CalibrateDistortions
 {
-    CalibrateDistortions(
+    CalibrateDistortions
+    (
         cv::Size chessboardSize,
         float squareSize,
         cv::Size frameSize
-        );
+    );
 
     void processImage
     (

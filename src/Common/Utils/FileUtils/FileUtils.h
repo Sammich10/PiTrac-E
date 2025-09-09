@@ -88,7 +88,8 @@ class FileUtils
  */
     static bool copyFile
     (
-        const std::string &sourcePath, const std::string &destPath
+        const std::string &sourcePath,
+        const std::string &destPath
     );
 
 
@@ -101,7 +102,8 @@ class FileUtils
  */
     static bool moveFile
     (
-        const std::string &sourcePath, const std::string &destPath
+        const std::string &sourcePath,
+        const std::string &destPath
     );
 };
 } // namespace PiTrac

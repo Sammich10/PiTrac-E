@@ -26,10 +26,22 @@ class queue
     std::condition_variable not_empty;
     std::condition_variable not_full;
 
-    queue(const queue &) = delete;
-    queue(queue &&) = delete;
-    queue &operator = (const queue &) = delete;
-    queue &operator = (queue &&) = delete;
+    queue
+    (
+        const queue &
+    ) = delete;
+    queue
+    (
+        queue &&
+    ) = delete;
+    queue &operator =
+    (
+        const queue &
+    ) = delete;
+    queue &operator =
+    (
+        queue &&
+    ) = delete;
 
   public:
     queue(size_t capacity) : capacity(capacity)

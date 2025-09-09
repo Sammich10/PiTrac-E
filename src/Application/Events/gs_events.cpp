@@ -18,7 +18,10 @@ namespace PiTrac
 // boost::lockfree::queue<GolfSimEventElement,
 // boost::lockfree::capacity<GolfSimEventQueue::kMaxQueueSize>>
 // GolfSimEventQueue::queue_;
-queue<GolfSimEventElement> GolfSimEventQueue::queue_(GolfSimEventQueue::kMaxQueueSize);
+queue<GolfSimEventElement> GolfSimEventQueue::queue_
+(
+    GolfSimEventQueue::kMaxQueueSize
+);
 int GolfSimEventQueue::queue_size_ = 0;
 
 bool GolfSimEventQueue::QueueEvent(GolfSimEventElement &event)
