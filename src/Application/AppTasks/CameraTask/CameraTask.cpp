@@ -16,13 +16,18 @@ CameraTask::CameraTask() : GSAgentTask("CameraTask")
 
 void CameraTask::configureAgents()
 {
-    logger_->info("Configuring Camera Agents...");
-    std::unique_ptr<GSCameraInterface> camera_0 = std::make_unique<IMX296Camera>(0);
-    // std::unique_ptr<GSCameraInterface> camera_2 =
-    // std::make_unique<IMX296Camera>(1456, 1088, 2.8f,
-    // PiTrac::TriggerMode::FREE_RUNNING);
+    logger_->info("Configuring Camera Task Agents...");
+    const size_t num_cameras = 1; // Update this to the actual number of cameras
+                                  // available
+    for(size_t i = 0; i < num_cameras; i++)
+    {
+        std::unique_ptr<GSCameraInterface> camera = std::make_unique<IMX296Camera>(i);
+        std::shared_ptr<FrameBuffer> frame_buffer = std::make_shared<FrameBuffer>(128);
 
-    addAgent(CameraAgentFactory::createCameraAgent(std::move(camera_0), camera_endpoints_[0]));
+        addAgent(CameraAgentFactory::createCameraAgent(std::move(camera), frame_buffer, i));
+        addAgent(FrameProcessorAgentFactory::create(std::move(frame_buffer), i));
+    }
+    logger_->info("Configured " + std::to_string(num_cameras) + " camera task agents.");
 }
 
 bool CameraTask::preAgentStartHook()

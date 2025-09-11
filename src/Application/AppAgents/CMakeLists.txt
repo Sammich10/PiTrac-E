@@ -1,2 +1,3 @@
 add_subdirectory(AgentBase)
 add_subdirectory(CameraAgent)
+add_subdirectory(FrameProcessorAgent)

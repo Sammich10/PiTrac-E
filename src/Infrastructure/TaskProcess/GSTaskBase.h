@@ -72,7 +72,7 @@ class GSTaskBase
      * @brief Virtual destructor for GSTaskBase.
      *
      * Ensures proper cleanup of derived classes when deleted through a base
-     *class pointer.
+     * class pointer.
      */
     virtual ~GSTaskBase();
 
@@ -80,9 +80,9 @@ class GSTaskBase
      * @brief Sets up the process required for the task.
      *
      * This pure virtual function should be implemented by derived classes to
-     *perform
+     * perform
      * any necessary initialization or configuration before the task process
-     *starts.
+     * starts.
      *
      * @return true if the setup was successful, false otherwise.
      */
@@ -90,23 +90,23 @@ class GSTaskBase
 
     /**
      * @brief Pure virtual function to execute the main processing logic of the
-     *task.
+     * task.
      *
      * This method must be implemented by derived classes to define the core
-     *behavior
+     * behavior
      * of the task. It is called to perform the primary operations associated
-     *with the task.
+     * with the task.
      */
     virtual void processMain() = 0;
 
     /**
      * @brief Cleans up resources and performs necessary finalization for the
-     *process.
+     * process.
      *
      * This pure virtual function should be implemented by derived classes to
-     *handle
+     * handle
      * any cleanup operations required when the process is finished or
-     *terminated.
+     * terminated.
      */
     virtual void cleanupProcess() = 0;
 
@@ -115,7 +115,7 @@ class GSTaskBase
      *
      * This virtual function initiates the execution of the task.
      * Derived classes should override this method to implement specific start
-     *logic.
+     * logic.
      *
      * @return true if the task started successfully, false otherwise.
      */
@@ -125,7 +125,7 @@ class GSTaskBase
      * @brief Stops the execution of the task.
      *
      * This method should be overridden to implement the logic required to
-     *safely
+     * safely
      * stop the task's processing. It may involve cleanup operations or resource
      * deallocation.
      */
@@ -133,10 +133,10 @@ class GSTaskBase
 
     /**
      * @brief Forcefully terminates the task, bypassing any graceful shutdown
-     *procedures.
+     * procedures.
      *
      * This method should be used with caution, as it may leave resources in an
-     *inconsistent state.
+     * inconsistent state.
      * Implementations should ensure that all necessary cleanup is performed.
      */
     virtual void forceKill();

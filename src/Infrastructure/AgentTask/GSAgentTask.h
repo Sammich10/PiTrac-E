@@ -14,34 +14,34 @@ class GSAgentTask : public GSTaskBase
 /**
  * @class GSAgentTask
  * @brief Manages a collection of agents within a task/process, providing
- *lifecycle control and monitoring.
+ * lifecycle control and monitoring.
  *
  * The GSAgentTask class serves as an abstract base for managing multiple agents
- *derived from GSAgentBase.
+ * derived from GSAgentBase.
  * It provides mechanisms for agent configuration, addition/removal, lifecycle
- *management (start/stop/restart),
+ * management (start/stop/restart),
  * and monitoring. The class supports hooks for customization at various stages
- *of agent operation, such as
+ * of agent operation, such as
  * before/after start, on failure, and during monitoring loops. Derived classes
- *must implement the
+ * must implement the
  * configureAgents() method to specify which agents are managed by the task.
  *
  * Key Features:
  * - Manages a vector of agents, allowing dynamic addition and removal.
  * - Supports automatic restart of failed agents, configurable via
- *setRestartFailedAgents().
+ * setRestartFailedAgents().
  * - Allows customization of agent check intervals.
  * - Provides hooks for extending behavior at critical points in the agent
- *lifecycle.
+ * lifecycle.
  * - Offers methods to start, stop, and monitor all managed agents.
  * - Integrates with process lifecycle via setupProcess(), cleanupProcess(), and
- *processMain().
+ * processMain().
  *
  * Usage:
  * - Inherit from GSAgentTask and implement configureAgents() to specify agents.
  * - Optionally override hook methods to customize agent behavior.
  * - Use start(), stopAllAgents(), and related methods to control agent
- *execution.
+ * execution.
  */
 {
   protected:
@@ -72,7 +72,7 @@ class GSAgentTask : public GSTaskBase
      * @brief Virtual destructor for GSAgentTask.
      *
      * Ensures proper cleanup of derived classes when deleted through a base
-     *class pointer.
+     * class pointer.
      */
     virtual ~GSAgentTask();
 
@@ -80,11 +80,11 @@ class GSAgentTask : public GSTaskBase
      * @brief Configures the agents to be managed by this task.
      *
      * This pure virtual function must be implemented by derived classes to
-     *specify
+     * specify
      * which agents should be created and managed within this task. The
-     *implementation
+     * implementation
      * should create instances of GSAgentBase-derived classes and add them to
-     *the
+     * the
      * internal agents_ vector using the addAgent() method.
      */
     virtual void configureAgents() = 0;
@@ -93,7 +93,7 @@ class GSAgentTask : public GSTaskBase
      * @brief Adds an agent to the task.
      *
      * @param agent A shared pointer to a GSAgentBase instance representing the
-     *agent to be added.
+     * agent to be added.
      */
     void addAgent
     (
@@ -136,7 +136,7 @@ class GSAgentTask : public GSTaskBase
      * that have failed should be restarted automatically.
      *
      * @param restart If true, failed agents will be restarted; otherwise, they
-     *will not.
+     * will not.
      */
     void setRestartFailedAgents(bool restart)
     {
@@ -157,7 +157,7 @@ class GSAgentTask : public GSTaskBase
      * @brief Starts the agent task.
      *
      * This method initiates the execution of the agent task. It should be
-     *overridden
+     * overridden
      * by derived classes to provide specific start-up logic.
      *
      * @return true if the task started successfully, false otherwise.
@@ -187,9 +187,9 @@ class GSAgentTask : public GSTaskBase
      * @brief Stops all running agents managed by this class.
      *
      * This method terminates or halts the execution of all agents currently
-     *active.
+     * active.
      * It is typically used to ensure a clean shutdown or to reset the agent
-     *system.
+     * system.
      */
     void stopAllAgents();
 
@@ -197,7 +197,7 @@ class GSAgentTask : public GSTaskBase
      * @brief Checks if all agents are currently running.
      *
      * This function determines whether every agent in the system is in a
-     *running state.
+     * running state.
      *
      * @return true if all agents are running; false otherwise.
      */
@@ -207,9 +207,9 @@ class GSAgentTask : public GSTaskBase
      * @brief Restarts agents that have previously failed.
      *
      * This method identifies agents that are in a failed state and attempts to
-     *restart them.
+     * restart them.
      * It is typically used to recover from transient errors or to ensure
-     *continued operation
+     * continued operation
      * of all agents within the system.
      */
     void restartFailedAgents();
@@ -227,7 +227,7 @@ class GSAgentTask : public GSTaskBase
      * @brief Sets up the process for the agent task.
      *
      * This method is called to perform any necessary setup before the agent
-     *task begins execution.
+     * task begins execution.
      *
      * @return true if the setup was successful, false otherwise.
      */
@@ -238,12 +238,12 @@ class GSAgentTask : public GSTaskBase
 
     /**
      * @brief Cleans up resources or performs necessary finalization for the
-     *process.
+     * process.
      *
      * This method is called to handle any cleanup operations required after the
-     *process
+     * process
      * has completed its execution. Override this method to implement custom
-     *cleanup logic.
+     * cleanup logic.
      */
     void cleanupProcess() override
     {
@@ -300,7 +300,7 @@ class GSAgentTask : public GSTaskBase
      *
      * This virtual function can be overridden by derived classes to implement
      * custom behavior that should occur immediately before the agent task
-     *starts.
+     * starts.
      * The default implementation does nothing.
      */
     bool preStartHook() override;

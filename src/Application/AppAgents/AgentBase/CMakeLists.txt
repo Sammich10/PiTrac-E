@@ -10,5 +10,4 @@ add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
     Logging
-    GSTaskBase
 )

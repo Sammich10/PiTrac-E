@@ -1,11 +1,11 @@
 project(CameraTask)
 
-file(GLOB ${PROJECT_NAME}_SOURCES 
+file(GLOB CAMERA_TASK_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
 )
 
-add_executable(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES})
+add_executable(${PROJECT_NAME} ${CAMERA_TASK_SOURCES})
 
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
@@ -15,6 +15,7 @@ target_link_libraries(${PROJECT_NAME}
         Logging
         GSAgentBase
         CameraAgent
+        FrameProcessorAgent
         GSCameraInterface
         GSCameraBase
         imx296

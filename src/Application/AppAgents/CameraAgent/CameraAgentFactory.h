@@ -11,10 +11,11 @@ class CameraAgentFactory
     static std::shared_ptr<CameraAgent> createCameraAgent
     (
         std::unique_ptr<GSCameraInterface> camera,
-        const std::string &endpoint
+        std::shared_ptr<FrameBuffer> frame_buffer,
+        const uint32_t camera_id
     )
     {
-        return std::make_shared<CameraAgent>(std::move(camera), endpoint);
+        return std::make_shared<CameraAgent>(std::move(camera), frame_buffer, camera_id);
     }
 };
 } // namespace PiTrac

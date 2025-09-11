@@ -1,40 +1,37 @@
 #ifndef CAMERA_AGENT_H
 #define CAMERA_AGENT_H
 
-#include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
-#include "Infrastructure/Messaging/Messages/GSCameraFrameRawMsg.h"
-#include "Interfaces/Camera/GSCameraInterface.h"
 #include "Application/AppAgents/AgentBase/GSAgentBase.h"
+#include "Infrastructure/DataStructures/FrameBuffer.h"
+#include "Interfaces/Camera/GSCameraInterface.h"
 #include "Common/System/SystemModes.h"
 #include <opencv2/opencv.hpp>
 #include <thread>
 #include <atomic>
+#include <memory>
 
 namespace PiTrac
 {
+/**
+ * @brief The CameraAgent class is responsible for operating a camera
+ * through the Camera Interface and publishing raw camera frames to a
+ * messaging system.
+ *
+ * At it's core, it will implement different camera operations such as
+ * opening, initializing, capturing frames, and closing the camera.
+ * The CameraAgent will also enqueue captured frames into a FrameBuffer
+ *
+ * On top of this, it will support different modes of operation to support
+ * the functionality of the launch monitor system.
+ */
 class CameraAgent : public GSAgentBase
 {
-    /**
-     * @brief The CameraAgent class is responsible for operating a camera
-     * through the Camera Interface and publishing raw camera frames to a
-     * messaging system.
-     *
-     * At it's core, it will implement different camera operations such as
-     * opening, initializing, capturing frames, and closing the camera.
-     * The CameraAgent will also handle the messaging of captured frames to
-     * other components in the system (when in the appropriate mode).
-     *
-     * On top of this, it will support different modes of operation to support
-     * the functionality of the launch monitor system, be able to notify other
-     * tasks
-     * when events occur, and manage the lifecycle of the camera interface.
-     */
-
   public:
     CameraAgent
     (
         std::unique_ptr<GSCameraInterface> camera_,
-        const std::string &endpoint
+        std::shared_ptr<FrameBuffer> frame_buffer_,
+        const uint32_t camera_id
     );
 
     ~CameraAgent();
@@ -52,9 +49,9 @@ class CameraAgent : public GSAgentBase
      * @brief Initializes the camera agent.
      *
      * This method sets up the necessary resources and configurations required
-     *for the camera agent to operate.
+     * for the camera agent to operate.
      * It opens the camera, performs initial configuration, and prepares the
-     *messaging system for frame publishing.
+     * messaging system for frame publishing.
      *
      * @return true if initialization was successful, false otherwise.
      */
@@ -64,8 +61,8 @@ class CameraAgent : public GSAgentBase
      * @brief Executes the main logic for the CameraAgent.
      *
      * This method starts the main capture loop for the camera agent, which
-     *continuously captures frames from the camera and publishes them to the
-     *messaging system.
+     * continuously captures frames from the camera and publishes them to the
+     * messaging system.
      */
     void execute() override;
 
@@ -79,18 +76,15 @@ class CameraAgent : public GSAgentBase
   private:
     /**
      * @brief Continuously captures frames from the camera in a loop and
-     *publishes them to the messaging system.
+     * publishes them to the messaging system.
      */
     void captureLoop();
 
-    std::unique_ptr<GSMessagerBase> frame_publisher_;
-    std::unique_ptr<GSMessagerBase> subscriber_;
+    std::shared_ptr<FrameBuffer> frame_buffer_;
     std::unique_ptr<GSCameraInterface> camera_;
     uint32_t camera_id_;
     std::atomic<bool> running_;
-    std::thread capture_thread_;
     uint64_t frame_counter_;
-    std::string endpoint_;
     SystemMode current_mode_;
 };
 } // namespace PiTrac
