@@ -15,7 +15,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -c|--changed)
             echo "Checking only changed source files against master branch."
-            SOURCE_FILES=$(git diff --name-only origin/master | grep -E '\.(cpp|h|hpp|c)$')
+            SOURCE_FILES=$(git diff --name-only origin/master 2> /dev/null | grep -E '\.(cpp|h|hpp|c)$')
             shift
             ;;
         -y|--yes)
@@ -41,7 +41,7 @@ done
 
 # If no options provided, default to checking changed files against master branch
 if [ -z "$SOURCE_FILES" ]; then
-  SOURCE_FILES=$(git diff --name-only origin/master | grep -E '\.(cpp|h|hpp|c)$')
+  SOURCE_FILES=$(git diff --name-only origin/master 2> /dev/null | grep -E '\.(cpp|h|hpp|c)$')
 fi
 
 # If still no source files found, exit with message
