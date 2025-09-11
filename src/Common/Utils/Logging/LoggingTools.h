@@ -89,7 +89,6 @@ struct LoggingTools
         std::string name,
         const cv::Mat &img,
         const std::vector < cv::Point > &pointFeatures = {}
-
     );
 
     // Save the image (possibly with some pointFeatures) to a timestamped file
@@ -168,7 +167,6 @@ struct LoggingTools
         std::string name,
         const cv::Mat &img,
         const std::vector < cv::Point > &pointFeatures = {}
-
     );
 
     // Prints out theh basic information about an image, but not all the data
