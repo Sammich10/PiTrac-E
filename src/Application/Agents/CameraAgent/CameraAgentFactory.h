@@ -1,7 +1,7 @@
 #ifndef CAMERA_AGENT_FACTORY_H
 #define CAMERA_AGENT_FACTORY_H
 
-#include "Application/AppAgents/CameraAgent/CameraAgent.h"
+#include "Application/Agents/CameraAgent/CameraAgent.h"
 
 namespace PiTrac
 {

@@ -6,29 +6,15 @@ GSAgentTask::GSAgentTask(const std::string &name)
     : GSTaskBase(name)
     , restart_failed_agents_(false)
     , agent_check_interval_(std::chrono::milliseconds(1000))
-    , agent_ipc_endpoint_("ipc://agent_task")
-    , agent_ipc_subscriber_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Subscriber))
+    , agent_task_ipc_endpoint_("ipc://agent_task")
+    , agent_task_ipc_subscriber_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Subscriber))
 {
     logInfo("Agent task created: " + task_name_ + " [" + task_id_ + "]");
 }
 
 GSAgentTask::~GSAgentTask()
 {
-    // Agents will be cleaned up by base destructor
-}
-
-bool GSAgentTask::start()
-{
-    // Use base start but add agent-specific checks
-    return GSTaskBase::start();
-}
-
-bool GSAgentTask::preStartHook()
-{
-    // This code will run before the main process is started, allowing for any
-    // necessary setup.
-    agent_ipc_subscriber_->bind(agent_ipc_endpoint_);
-    return true;
+    agent_task_ipc_subscriber_->stop();
 }
 
 void GSAgentTask::processMain()
@@ -82,7 +68,7 @@ void GSAgentTask::processMain()
         std::this_thread::sleep_for(agent_check_interval_);
     }
 
-    logInfo("Agent task main loop ended");
+    logInfo("Agent task main loop ended. Stopping all agents.");
     stopAllAgents();
 }
 
@@ -126,13 +112,12 @@ void GSAgentTask::stopAllAgents()
 
     for (auto &agent : agents_)
     {
+        logInfo("Stopping agent: " + agent->getAgentName());
         agent->stop();
-    }
-
-    // Wait for agents to stop
-    for (auto &agent : agents_)
-    {
-        agent->waitForCompletion(std::chrono::seconds(5));
+        if(!agent->waitForCompletion(std::chrono::seconds(5)))
+        {
+            logWarning("Agent did not stop in time: " + agent->getAgentName());
+        }
     }
 
     logInfo("All agents stopped");

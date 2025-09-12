@@ -1,7 +1,7 @@
 #ifndef CAMERA_AGENT_H
 #define CAMERA_AGENT_H
 
-#include "Application/AppAgents/AgentBase/GSAgentBase.h"
+#include "Application/Agents/AgentBase/GSAgentBase.h"
 #include "Infrastructure/DataStructures/FrameBuffer.h"
 #include "Interfaces/Camera/GSCameraInterface.h"
 #include "Common/System/SystemModes.h"

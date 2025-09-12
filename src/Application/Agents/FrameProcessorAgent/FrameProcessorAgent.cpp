@@ -1,4 +1,4 @@
-#include "Application/AppAgents/FrameProcessorAgent/FrameProcessorAgent.h"
+#include "Application/Agents/FrameProcessorAgent/FrameProcessorAgent.h"
 
 namespace PiTrac
 {
@@ -10,7 +10,7 @@ FrameProcessorAgent::FrameProcessorAgent(std::shared_ptr<FrameBuffer> frame_buff
     frame_counter_(0),
     running_(false)
 {
-    agent_name_ = agent_name_ + "_" + std::to_string(camera_id_);
+    agent_name_ = agent_name_ + " " + std::to_string(camera_id_);
     frame_publisher_ = std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Publisher);
 }
 

@@ -1,2 +1,2 @@
-add_subdirectory(AppAgents)
-add_subdirectory(AppTasks)
+add_subdirectory(Agents)
+add_subdirectory(Tasks)

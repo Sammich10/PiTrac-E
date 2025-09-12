@@ -3,9 +3,10 @@
 
 #include <string>
 #include <memory>
+#include <libcamera/camera_manager.h>
 #include "Infrastructure/AgentTask/GSAgentTask.h"
-#include "Application/AppAgents/CameraAgent/CameraAgentFactory.h"
-#include "Application/AppAgents/FrameProcessorAgent/FrameProcessorAgentFactory.h"
+#include "Application/Agents/CameraAgent/CameraAgentFactory.h"
+#include "Application/Agents/FrameProcessorAgent/FrameProcessorAgentFactory.h"
 
 namespace PiTrac
 {
@@ -19,14 +20,15 @@ class CameraTask : public GSAgentTask
     void configureAgents() override;
 
   protected:
-
+    bool setupProcess() override;
     bool preAgentStartHook() override;
-    void preStopHook() override;
+    void cleanupProcess() override;
 
   private:
 
     void checkForStrayIPAProcesses();
 
+    std::shared_ptr<libcamera::CameraManager> cameraManager_; 
     std::array<std::shared_ptr<CameraAgent>, 2> camera_agents_;
     std::shared_ptr<GSLogger> logger_;
     std::array<std::string, 2> camera_endpoints_;

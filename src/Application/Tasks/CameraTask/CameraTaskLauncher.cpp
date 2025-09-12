@@ -1,4 +1,4 @@
-#include "Application/AppTasks/CameraTask/CameraTask.h"
+#include "Application/Tasks/CameraTask/CameraTask.h"
 #include "Common/Utils/Logging/GSLogger.h"
 #include <cstdlib>
 #include <thread>

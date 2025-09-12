@@ -65,12 +65,12 @@ class GSCameraInterface
   public:
 
 // You can also provide a protected constructor with common parameters
-    GSCameraInterface(const uint32_t &cameraIndex)
+    GSCameraInterface(const uint32_t &cameraIndex, std::shared_ptr<libcamera::CameraManager> const &cameraManager)
         : cameraIndex_(cameraIndex)
         , resolutionX_(0)
         , resolutionY_(0)
         , focalLength_mm_(0)
-        , cameraManager_(nullptr)
+        , cameraManager_(cameraManager)
         , camera_(nullptr)
         , allocator_(nullptr)
         , isConfigured_(false)
@@ -315,7 +315,7 @@ class GSCameraInterface
     uint32_t cameraIndex_;
 
     // Libcamera components
-    std::unique_ptr<libcamera::CameraManager> cameraManager_;
+    std::shared_ptr<libcamera::CameraManager> cameraManager_;
     std::shared_ptr<libcamera::Camera> camera_;
     std::unique_ptr<libcamera::FrameBufferAllocator> allocator_;
     std::unique_ptr<libcamera::CameraConfiguration> config_;

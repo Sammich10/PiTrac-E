@@ -115,7 +115,8 @@ class GSTaskBase
      *
      * This virtual function initiates the execution of the task.
      * Derived classes should override this method to implement specific start
-     * logic.
+     * logic, or use the base class implementation to handle common startup
+     * procedures.
      *
      * @return true if the task started successfully, false otherwise.
      */
@@ -125,9 +126,9 @@ class GSTaskBase
      * @brief Stops the execution of the task.
      *
      * This method should be overridden to implement the logic required to
-     * safely
-     * stop the task's processing. It may involve cleanup operations or resource
-     * deallocation.
+     * safely stop the task's processing. It may involve cleanup operations
+     * or resource deallocation. A base implementation is provided to handle
+     * common stop procedures.
      */
     virtual void stop();
 

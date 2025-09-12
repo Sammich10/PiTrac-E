@@ -1,4 +1,4 @@
-#include "Application/AppAgents/AgentBase/GSAgentBase.h"
+#include "Application/Agents/AgentBase/GSAgentBase.h"
 #include <sstream>
 #include <iomanip>
 #include <random>
@@ -65,24 +65,27 @@ bool GSAgentBase::start()
 
 void GSAgentBase::stop()
 {
-    logger_->info("Stopping agent: " + agent_name_);
+    logInfo("Stopping agent: " + agent_name_);
     if (status_ == AgentStatus::NotStarted || status_ == AgentStatus::Completed ||
         status_ == AgentStatus::Failed)
     {
-        logger_->info("Agent already in terminal state: " + agent_name_);
+        logInfo("Agent already in terminal state: " + agent_name_);
         return;
     }
 
-    should_stop_ = true;
-    should_pause_ = false;
+    should_stop_.store(true);
+    should_pause_.store(false);
 
-    logger_->info("Changing agent status to Stopping: " + agent_name_);
     changeStatus(AgentStatus::Stopping);
 
     if (agent_thread_.joinable())
     {
-        logger_->info("Joining agent execution thread for: " + agent_name_);
-        agent_thread_.join();
+        logInfo("Joining " + agent_name_ + " execution thread...");
+        if(!waitForCompletion(std::chrono::seconds(2)))
+        {
+            logWarning("Agent thread did not exit within timeout!");
+        }
+        logInfo(agent_name_ + " execution thread stopped");
     }
 
     logInfo("Agent stopped: " + agent_name_);

@@ -25,8 +25,8 @@ class IMX296Camera : public GSCameraBase
      * @param[in] mode          Trigger mode for image acquisition (default:
      * FREE_RUNNING).
      */
-    IMX296Camera(const uint32_t &cameraIndex)
-        : GSCameraBase(cameraIndex)
+    IMX296Camera(const uint32_t &cameraIndex, std::shared_ptr<libcamera::CameraManager> const &cameraManager)
+        : GSCameraBase(cameraIndex, cameraManager)
     {
     }
 

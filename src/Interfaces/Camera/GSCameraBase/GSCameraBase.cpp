@@ -19,15 +19,6 @@ bool GSCameraBase::openCamera()
     }
     logger_->info("Opening camera at index " + std::to_string(cameraIndex_));
     try {
-        // Initialize camera manager
-        cameraManager_ = std::make_unique<libcamera::CameraManager>();
-        int ret = cameraManager_->start();
-        if (ret)
-        {
-            logger_->error("Failed to start camera manager");
-            return false;
-        }
-
         // Get available cameras
         auto cameras = cameraManager_->cameras();
         if (cameras.empty())
@@ -50,7 +41,7 @@ bool GSCameraBase::openCamera()
         std::cout << "Using camera: " << cameraId << std::endl;
 
         // Acquire the camera
-        ret = camera_->acquire();
+        int ret = camera_->acquire();
         if (ret)
         {
             logger_->error("Failed to acquire camera");
@@ -123,12 +114,6 @@ void GSCameraBase::closeCamera()
 
         camera_->release();
         camera_.reset();
-    }
-
-    if (cameraManager_)
-    {
-        cameraManager_->stop();
-        cameraManager_.reset();
     }
 
     isCameraOpen_ = false;

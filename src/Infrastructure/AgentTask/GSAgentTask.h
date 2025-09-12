@@ -1,7 +1,7 @@
 #ifndef GSAGENTTASK_H
 #define GSAGENTTASK_H
 
-#include "Application/AppAgents/AgentBase/GSAgentBase.h"
+#include "Application/Agents/AgentBase/GSAgentBase.h"
 #include "Infrastructure/TaskProcess/GSTaskBase.h"
 #include "Infrastructure/AgentTask/GSAgentTask.h"
 #include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
@@ -54,7 +54,7 @@ class GSAgentTask : public GSTaskBase
     // @brief Interval at which the agent performs checks
     std::chrono::milliseconds agent_check_interval_;
 
-    std::string agent_ipc_endpoint_;
+    std::string agent_task_ipc_endpoint_;
 
   public:
 
@@ -76,18 +76,6 @@ class GSAgentTask : public GSTaskBase
      */
     virtual ~GSAgentTask();
 
-    /**
-     * @brief Configures the agents to be managed by this task.
-     *
-     * This pure virtual function must be implemented by derived classes to
-     * specify
-     * which agents should be created and managed within this task. The
-     * implementation
-     * should create instances of GSAgentBase-derived classes and add them to
-     * the
-     * internal agents_ vector using the addAgent() method.
-     */
-    virtual void configureAgents() = 0;
 
     /**
      * @brief Adds an agent to the task.
@@ -153,17 +141,6 @@ class GSAgentTask : public GSTaskBase
         agent_check_interval_ = interval;
     }
 
-    /**
-     * @brief Starts the agent task.
-     *
-     * This method initiates the execution of the agent task. It should be
-     * overridden
-     * by derived classes to provide specific start-up logic.
-     *
-     * @return true if the task started successfully, false otherwise.
-     */
-    bool start() override;
-
   protected:
 
     /**
@@ -175,6 +152,20 @@ class GSAgentTask : public GSTaskBase
      * @return true if all agents were successfully set up; false otherwise.
      */
     bool setupAllAgents();
+
+    /**
+     * @brief Configures the agents to be managed by this task.
+     *
+     * This pure virtual function must be implemented by derived classes to
+     * specify
+     * which agents should be created and managed within this task. The
+     * implementation
+     * should create instances of GSAgentBase-derived classes and add them to
+     * the
+     * internal agents_ vector using the addAgent() method.
+     */
+    virtual void configureAgents() = 0;
+
     /**
      * @brief Starts all agents managed by this class.
      *
@@ -183,6 +174,7 @@ class GSAgentTask : public GSTaskBase
      * @return true if all agents started successfully, false otherwise.
      */
     bool startAllAgents();
+
     /**
      * @brief Stops all running agents managed by this class.
      *
@@ -223,18 +215,6 @@ class GSAgentTask : public GSTaskBase
      */
     void processMain() override;
 
-    /**
-     * @brief Sets up the process for the agent task.
-     *
-     * This method is called to perform any necessary setup before the agent
-     * task begins execution.
-     *
-     * @return true if the setup was successful, false otherwise.
-     */
-    bool setupProcess() override
-    {
-        return true;
-    }
 
     /**
      * @brief Cleans up resources or performs necessary finalization for the
@@ -295,17 +275,7 @@ class GSAgentTask : public GSTaskBase
     {
     }
 
-    /**
-     * @brief Hook method called before the agent task is started.
-     *
-     * This virtual function can be overridden by derived classes to implement
-     * custom behavior that should occur immediately before the agent task
-     * starts.
-     * The default implementation does nothing.
-     */
-    bool preStartHook() override;
-
-    std::unique_ptr<GSMessagerBase> agent_ipc_subscriber_;
+    std::unique_ptr<GSMessagerBase> agent_task_ipc_subscriber_;
 };
 } // namespace PiTrac
 

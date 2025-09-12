@@ -135,9 +135,9 @@ void GSTaskBase::changeStatus(TaskStatus new_status)
     if (old_status != new_status)
     {
         status_ = new_status;
-        logger_->info("[" + task_name_ + "] Task status changed: " +
-                      taskStatusToString(old_status) +
-                      " -> " + taskStatusToString(new_status));
+        logInfo("Task status changed: " +
+                taskStatusToString(old_status) +
+                " -> " + taskStatusToString(new_status));
     }
 }
 

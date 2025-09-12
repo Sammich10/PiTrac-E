@@ -1,4 +1,4 @@
-#include "Application/AppAgents/CameraAgent/CameraAgent.h"
+#include "Application/Agents/CameraAgent/CameraAgent.h"
 
 namespace PiTrac
 {
@@ -11,7 +11,7 @@ CameraAgent::CameraAgent(std::unique_ptr<GSCameraInterface> camera_, std::shared
     frame_counter_(0),
     current_mode_(SystemMode::Initializing)
 {
-    agent_name_ = agent_name_ + "_" + std::to_string(camera_id_);
+    agent_name_ = agent_name_ + " " + std::to_string(camera_id_);
     logInfo("CameraAgent created: " + agent_name_);
 }
 
@@ -80,9 +80,9 @@ void CameraAgent::captureLoop()
         frame_buffer_->addFrame(frame);
         frame_counter_++;
     }
-
-    logInfo("CameraAgent capture loop exiting for: " + agent_name_);
+    logInfo("Stopping continuous capture for: " + agent_name_);
     camera_->stopContinuousCapture();
+    logInfo("CameraAgent capture loop exiting for: " + agent_name_);
 }
 
 void CameraAgent::cleanup()

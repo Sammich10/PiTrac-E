@@ -1,7 +1,7 @@
 #ifndef FRAME_PROCESSOR_AGENT_H
 #define FRAME_PROCESSOR_AGENT_H
 
-#include "Application/AppAgents/AgentBase/GSAgentBase.h"
+#include "Application/Agents/AgentBase/GSAgentBase.h"
 #include "Infrastructure/DataStructures/FrameBuffer.h"
 #include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
 #include "Infrastructure/Messaging/Messages/GSCameraFrameRawMsg.h"

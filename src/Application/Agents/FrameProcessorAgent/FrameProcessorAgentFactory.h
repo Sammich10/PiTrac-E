@@ -1,7 +1,7 @@
 #ifndef FRAME_PROCESSOR_FACTORY_H
 #define FRAME_PROCESSOR_FACTORY_H
 
-#include "Application/AppAgents/FrameProcessorAgent/FrameProcessorAgent.h"
+#include "Application/Agents/FrameProcessorAgent/FrameProcessorAgent.h"
 
 namespace PiTrac
 {
