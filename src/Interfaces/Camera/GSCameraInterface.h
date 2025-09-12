@@ -76,7 +76,6 @@ class GSCameraInterface
         , isConfigured_(false)
         , triggerMode_(TriggerMode::FREE_RUNNING)
         , isCapturing_(false)
-        , activeStream_(StreamType::STREAM_TYPE_MAIN)
     {
     }
 
@@ -84,7 +83,10 @@ class GSCameraInterface
 
     /** Pure virtual methods to be implemented by derived classes **/
     virtual bool openCamera() = 0;
-    virtual bool initializeCamera() = 0;
+    virtual bool configureStream
+    (
+        const libcamera::StreamRole &streamRole
+    ) = 0;
     virtual void closeCamera() = 0;
     virtual cv::Mat captureFrame() = 0;
     virtual cv::Mat getNextFrame() = 0;
@@ -95,10 +97,6 @@ class GSCameraInterface
     ) = 0;
     virtual bool startContinuousCapture() = 0;
     virtual bool stopContinuousCapture() = 0;
-    virtual bool switchStream
-    (
-        StreamType newStream
-    ) = 0;
     virtual std::string toString() const = 0;
 
     /** Accessor methods **/
@@ -290,7 +288,6 @@ class GSCameraInterface
 
   protected:
 
-    virtual bool configureCamera() = 0;
     virtual bool allocateBuffersForStream
     (
         libcamera::Stream *stream
@@ -350,8 +347,6 @@ class GSCameraInterface
     bool useCalibrationMatrix_ = false;
     bool isCameraOpen_ = false;
     bool isCapturing_ = false;
-
-    StreamType activeStream_;
 
     // Frame capture synchronization
     std::mutex frameMutex_;

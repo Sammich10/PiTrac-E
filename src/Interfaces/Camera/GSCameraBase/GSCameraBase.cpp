@@ -57,29 +57,6 @@ bool GSCameraBase::openCamera()
     }
 }
 
-bool GSCameraBase::initializeCamera()
-{
-    if (!isCameraOpen_)
-    {
-        logger_->error("Camera not open, cannot initialize");
-        return false;
-    }
-
-    if (!configureCamera())
-    {
-        logger_->error("Failed to configure camera during initialization");
-        return false;
-    }
-
-    if (!configureTriggerMode(triggerMode_))
-    {
-        logger_->error("Failed to configure trigger mode");
-        return false;
-    }
-
-    return true;
-}
-
 void GSCameraBase::closeCamera()
 {
     if (camera_)
@@ -255,16 +232,8 @@ bool GSCameraBase::stopContinuousCapture()
     return true;
 }
 
-bool GSCameraBase::switchStream(StreamType newStream)
+bool GSCameraBase::configureStream(const libcamera::StreamRole &streamRole)
 {
-    if (activeStream_ == newStream)
-    {
-        return true; // Already using this stream
-    }
-
-    logger_->info("Switching from stream " + std::to_string(static_cast<int>(activeStream_))
-                  + " to stream " + std::to_string(static_cast<int>(newStream)));
-
     bool wasCapturing = isCapturing_;
 
     // Step 1: Completely stop capture and camera
@@ -310,20 +279,16 @@ bool GSCameraBase::switchStream(StreamType newStream)
         allocator_.reset();
     }
 
-    // Step 4: Switch active stream
-    activeStream_ = newStream;
-
-    // Step 5: Create new single-stream configuration for the active stream
-    if (!reconfigureForActiveStream())
+    // Step 4: Create new single-stream configuration for the active stream
+    if (!reconfigureForActiveStream(streamRole))
     {
         logger_->error("Failed to reconfigure for active stream");
         return false;
     }
 
-    logger_->info("Successfully switched to stream " +
-                  std::to_string(static_cast<int>(activeStream_)));
+    logger_->info("Successfully configured stream");
 
-    // Step 6: Resume capture if it was running
+    // Step 5: Resume capture if it was running
     if (wasCapturing)
     {
         logger_->info("Restarting capture for new stream...");
@@ -394,11 +359,6 @@ std::string GSCameraBase::toString() const
            ", FL:" + std::to_string(focalLength_mm_) + "mm]";
 }
 
-bool GSCameraBase::configureCamera()
-{
-    return reconfigureForActiveStream();
-}
-
 bool GSCameraBase::allocateBuffersForStream(libcamera::Stream *stream)
 {
     if (!allocator_)
@@ -415,8 +375,7 @@ bool GSCameraBase::allocateBuffersForStream(libcamera::Stream *stream)
     }
 
     size_t allocated = allocator_->buffers(stream).size();
-    logger_->info("Allocated " + std::to_string(allocated) + " buffers for stream " +
-                  std::to_string(static_cast<int>(activeStream_)));
+    logger_->info("Allocated " + std::to_string(allocated) + " buffers for stream");
 
     // Clear any existing requests
     requests_.clear();
@@ -439,9 +398,12 @@ bool GSCameraBase::allocateBuffersForStream(libcamera::Stream *stream)
             return false;
         }
 
-        // Set controls (exposure, gain, etc.)
+        // Set controls (exposure, frame duration, gain, etc.)
         libcamera::ControlList &controls = request->controls();
         controls.set(libcamera::controls::ExposureTime, currentExposureUs_);
+        controls.set(libcamera::controls::FrameDurationLimits,
+                     {static_cast<int64_t>(1000000.0f / currentFps_),
+                      static_cast<int64_t>(1000000.0f / currentFps_)});
         controls.set(libcamera::controls::AnalogueGain, currentGain_);
 
         requests_.push_back(std::move(request));
@@ -542,8 +504,7 @@ void GSCameraBase::requestComplete(libcamera::Request *request)
         libcamera::FrameBuffer *buffer = request->findBuffer(config_->at(0).stream());
         if (buffer)
         {
-            // logger_->info("Received frame from stream " +
-            // std::to_string(static_cast<int>(activeStream_)));
+            // logger_->info("Received frame");
 
             cv::Mat frame = convertBufferToMat(buffer);
 
@@ -625,57 +586,22 @@ cv::Mat GSCameraBase::unpack10BitBayer(void *data, int width, int height, size_t
     return result8bit;
 }
 
-bool GSCameraBase::reconfigureForActiveStream()
+bool GSCameraBase::reconfigureForActiveStream(const libcamera::StreamRole &streamRole)
 {
-    // Generate configuration for ONLY the active stream
-    libcamera::StreamRole role;
-    switch (activeStream_)
-    {
-        case StreamType::STREAM_TYPE_PREVIEW:
-            role = libcamera::StreamRole::Viewfinder;
-            break;
-        case StreamType::STREAM_TYPE_MAIN:
-            role = libcamera::StreamRole::VideoRecording;
-            break;
-        case StreamType::STREAM_TYPE_HQ:
-            role = libcamera::StreamRole::Raw;
-            break;
-        default:
-            logger_->error("Invalid stream type");
-            return false;
-    }
-
-    // Generate configuration for single stream
-    config_ = camera_->generateConfiguration({role});
+    // Generate base configuration for stream
+    config_ = camera_->generateConfiguration({streamRole});
     if (!config_)
     {
-        logger_->error("Failed to generate configuration for stream " +
-                       std::to_string(static_cast<int>(activeStream_)));
+        logger_->error("Failed to generate configuration for stream");
         return false;
     }
 
     // Configure the single stream
     libcamera::StreamConfiguration &streamConfig = config_->at(0); // Only one
-                                                                   // stream now
 
-    switch (activeStream_)
-    {
-        case StreamType::STREAM_TYPE_PREVIEW:
-            streamConfig.size.width = resolutionX_ / 2;   // 728
-            streamConfig.size.height = resolutionY_ / 2;  // 544
-            streamConfig.pixelFormat = libcamera::formats::BGR888;
-            break;
-        case StreamType::STREAM_TYPE_MAIN:
-            streamConfig.size.width = resolutionX_;       // 1456
-            streamConfig.size.height = resolutionY_;      // 1088
-            streamConfig.pixelFormat = libcamera::formats::BGR888;
-            break;
-        case StreamType::STREAM_TYPE_HQ:
-            streamConfig.size.width = resolutionX_;       // 1456
-            streamConfig.size.height = resolutionY_;      // 1088
-            streamConfig.pixelFormat = libcamera::formats::SRGGB10_CSI2P;
-            break;
-    }
+    streamConfig.size.width = resolutionX_;
+    streamConfig.size.height = resolutionY_;
+    streamConfig.pixelFormat = libcamera::formats::BGR888;
 
     // Validate configuration
     libcamera::CameraConfiguration::Status validation = config_->validate();
@@ -689,12 +615,11 @@ bool GSCameraBase::reconfigureForActiveStream()
     int ret = camera_->configure(config_.get());
     if (ret)
     {
-        logger_->error("Failed to configure camera for stream " +
-                       std::to_string(static_cast<int>(activeStream_)));
+        logger_->error("Failed to configure camera for stream");
         return false;
     }
 
-    logger_->info("Configured stream " + std::to_string(static_cast<int>(activeStream_)) + ": "
+    logger_->info("Configured stream: "
                   + std::to_string(streamConfig.size.width) + "x" +
                   std::to_string(streamConfig.size.height)
                   + "-" + streamConfig.pixelFormat.toString());

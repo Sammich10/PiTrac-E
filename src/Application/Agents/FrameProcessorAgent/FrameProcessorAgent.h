@@ -10,7 +10,6 @@
 
 namespace PiTrac
 {
-
 class FrameProcessorAgent : public GSAgentBase
 {
   public:
@@ -35,7 +34,6 @@ class FrameProcessorAgent : public GSAgentBase
 
     void processFrames();
 };
-
 } // namespace PiTrac
 
 #endif // FRAME_PROCESSOR_AGENT_H

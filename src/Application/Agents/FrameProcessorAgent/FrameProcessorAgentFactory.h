@@ -5,10 +5,9 @@
 
 namespace PiTrac
 {
-
 class FrameProcessorAgentFactory
 {
-public:
+  public:
     static std::unique_ptr<FrameProcessorAgent> create
     (
         std::shared_ptr<FrameBuffer> frame_buffer,
@@ -18,7 +17,6 @@ public:
         return std::make_unique<FrameProcessorAgent>(std::move(frame_buffer), camera_id);
     }
 };
-
 }
 
 #endif // FRAME_PROCESSOR_FACTORY_H

@@ -25,6 +25,9 @@ bool CameraAgent::setup()
 {
     logInfo("Setting up " + agent_name_);
     camera_->setResolution(1456, 1088);
+    camera_->setExposureTime(2000); // 2ms
+    camera_->setSensorSize(3.674f, 2.760f); // IMX219 sensor size in mm
+    camera_->setFrameRate(15.0f); // 15 FPS
     camera_->setFocalLength(2.8f);
     camera_->setTriggerMode(TriggerMode::FREE_RUNNING);
     return true;
@@ -45,9 +48,9 @@ bool CameraAgent::initialize()
     if(!camera_->isCameraConfigured())
     {
         logInfo("Initializing camera for: " + agent_name_);
-        if (!camera_->initializeCamera())
+        if(!camera_->configureStream(libcamera::StreamRole::VideoRecording))
         {
-            logError("Failed to initialize camera for: " + agent_name_);
+            logError("Failed to configure camera stream for: " + agent_name_);
             return false;
         }
     }

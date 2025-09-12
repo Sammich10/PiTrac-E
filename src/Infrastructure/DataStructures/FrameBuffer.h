@@ -13,25 +13,25 @@ namespace PiTrac
  *(cv::Mat).
  *
  * The FrameBuffer class implements a circular buffer to efficiently store and
- *manage
+ * manage
  * a sequence of frames. When the buffer reaches its capacity, adding a new
- *frame
+ * frame
  * will overwrite the oldest frame. The buffer supports adding frames,
- *retrieving
+ * retrieving
  * frames in FIFO order, and querying its state (empty, full, size, capacity).
  *
  * Usage:
  * - Construct with a positive capacity.
  * - Use addFrame() to insert frames; if the buffer is full, the oldest frame is
- *overwritten.
+ * overwritten.
  * - Use getFrame() to retrieve and remove the oldest frame.
  * - Use isEmpty(), isFull(), size(), and capacity() to query buffer status.
  *
  * @note Thread Safety: This class is not thread-safe. The intended use is a
- *single-producer, single-consumer scenario.
+ * single-producer, single-consumer scenario.
  *
  * @note Frames are stored as deep copies (using cv::Mat::clone()) to avoid
- *shared data issues.
+ * shared data issues.
  */
 class FrameBuffer
 {
@@ -57,9 +57,9 @@ class FrameBuffer
      *
      * @param frame The frame to add (as a cv::Mat).
      * @return true if the frame was added without overwriting an existing
-     *frame,
+     * frame,
      *         false if the oldest frame was overwritten to make space for the
-     *new frame.
+     * new frame.
      */
     bool addFrame(const cv::Mat &frame)
     {
@@ -80,16 +80,16 @@ class FrameBuffer
      * @brief Retrieves the next frame from the buffer.
      *
      * If the buffer is not empty, this function copies the frame at the current
-     *tail position
+     * tail position
      * into the provided cv::Mat reference, advances the tail index, and returns
-     *true.
+     * true.
      * If the buffer is empty, the function returns false and does not modify
-     *the frame.
+     * the frame.
      *
      * @param frame Reference to a cv::Mat object where the retrieved frame will
-     *be stored.
+     * be stored.
      * @return true if a frame was successfully retrieved; false if the buffer
-     *is empty.
+     * is empty.
      */
     bool getFrame(cv::Mat &frame)
     {
@@ -116,9 +116,9 @@ class FrameBuffer
      * @brief Checks if the frame buffer is full.
      *
      * This function determines whether the buffer has reached its maximum
-     *capacity.
+     * capacity.
      * It returns true if adding another element would overwrite the oldest
-     *element,
+     * element,
      * indicating that the buffer is full.
      *
      * @return true if the buffer is full, false otherwise.

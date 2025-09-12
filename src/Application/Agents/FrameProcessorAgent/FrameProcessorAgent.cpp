@@ -2,7 +2,6 @@
 
 namespace PiTrac
 {
-
 FrameProcessorAgent::FrameProcessorAgent(std::shared_ptr<FrameBuffer> frame_buffer, const uint32_t camera_id)
     : GSAgentBase("FrameProcessorAgent", AgentPriority::High),
     frame_buffer_(std::move(frame_buffer)),
@@ -23,7 +22,16 @@ FrameProcessorAgent::~FrameProcessorAgent()
 bool FrameProcessorAgent::setup()
 {
     logInfo("Setting up " + agent_name_ + " with buffer capacity: " + std::to_string(frame_buffer_->capacity()));
-    frame_publisher_->bind("ipc://frame_publisher_" + std::to_string(camera_id_));
+    switch(camera_id_)
+    {
+        case 0:
+            frame_publisher_->bind("tcp://0.0.0.0:5555");
+            break;
+        case 1:
+            frame_publisher_->bind("tcp://0.0.0.0:5556");
+            break;
+    }
+    // frame_publisher_->bind("ipc://frame_publisher_" + std::to_string(camera_id_));
     return true;
 }
 
@@ -57,9 +65,9 @@ void FrameProcessorAgent::processFrames()
             frame_msg.setFrame(frame);
             frame_msg.setFrameNumber(frame_counter_++);
             frame_msg.setCaptureTimestamp(std::chrono::system_clock::now());
+            frame_msg.setJpegQuality(60);
             frame_publisher_->sendMessage(frame_msg);
         }
     }
 }
-
 } // namespace PiTrac

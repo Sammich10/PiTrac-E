@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     for(size_t i = 0; i < static_cast<size_t>(PiTrac::StreamType::STREAM_TYPE_MAX); ++i)
     {
         // Test switching streams
-        camera->switchStream(static_cast<PiTrac::StreamType>(i));
+        camera->configureStream(static_cast<PiTrac::StreamType>(i));
         std::string fname = "/tmp/imx296/stream_" + std::to_string(i) + ".jpg";
         if(test_camera_capture(camera.get(), fname) != 0)
         {

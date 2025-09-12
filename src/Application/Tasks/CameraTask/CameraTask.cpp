@@ -14,7 +14,6 @@ CameraTask::CameraTask() : GSAgentTask("CameraTask")
     logger_ = GSLogger::getInstance();
 }
 
-
 bool CameraTask::setupProcess()
 {
     // Configure agents before starting
@@ -71,7 +70,7 @@ void CameraTask::cleanupProcess()
         cameraManager_->stop();
         cameraManager_.reset();
     }
-    
+
     // Cleanup any lingering IPA processes manually for now... this should be
     // handled by the camera agent's closeCamera() method in the future.
     const int result = system("pkill -f raspberrypi_ipa 2>/dev/null");

@@ -48,15 +48,6 @@ class GSCameraBase : public GSCameraInterface
     bool openCamera() override;
 
     /**
-     * @brief Initializes the camera after it has been opened.
-     *
-     * Configures the camera settings and prepares it for capturing frames.
-     *
-     * @return True if the camera was initialized successfully, false otherwise.
-     */
-    bool initializeCamera() override;
-
-    /**
      * @brief Closes the camera.
      *
      * Stops capturing and releases the camera resources.
@@ -138,13 +129,6 @@ class GSCameraBase : public GSCameraInterface
     size_t maxFrameBuffer_ = 100;
 
     /**
-     * @brief Configures the camera with the required settings.
-     *
-     * @return true if the camera was successfully configured, false otherwise.
-     */
-    bool configureCamera() override;
-
-    /**
      * @brief Allocates memory buffers required for the specified camera stream.
      *
      * @param stream Pointer to the libcamera::Stream object for which buffers
@@ -207,16 +191,20 @@ class GSCameraBase : public GSCameraInterface
      *
      * @return true if the stream was successfully switched; false otherwise.
      */
-    bool switchStream
+    bool configureStream
     (
-        StreamType streamType
+        const libcamera::StreamRole &streamRole
     ) override;
+
     /**
      * @brief Reconfigures the camera settings for an active streaming session.
      *
      * @return true if the reconfiguration was successful, false otherwise.
      */
-    bool reconfigureForActiveStream();
+    bool reconfigureForActiveStream
+    (
+        const libcamera::StreamRole &streamRole
+    );
 
     /**
      * @brief Get the latest captured frame

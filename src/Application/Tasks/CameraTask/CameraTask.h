@@ -28,7 +28,7 @@ class CameraTask : public GSAgentTask
 
     void checkForStrayIPAProcesses();
 
-    std::shared_ptr<libcamera::CameraManager> cameraManager_; 
+    std::shared_ptr<libcamera::CameraManager> cameraManager_;
     std::array<std::shared_ptr<CameraAgent>, 2> camera_agents_;
     std::shared_ptr<GSLogger> logger_;
     std::array<std::string, 2> camera_endpoints_;
