@@ -1,4 +1,5 @@
 #include "Infrastructure/AgentTask/GSAgentTask.h"
+#include "Common/System/Endpoints.h"
 
 namespace PiTrac
 {
@@ -6,7 +7,7 @@ GSAgentTask::GSAgentTask(const std::string &name)
     : GSTaskBase(name)
     , restart_failed_agents_(false)
     , agent_check_interval_(std::chrono::milliseconds(1000))
-    , agent_task_ipc_endpoint_("ipc://agent_task")
+    , agent_task_ipc_endpoint_(Endpoints::getAgentTaskEndpoint())
     , agent_task_ipc_subscriber_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Subscriber))
 {
     logInfo("Agent task created: " + task_name_ + " [" + task_id_ + "]");

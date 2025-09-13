@@ -22,15 +22,7 @@ FrameProcessorAgent::~FrameProcessorAgent()
 bool FrameProcessorAgent::setup()
 {
     logInfo("Setting up " + agent_name_ + " with buffer capacity: " + std::to_string(frame_buffer_->capacity()));
-    switch(camera_id_)
-    {
-        case 0:
-            frame_publisher_endpoint_ = "tcp://0.0.0.0:5555";
-            break;
-        case 1:
-            frame_publisher_endpoint_ = "tcp://0.0.0.0:5556";
-            break;
-    }
+    frame_publisher_endpoint_ = Endpoints::getFrameProcessorPublisherEndpoint(camera_id_);
     frame_publisher_->bind(frame_publisher_endpoint_);
     logInfo("FrameProcessorAgent bound to publisher endpoint: " + frame_publisher_endpoint_);
     return true;

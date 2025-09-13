@@ -19,6 +19,17 @@ namespace PiTrac
  */
 class SystemManager : public GSManagerBase
 {
+SystemManager();
+~SystemManager() override;
+bool setup() override;
+bool initialize() override;
+void execute() override;
+void cleanup() override;
+
+private:
+
+GSMessager
+
 };
 } // namespace PiTrac
 

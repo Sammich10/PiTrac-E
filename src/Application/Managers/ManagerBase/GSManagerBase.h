@@ -2,6 +2,7 @@
 #define GSManager_H
 
 #include "Common/Utils/Logging/GSLogger.h"
+#include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
 #include <string>
 #include <thread>
 #include <atomic>
