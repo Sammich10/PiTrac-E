@@ -2,6 +2,7 @@
 #define GSTASKBASE_H
 
 #include "Common/Utils/Logging/GSLogger.h"
+#include "Common/System/SystemModes.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -175,19 +176,6 @@ class GSTaskBase
      * @return true if the task is running, false otherwise.
      */
     virtual bool isRunning() const;
-
-    /**
-     * @brief Sets the IPC (Inter-Process Communication) endpoint.
-     *
-     * This function assigns the specified endpoint string to the internal
-     * IPC endpoint variable, which is used for communication between processes.
-     *
-     * @param endpoint The IPC endpoint as a string.
-     */
-    void setIPCEndpoint(const std::string &endpoint)
-    {
-        ipc_endpoint_ = endpoint;
-    }
 
     /**
      * @brief Sets the callback function to be invoked when the task status

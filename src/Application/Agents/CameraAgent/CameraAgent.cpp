@@ -2,16 +2,16 @@
 
 namespace PiTrac
 {
-CameraAgent::CameraAgent(std::unique_ptr<GSCameraInterface> camera_, std::shared_ptr<FrameBuffer> frame_buffer_, const uint32_t camera_id_)
+CameraAgent::CameraAgent(std::unique_ptr<GSCameraInterface> camera_, std::shared_ptr<FrameBuffer> frame_buffer_, const uint32_t camera_index_)
     : GSAgentBase("CameraAgent", AgentPriority::High),
     camera_(std::move(camera_)),
     frame_buffer_(std::move(frame_buffer_)),
-    camera_id_(camera_id_),
+    camera_index_(camera_index_),
     running_(false),
     frame_counter_(0),
     current_mode_(SystemMode::Initializing)
 {
-    agent_name_ = agent_name_ + " " + std::to_string(camera_id_);
+    agent_name_ = agent_name_ + " " + std::to_string(camera_index_);
     logInfo("CameraAgent created: " + agent_name_);
 }
 

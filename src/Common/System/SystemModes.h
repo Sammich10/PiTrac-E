@@ -7,6 +7,7 @@ enum class SystemMode
 {
     Initializing,
     Idle,
+    Viewfinding,
     Calibrating,
     Waiting,
     CameraCapture,
@@ -20,6 +21,15 @@ enum class EventID
     StrikeDetected,
     DataProcessed,
     ErrorOccurred
+};
+
+enum class LaunchMonitorState
+{
+    ACQUIRING_BALL = 0,
+    AWAITING_STRIKE,
+    PROCESSING_STRIKE,
+    ERROR,
+    MAX
 };
 } // namespace PiTrac
 

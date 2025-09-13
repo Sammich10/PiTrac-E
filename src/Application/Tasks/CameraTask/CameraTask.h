@@ -16,8 +16,8 @@ class CameraTask : public GSAgentTask
 
     CameraTask
     (
-      const size_t camera_index,
-      const size_t frame_buffer_size
+        const size_t camera_index,
+        const size_t frame_buffer_size
     );
     ~CameraTask() override = default;
 

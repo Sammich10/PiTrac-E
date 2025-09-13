@@ -3,10 +3,10 @@
 
 namespace PiTrac
 {
-CameraTask::CameraTask(const size_t camera_index, const size_t frame_buffer_size) 
-: GSAgentTask("CameraTask")
-, camera_index_(camera_index)
-, frame_buffer_size_(frame_buffer_size)
+CameraTask::CameraTask(const size_t camera_index, const size_t frame_buffer_size)
+    : GSAgentTask("CameraTask")
+    , camera_index_(camera_index)
+    , frame_buffer_size_(frame_buffer_size)
 {
     setRestartFailedAgents(true);
     setAgentCheckInterval(std::chrono::milliseconds(2000));
@@ -24,7 +24,8 @@ bool CameraTask::setupProcess()
         logger_->error("Failed to start camera manager");
         return false;
     }
-    // Subscribe to agent task IPC endpoint to receive commands from the system regarding
+    // Subscribe to agent task IPC endpoint to receive commands from the system
+    // regarding
     // state updates
     agent_task_ipc_subscriber_->bind(agent_task_ipc_endpoint_);
     logInfo("Agent task IPC subscriber bound to: " + agent_task_ipc_endpoint_);
@@ -70,6 +71,6 @@ void CameraTask::cleanupProcess()
 
     // Cleanup any lingering IPA processes manually for now... this should be
     // handled by the camera agent's closeCamera() method in the future.
-    const int result = system("pkill -f raspberrypi_ipa 2>/dev/null");
+    // const int result = system("pkill -f raspberrypi_ipa 2>/dev/null");
 }
 } // namespace PiTrac

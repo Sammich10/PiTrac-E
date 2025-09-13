@@ -18,8 +18,9 @@ namespace PiTrac
  * messaging system.
  *
  * At it's core, it will implement different camera operations such as
- * opening, initializing, capturing frames, and closing the camera.
+ * opening, configuring, capturing frames, and closing the camera.
  * The CameraAgent will also enqueue captured frames into a FrameBuffer
+ * to be consumed by the FrameProcessorAgent.
  *
  * On top of this, it will support different modes of operation to support
  * the functionality of the launch monitor system.
@@ -27,13 +28,28 @@ namespace PiTrac
 class CameraAgent : public GSAgentBase
 {
   public:
+    /**
+     * @brief Constructs a CameraAgent object.
+     *
+     * @param camera_ Unique pointer to a GSCameraInterface instance
+     *representing the camera hardware interface.
+     * @param frame_buffer_ Shared pointer to a FrameBuffer instance used for
+     *storing captured frames.
+     * @param camera_index Index of the camera
+     */
     CameraAgent
     (
         std::unique_ptr<GSCameraInterface> camera_,
         std::shared_ptr<FrameBuffer> frame_buffer_,
-        const uint32_t camera_id
+        const uint32_t camera_index
     );
 
+    /**
+     * @brief Destructor for the CameraAgent class.
+     *
+     * Cleans up resources and performs necessary shutdown procedures
+     * when a CameraAgent object is destroyed.
+     */
     ~CameraAgent();
 
     /**
@@ -82,7 +98,7 @@ class CameraAgent : public GSAgentBase
 
     std::shared_ptr<FrameBuffer> frame_buffer_;
     std::unique_ptr<GSCameraInterface> camera_;
-    uint32_t camera_id_;
+    uint32_t camera_index_;
     std::atomic<bool> running_;
     uint64_t frame_counter_;
     SystemMode current_mode_;

@@ -10,6 +10,14 @@
 
 namespace PiTrac
 {
+/**
+ * @class FrameProcessorAgent
+ * @brief Agent responsible for processing frames from the camera.
+ *
+ * This agent retrieves raw frames from a shared FrameBuffer, processes them
+ * based on the system mode and applicable processing pipeline, can publish
+ * frames to other system components or external systems via ZeroMQ.
+ */
 class FrameProcessorAgent : public GSAgentBase
 {
   public:

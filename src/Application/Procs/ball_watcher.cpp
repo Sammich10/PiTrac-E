@@ -3,8 +3,6 @@
  * Copyright (C) 2022-2025, Verdant Consultants, LLC.
  */
 
-#ifdef __unix__  // Ignore in Windows environment
-
 #include <chrono>
 #include <signal.h>
 #include <sys/stat.h>
@@ -166,5 +164,3 @@ bool ball_watcher_event_loop(RPiCamEncoder &app, bool &motion_detected)
     return true;
 }
 }
-
-#endif // #ifdef __unix__  // Ignore in Windows environment
