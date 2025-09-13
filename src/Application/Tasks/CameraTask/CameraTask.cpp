@@ -3,14 +3,13 @@
 
 namespace PiTrac
 {
-CameraTask::CameraTask() : GSAgentTask("CameraTask")
+CameraTask::CameraTask(const size_t camera_index, const size_t frame_buffer_size) 
+: GSAgentTask("CameraTask")
+, camera_index_(camera_index)
+, frame_buffer_size_(frame_buffer_size)
 {
     setRestartFailedAgents(true);
     setAgentCheckInterval(std::chrono::milliseconds(2000));
-    camera_endpoints_[0] = "ipc:///tmp/camera_frames_1";
-    camera_endpoints_[1] = "ipc:///tmp/camera_frames_2";
-    camera_ids_[0] = "Camera_0";
-    camera_ids_[1] = "Camera_1";
     logger_ = GSLogger::getInstance();
 }
 
@@ -25,6 +24,8 @@ bool CameraTask::setupProcess()
         logger_->error("Failed to start camera manager");
         return false;
     }
+    // Subscribe to agent task IPC endpoint to receive commands from the system regarding
+    // state updates
     agent_task_ipc_subscriber_->bind(agent_task_ipc_endpoint_);
     logInfo("Agent task IPC subscriber bound to: " + agent_task_ipc_endpoint_);
     return true;
@@ -33,18 +34,14 @@ bool CameraTask::setupProcess()
 void CameraTask::configureAgents()
 {
     logger_->info("Configuring Camera Task Agents...");
-    const size_t num_cameras = 2; // Update this to the actual number of cameras
-                                  // available
+    // Create a camera and frame buffer for the camera
+    std::unique_ptr<GSCameraInterface> camera = std::make_unique<IMX296Camera>(camera_index_, cameraManager_);
+    std::shared_ptr<FrameBuffer> frame_buffer = std::make_shared<FrameBuffer>(frame_buffer_size_);
+    // Create and add camera agent and frame processor agent
+    addAgent(CameraAgentFactory::createCameraAgent(std::move(camera), frame_buffer, camera_index_));
+    addAgent(FrameProcessorAgentFactory::create(std::move(frame_buffer), camera_index_));
 
-    for(size_t i = 0; i < num_cameras; i++)
-    {
-        std::unique_ptr<GSCameraInterface> camera = std::make_unique<IMX296Camera>(i, cameraManager_);
-        std::shared_ptr<FrameBuffer> frame_buffer = std::make_shared<FrameBuffer>(128);
-
-        addAgent(CameraAgentFactory::createCameraAgent(std::move(camera), frame_buffer, i));
-        addAgent(FrameProcessorAgentFactory::create(std::move(frame_buffer), i));
-    }
-    logger_->info("Configured " + std::to_string(num_cameras) + " camera task agents.");
+    logger_->info("Configured camera task for camera " + std::to_string(camera_index_) + ".");
 }
 
 bool CameraTask::preAgentStartHook()

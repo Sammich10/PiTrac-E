@@ -25,13 +25,14 @@ bool FrameProcessorAgent::setup()
     switch(camera_id_)
     {
         case 0:
-            frame_publisher_->bind("tcp://0.0.0.0:5555");
+            frame_publisher_endpoint_ = "tcp://0.0.0.0:5555";
             break;
         case 1:
-            frame_publisher_->bind("tcp://0.0.0.0:5556");
+            frame_publisher_endpoint_ = "tcp://0.0.0.0:5556";
             break;
     }
-    // frame_publisher_->bind("ipc://frame_publisher_" + std::to_string(camera_id_));
+    frame_publisher_->bind(frame_publisher_endpoint_);
+    logInfo("FrameProcessorAgent bound to publisher endpoint: " + frame_publisher_endpoint_);
     return true;
 }
 

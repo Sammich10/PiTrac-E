@@ -29,11 +29,19 @@ int main(int argc, char *argv[])
 {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
+    // Parse arguments. Arg 1 is camera index, arg 2 is frame buffer size
+    if (argc < 3)
+    {
+        logger->error("Usage: CameraTaskLauncher <camera_index> <frame_buffer_size>");
+        return EXIT_FAILURE;
+    }
+    size_t camera_index = std::stoul(argv[1]);
+    size_t frame_buffer_size = std::stoul(argv[2]);
     try {
         logger->info("Starting Camera Agent Task Launcher");
 
         // Create and start the camera agent task
-        PiTrac::CameraTask camera_agent_task;
+        PiTrac::CameraTask camera_agent_task(camera_index, frame_buffer_size);
         g_camera_task = &camera_agent_task;
 
         if (!camera_agent_task.start())

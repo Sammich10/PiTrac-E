@@ -14,7 +14,11 @@ class CameraTask : public GSAgentTask
 {
   public:
 
-    CameraTask();
+    CameraTask
+    (
+      const size_t camera_index,
+      const size_t frame_buffer_size
+    );
     ~CameraTask() override = default;
 
     void configureAgents() override;
@@ -29,11 +33,11 @@ class CameraTask : public GSAgentTask
     void checkForStrayIPAProcesses();
 
     std::shared_ptr<libcamera::CameraManager> cameraManager_;
-    std::array<std::shared_ptr<CameraAgent>, 2> camera_agents_;
     std::shared_ptr<GSLogger> logger_;
-    std::array<std::string, 2> camera_endpoints_;
-    std::array<std::string, 2> camera_ids_;
-    std::array<std::shared_ptr<FrameBuffer>, 2> frame_buffers_;
+    size_t camera_index_;
+    std::string camera_id_;
+    std::shared_ptr<FrameBuffer> frame_buffer_;
+    size_t frame_buffer_size_;
 }; // class CameraTask
 } // namespace PiTrac
 

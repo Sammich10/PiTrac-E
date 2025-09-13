@@ -29,6 +29,7 @@ class FrameProcessorAgent : public GSAgentBase
     std::shared_ptr<FrameBuffer> frame_buffer_;
     std::atomic<bool> running_;
     std::unique_ptr<GSMessagerBase> frame_publisher_;
+    std::string frame_publisher_endpoint_;
     uint32_t camera_id_;
     size_t frame_counter_;
 
