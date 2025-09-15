@@ -44,7 +44,7 @@ void GSMessageBase::fromZmqMessage(zmq_msg_t &msg)
 std::string GSMessageBase::toString() const
 {
     std::ostringstream oss;
-    oss << "Message Type: " << getMessageType()
+    oss << "Message Type: " << std::to_string(static_cast<int>(getMessageType()))
         << ", Timestamp: " << std::chrono::duration_cast<std::chrono::milliseconds>(
         timestamp_.time_since_epoch()).count() << "ms";
     return oss.str();

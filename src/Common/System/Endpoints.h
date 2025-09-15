@@ -9,7 +9,7 @@ namespace PiTrac
 
 /**
  * @brief The Endpoints class provides static methods to 
- * retrieve IPC endpoints used for inter-process communication.
+ * retrieve IPC endpoints used for inter-process communic
  * This is also where network endpoints will be defined.
  * 
  * @note All endpoints should be defined here to maintain consistency.
@@ -20,9 +20,11 @@ namespace PiTrac
 class Endpoints
 {
 
+public:
+
 static const std::string getAgentTaskEndpoint()
 {
-    return "ipc:://agent_endpoint";
+    return "ipc://agent_task_endpoint";
 }
 
 static const std::string getCameraStreamEndpoint(const size_t &cameraIndex)
@@ -36,6 +38,22 @@ static const std::string getCameraStreamEndpoint(const size_t &cameraIndex)
         default:
             return "tcp://0.0.0.0:5555"; // Default to camera 0 if index is out of range
     }
+}
+
+static const std::string getTaskEndpoint()
+{
+    return "ipc://task_endpoint";
+}
+
+static const std::string getHostEndpoint()
+{
+    return "tcp://192.168.86.32:6000";
+}
+
+private:
+
+static const std::string endpointsJsonFilePath_;
+
 };
 
 }

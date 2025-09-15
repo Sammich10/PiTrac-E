@@ -6,6 +6,7 @@
 #include <memory>
 #include <zmq.h>
 #include <msgpack.hpp>
+#include "Infrastructure/Messaging/Messages/GSMessageTypes.h"
 
 namespace PiTrac
 {
@@ -15,7 +16,7 @@ class GSMessageInterface
     virtual ~GSMessageInterface() = default;
 
     // Core message operations
-    virtual std::string getMessageType() const = 0;
+    virtual GSMessageType getMessageType() const = 0;
     virtual std::chrono::system_clock::time_point getTimestamp() const = 0;
     virtual void setTimestamp
     (
@@ -46,6 +47,13 @@ class GSMessageInterface
     // Convenience methods
     virtual std::string toString() const = 0;
     virtual std::unique_ptr<GSMessageInterface> clone() const = 0;
+
+  protected:
+    const std::string incorrectMessageTypeString(const GSMessageType incorrectMessageType) const
+    {
+        return "Message type mismatch: expected " + std::to_string(static_cast<int>(getMessageType())) +
+               ", got " + std::to_string(static_cast<int>(incorrectMessageType));
+    }
 };
 } // namespace PiTrac
 

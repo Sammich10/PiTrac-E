@@ -2,6 +2,7 @@
 #define MESSAGE_FACTORY_H
 
 #include "Infrastructure/Messaging/GSMessageInterface.h"
+#include "Infrastructure/Messaging/Messages/GSMessageTypes.h"
 #include <memory>
 #include <unordered_map>
 #include <functional>
@@ -14,7 +15,7 @@ class GSMessageFactory
     GSMessageFactory();
 
     template<typename MessageType>
-    void registerMessage(const std::string &type)
+    void registerMessage(const GSMessageType &type)
     {
         creators_[type] = []() {
                               return std::make_unique<MessageType>();
@@ -28,7 +29,7 @@ class GSMessageFactory
 
   private:
 
-    std::unordered_map<std::string,
+    std::unordered_map<GSMessageType,
                        std::function<std::unique_ptr<GSMessageInterface>()> > creators_;
 };
 } // namespace PiTrac

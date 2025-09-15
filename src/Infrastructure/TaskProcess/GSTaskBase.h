@@ -3,6 +3,7 @@
 
 #include "Common/Utils/Logging/GSLogger.h"
 #include "Common/System/SystemModes.h"
+#include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -48,6 +49,9 @@ class GSTaskBase
     // components
     std::string ipc_endpoint_;
 
+    // @brief Subscriber for receiving task-level commands
+    std::unique_ptr<GSMessagerBase> task_command_subscriber_;
+    
     // @brief Time point marking when the task started execution
     std::chrono::steady_clock::time_point start_time_;
     // @brief Logger instance for logging task-related messages
@@ -114,24 +118,18 @@ class GSTaskBase
     /**
      * @brief Starts the task process.
      *
-     * This virtual function initiates the execution of the task.
-     * Derived classes should override this method to implement specific start
-     * logic, or use the base class implementation to handle common startup
-     * procedures.
+     * This method initiates the execution of the task.
      *
      * @return true if the task started successfully, false otherwise.
      */
-    virtual bool start();
+    bool start();
 
     /**
      * @brief Stops the execution of the task.
      *
-     * This method should be overridden to implement the logic required to
-     * safely stop the task's processing. It may involve cleanup operations
-     * or resource deallocation. A base implementation is provided to handle
-     * common stop procedures.
+     * This method stops the execution of the task gracefully.
      */
-    virtual void stop();
+    void stop();
 
     /**
      * @brief Forcefully terminates the task, bypassing any graceful shutdown
@@ -139,9 +137,8 @@ class GSTaskBase
      *
      * This method should be used with caution, as it may leave resources in an
      * inconsistent state.
-     * Implementations should ensure that all necessary cleanup is performed.
      */
-    virtual void forceKill();
+    void forceKill();
 
     /**
      * @brief Retrieves the current status of the task.
@@ -272,9 +269,7 @@ class GSTaskBase
      * @brief Entry point for processing tasks.
      *
      * This method serves as the main entry point for executing the task's
-     * processing logic.
-     * Override this function in derived classes to implement specific task
-     * behavior.
+     * processing logic. It defines the startup flow for the task.
      */
     void processEntryPoint
     (
@@ -286,8 +281,7 @@ class GSTaskBase
      *
      * This virtual function can be overridden to perform any setup or checks
      * required before the process starts. Returning false will prevent the
-     * process
-     * from starting.
+     * process from starting.
      *
      * @return true if the process can proceed to start; false otherwise.
      */

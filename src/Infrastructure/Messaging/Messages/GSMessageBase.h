@@ -43,7 +43,7 @@ class GSMessageBase : public GSMessageInterface
     {
         auto timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             timestamp_.time_since_epoch()).count();
-        packer.pack(getMessageType());
+        packer.pack(static_cast<int>(getMessageType()));
         packer.pack(timestamp_ms);
     }
 
@@ -51,7 +51,7 @@ class GSMessageBase : public GSMessageInterface
     template<typename Unpacker>
     void unpackCommonFields(Unpacker &unpacker)
     {
-        std::string message_type;
+        GSMessageType message_type;
         int64_t timestamp_ms;
         unpacker.unpack(message_type);
         unpacker.unpack(timestamp_ms);
@@ -59,7 +59,7 @@ class GSMessageBase : public GSMessageInterface
         if (message_type != getMessageType())
         {
             throw std::runtime_error("Message type mismatch: expected " +
-                                     getMessageType() + ", got " + message_type);
+                                     std::to_string(static_cast<int>(getMessageType())) + ", got " + std::to_string(static_cast<int>(message_type)));
         }
 
         timestamp_ = std::chrono::system_clock::time_point(

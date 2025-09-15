@@ -54,7 +54,17 @@ class GSAgentTask : public GSTaskBase
     // @brief Interval at which the agent performs checks
     std::chrono::milliseconds agent_check_interval_;
 
+    // @brief IPC endpoint for agent task communication
     std::string agent_task_ipc_endpoint_;
+
+    // @brief Subscriber for receiving agent task-level commands
+    std::unique_ptr<GSMessagerBase> agent_task_ipc_subscriber_;
+
+    // @brief Thread for processing incoming commands
+    std::thread command_processor_thread_;
+
+    // @brief Command handler function
+    std::function<void(std::unique_ptr<GSMessageInterface>)> command_handler_;
 
   public:
 
@@ -215,20 +225,6 @@ class GSAgentTask : public GSTaskBase
      */
     void processMain() override;
 
-
-    /**
-     * @brief Cleans up resources or performs necessary finalization for the
-     * process.
-     *
-     * This method is called to handle any cleanup operations required after the
-     * process
-     * has completed its execution. Override this method to implement custom
-     * cleanup logic.
-     */
-    void cleanupProcess() override
-    {
-    }
-
     /**
      * @brief Hook method called before the agent starts.
      *
@@ -275,7 +271,21 @@ class GSAgentTask : public GSTaskBase
     {
     }
 
-    std::unique_ptr<GSMessagerBase> agent_task_ipc_subscriber_;
+    /**
+     * @brief Processes a command message sent to the agent task.
+     *
+     * This pure virtual function must be implemented by derived classes to
+     * handle specific commands received by the agent task. The implementation 
+     * should define how to interpret and respond to the command encapsulated 
+     * in the provided message.
+     *
+     * @param message A reference to a GSMessageInterface object representing
+     * the command message to be processed.
+     */
+    virtual void processAgentCommand
+    (
+        const GSMessageInterface &message
+    ) = 0;
 };
 } // namespace PiTrac
 

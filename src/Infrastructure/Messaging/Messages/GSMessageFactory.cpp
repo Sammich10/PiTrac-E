@@ -1,13 +1,17 @@
 #include "Infrastructure/Messaging/Messages/GSMessageFactory.h"
 #include "Infrastructure/Messaging/Messages/GSMessageBase.h"
 #include "Infrastructure/Messaging/Messages/GSCameraFrameMsg.h"
+#include "Infrastructure/Messaging/Messages/GSCameraFrameRawMsg.h"
+#include "Infrastructure/Messaging/Messages/GSChangeModeMsg.h"
 
 namespace PiTrac
 {
 GSMessageFactory::GSMessageFactory()
 {
     // Register message types
-    registerMessage<GSCameraFrameMessage>("CameraFrame");
+    registerMessage<GSCameraFrameMessage>(GSMessageType::CameraFrame);
+    // registerMessage<GSCameraFrameRawMessage>(GSMessageType::CameraFrameRaw);
+    registerMessage<GSChangeModeMsg>(GSMessageType::ChangeMode);
 }
 
 std::unique_ptr<GSMessageInterface> GSMessageFactory::createFromZmqMessage(zmq_msg_t &msg)
@@ -30,13 +34,13 @@ std::unique_ptr<GSMessageInterface> GSMessageFactory::createFromZmqMessage(zmq_m
         throw std::runtime_error("Invalid message format");
     }
 
-    std::string message_type;
+    int message_type;
     obj.via.array.ptr[0].convert(message_type);
 
-    auto it = creators_.find(message_type);
+    auto it = creators_.find(static_cast<GSMessageType>(message_type));
     if (it == creators_.end())
     {
-        throw std::runtime_error("Unknown message type: " + message_type);
+        throw std::runtime_error("Unknown message type: " + std::to_string(static_cast<int>(message_type)));
     }
 
     auto message = it->second();

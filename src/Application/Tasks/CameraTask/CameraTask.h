@@ -27,13 +27,16 @@ class CameraTask : public GSAgentTask
     bool setupProcess() override;
     bool preAgentStartHook() override;
     void cleanupProcess() override;
+    void processAgentCommand
+    (
+        const GSMessageInterface &message
+    ) override;
 
   private:
 
     void checkForStrayIPAProcesses();
 
     std::shared_ptr<libcamera::CameraManager> cameraManager_;
-    std::shared_ptr<GSLogger> logger_;
     size_t camera_index_;
     std::string camera_id_;
     std::shared_ptr<FrameBuffer> frame_buffer_;

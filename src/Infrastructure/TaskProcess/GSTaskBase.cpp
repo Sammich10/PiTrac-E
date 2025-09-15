@@ -1,4 +1,5 @@
 #include "Infrastructure/TaskProcess/GSTaskBase.h"
+#include "Common/System/Endpoints.h"
 #include "GSTaskBase.h"
 #include <sys/prctl.h>
 #include <errno.h>
@@ -9,15 +10,17 @@
 
 namespace PiTrac
 {
+
 GSTaskBase::GSTaskBase(const std::string &name)
     : task_name_(name)
     , task_id_(generateTaskId())
     , status_(TaskStatus::NotStarted)
     , should_stop_(false)
     , logger_(GSLogger::getInstance())
-    , ipc_endpoint_("ipc://gs_task")
+    , ipc_endpoint_(Endpoints::getTaskEndpoint())
 {
     logInfo("Task created: " + task_name_ + " [" + task_id_ + "]");
+    // task_command_subscriber_ = GSMessagerBase(GSMessagerBase::SocketType::Subscriber);
 }
 
 GSTaskBase::~GSTaskBase()
@@ -36,6 +39,8 @@ bool GSTaskBase::start()
         logWarning("Task already running: " + task_name_);
         return false;
     }
+
+    // task_command_subscriber_.connect(ipc_endpoint_);
 
     logInfo("Starting task: " + task_name_);
     changeStatus(TaskStatus::Starting);

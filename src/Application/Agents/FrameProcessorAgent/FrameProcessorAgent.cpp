@@ -1,5 +1,5 @@
 #include "Application/Agents/FrameProcessorAgent/FrameProcessorAgent.h"
-
+#include "Common/System/Endpoints.h"
 namespace PiTrac
 {
 FrameProcessorAgent::FrameProcessorAgent(std::shared_ptr<FrameBuffer> frame_buffer, const uint32_t camera_id)
@@ -22,7 +22,7 @@ FrameProcessorAgent::~FrameProcessorAgent()
 bool FrameProcessorAgent::setup()
 {
     logInfo("Setting up " + agent_name_ + " with buffer capacity: " + std::to_string(frame_buffer_->capacity()));
-    frame_publisher_endpoint_ = Endpoints::getFrameProcessorPublisherEndpoint(camera_id_);
+    frame_publisher_endpoint_ = Endpoints::getCameraStreamEndpoint(camera_id_);
     frame_publisher_->bind(frame_publisher_endpoint_);
     logInfo("FrameProcessorAgent bound to publisher endpoint: " + frame_publisher_endpoint_);
     return true;

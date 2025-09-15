@@ -3,7 +3,7 @@
 
 namespace PiTrac
 {
-enum class SystemMode
+enum class SystemStatus
 {
     Initializing,
     Idle,
@@ -12,15 +12,27 @@ enum class SystemMode
     Waiting,
     CameraCapture,
     DataProcessing,
-    ErrorHandling
+    ErrorHandling,
+    MAX_STATUS
 };
+
+enum class SystemMode
+{
+    Standby = 0,
+    Viewfinder,
+    Calibration,
+    LaunchMonitor,
+    Diagnostics,
+    MAX_MODE
+}
 
 enum class EventID
 {
     AwaitingStrike,
     StrikeDetected,
     DataProcessed,
-    ErrorOccurred
+    ErrorOccurred,
+    MAX_EVENT_ID
 };
 
 enum class LaunchMonitorState
@@ -29,8 +41,9 @@ enum class LaunchMonitorState
     AWAITING_STRIKE,
     PROCESSING_STRIKE,
     ERROR,
-    MAX
+    MAX_STATE
 };
+
 } // namespace PiTrac
 
 #endif // SYSTEM_MODES_H

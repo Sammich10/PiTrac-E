@@ -31,9 +31,9 @@ class GSCameraFrameMessage : public GSMessageBase
     }
 
     // GSMessageInterface implementation
-    std::string getMessageType() const override
+    GSMessageType getMessageType() const override
     {
-        return "CameraFrame";
+        return GSMessageType::CameraFrame;
     }
 
     void serialize

@@ -101,7 +101,6 @@ class CameraAgent : public GSAgentBase
     uint32_t camera_index_;
     std::atomic<bool> running_;
     uint64_t frame_counter_;
-    SystemMode current_mode_;
 };
 } // namespace PiTrac
 

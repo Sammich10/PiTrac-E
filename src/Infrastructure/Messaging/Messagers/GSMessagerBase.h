@@ -2,6 +2,7 @@
 #define ZMQ_MESSENGER_H
 
 #include "Infrastructure/Messaging/GSMessageInterface.h"
+#include "Infrastructure/Messaging/Messages/GSMessageFactory.h"
 #include <zmq.h>
 #include <memory>
 #include <functional>
@@ -191,9 +192,8 @@ class GSMessagerBase
             int rc = zmq_msg_recv(&msg, socket_, 0);
             if (rc >= 0 && message_handler_)
             {
-                // Here you'd need message type detection logic
-                // For now, this is a placeholder
-                zmq_msg_close(&msg);
+                // std::unique_ptr<GSMessageInterface> message = GSMessageFactory::createFromZmqMessage(msg);
+                // message_handler_(std::move(message));
             }
             else if (errno != EAGAIN)
             {

@@ -10,7 +10,9 @@ CameraTask::CameraTask(const size_t camera_index, const size_t frame_buffer_size
 {
     setRestartFailedAgents(true);
     setAgentCheckInterval(std::chrono::milliseconds(2000));
-    logger_ = GSLogger::getInstance();
+    command_handler_ = [this](std::unique_ptr<GSMessageInterface> msg) {
+        this->processAgentCommand(*msg);
+    };
 }
 
 bool CameraTask::setupProcess()
@@ -24,11 +26,7 @@ bool CameraTask::setupProcess()
         logger_->error("Failed to start camera manager");
         return false;
     }
-    // Subscribe to agent task IPC endpoint to receive commands from the system
-    // regarding
-    // state updates
-    agent_task_ipc_subscriber_->bind(agent_task_ipc_endpoint_);
-    logInfo("Agent task IPC subscriber bound to: " + agent_task_ipc_endpoint_);
+
     return true;
 }
 
@@ -73,4 +71,12 @@ void CameraTask::cleanupProcess()
     // handled by the camera agent's closeCamera() method in the future.
     // const int result = system("pkill -f raspberrypi_ipa 2>/dev/null");
 }
+
+void CameraTask::processAgentCommand(const GSMessageInterface &message)
+{
+    // Process the incoming message and route it to the appropriate agent
+    logInfo("Received command message in CameraTask");
+
+}
+
 } // namespace PiTrac

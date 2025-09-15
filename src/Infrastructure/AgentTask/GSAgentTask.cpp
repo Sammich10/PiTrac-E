@@ -9,6 +9,7 @@ GSAgentTask::GSAgentTask(const std::string &name)
     , agent_check_interval_(std::chrono::milliseconds(1000))
     , agent_task_ipc_endpoint_(Endpoints::getAgentTaskEndpoint())
     , agent_task_ipc_subscriber_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Subscriber))
+    , command_handler_(nullptr)
 {
     logInfo("Agent task created: " + task_name_ + " [" + task_id_ + "]");
 }
@@ -21,6 +22,11 @@ GSAgentTask::~GSAgentTask()
 void GSAgentTask::processMain()
 {
     logInfo("Starting agent task main loop");
+
+    // Subscribe to agent task IPC endpoint to receive commands from the system
+    // regarding state updates
+    agent_task_ipc_subscriber_->bind(agent_task_ipc_endpoint_);
+    logInfo(task_name_ + " IPC subscriber bound to: " + agent_task_ipc_endpoint_);
 
     // Pre-agent start hook
     if (!preAgentStartHook())
@@ -43,6 +49,15 @@ void GSAgentTask::processMain()
     }
 
     postAgentStartHook();
+
+    if(command_handler_)
+    {
+        agent_task_ipc_subscriber_->startReceiving(command_handler_);
+        logInfo("Started command processing thread");
+    }else
+    {
+        logWarning("No command handler set, incoming messages will be ignored");
+    }
 
     changeStatus(TaskStatus::Running);
 
@@ -68,6 +83,8 @@ void GSAgentTask::processMain()
 
         std::this_thread::sleep_for(agent_check_interval_);
     }
+
+    agent_task_ipc_subscriber_->stop();
 
     logInfo("Agent task main loop ended. Stopping all agents.");
     stopAllAgents();
@@ -177,4 +194,5 @@ std::vector<std::shared_ptr<GSAgentBase> > GSAgentTask::getAgents() const
 {
     return agents_;
 }
+
 } // namespace PiTrac

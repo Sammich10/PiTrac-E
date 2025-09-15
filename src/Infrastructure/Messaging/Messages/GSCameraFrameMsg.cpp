@@ -20,8 +20,8 @@ void GSCameraFrameMessage::serialize(msgpack::sbuffer &buffer) const
     // Pack as array: [type, timestamp, camera_id, frame_number,
     // capture_timestamp, fps, frame_data]
     packer.pack_array(7);
-    packer.pack(getMessageType());
-    packer.pack(timestamp_ms);
+    // Pack common fields [type, timestamp]
+    packCommonFields(packer);
     packer.pack(camera_id_);
     packer.pack(frame_number_);
     packer.pack(capture_timestamp_ms);
@@ -40,7 +40,7 @@ void GSCameraFrameMessage::deserialize(const char *data, size_t size)
     }
 
     // Unpack fields
-    std::string message_type;
+    int message_type;
     int64_t timestamp_ms;
     int64_t capture_timestamp_ms;
     std::vector<uint8_t> encoded_frame;
@@ -53,10 +53,9 @@ void GSCameraFrameMessage::deserialize(const char *data, size_t size)
     obj.via.array.ptr[5].convert(fps_);
     obj.via.array.ptr[6].convert(encoded_frame);
 
-    if (message_type != getMessageType())
+    if (static_cast<GSMessageType>(message_type) != getMessageType())
     {
-        throw std::runtime_error("Message type mismatch: expected " + getMessageType() +
-                                 ", got " + message_type);
+        throw std::runtime_error(incorrectMessageTypeString(static_cast<GSMessageType>(message_type)));
     }
 
     // Restore timestamps
