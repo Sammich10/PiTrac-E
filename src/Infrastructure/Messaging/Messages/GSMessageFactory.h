@@ -3,6 +3,7 @@
 
 #include "Infrastructure/Messaging/GSMessageInterface.h"
 #include "Infrastructure/Messaging/Messages/GSMessageTypes.h"
+#include "Common/Utils/Logging/GSLogger.h"
 #include <memory>
 #include <unordered_map>
 #include <functional>
@@ -31,6 +32,7 @@ class GSMessageFactory
 
     std::unordered_map<GSMessageType,
                        std::function<std::unique_ptr<GSMessageInterface>()> > creators_;
+    std::shared_ptr<GSLogger> logger_ = GSLogger::getInstance();
 };
 } // namespace PiTrac
 

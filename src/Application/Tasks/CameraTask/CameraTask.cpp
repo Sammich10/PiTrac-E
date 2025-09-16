@@ -53,7 +53,7 @@ bool CameraTask::preAgentStartHook()
         logError("Failed to configure agents: " + std::string(e.what()));
         return false;
     }
-    return true; // Pre-agent start hook implementation
+    return true; 
 }
 
 void CameraTask::cleanupProcess()

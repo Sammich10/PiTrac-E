@@ -1,7 +1,8 @@
 #ifndef GS_SYSTEM_MANAGER_H
 #define GS_SYSTEM_MANAGER_H
 
-#include "Infrastructure/Managers/GSManagerBase.h"
+#include "Application/Managers/ManagerBase/GSManagerBase.h"
+#include "Common/System/SystemModes.h"
 
 namespace PiTrac
 {
@@ -19,8 +20,10 @@ namespace PiTrac
  */
 class SystemManager : public GSManagerBase
 {
+public:
+
 SystemManager();
-~SystemManager() override;
+virtual ~SystemManager();
 bool setup() override;
 bool initialize() override;
 void execute() override;
@@ -28,7 +31,12 @@ void cleanup() override;
 
 private:
 
-GSMessager
+void handleCommand(std::unique_ptr<GSMessageInterface> message);
+void handleModeChange(SystemMode_Type new_mode);
+
+std::unique_ptr<GSMessagerBase> mode_command_messager_;
+
+std::function<void(std::unique_ptr<GSMessageInterface>)> command_handler_;
 
 };
 } // namespace PiTrac

@@ -25,15 +25,15 @@ void GSChangeModeMsg::deserialize(const char *data, size_t size)
     int mode_int;
 
     obj.via.array.ptr[0].convert(message_type);
-    obj.via.array.ptr[1].convert(mode_int);
-    obj.via.array.ptr[2].convert(timestamp_ms);
+    obj.via.array.ptr[1].convert(timestamp_ms);
+    obj.via.array.ptr[2].convert(mode_int);
 
     if (static_cast<GSMessageType>(message_type) != getMessageType())
     {
         throw std::runtime_error(incorrectMessageTypeString(static_cast<GSMessageType>(message_type)));
     }
 
-    newMode_ = static_cast<SystemMode>(mode_int);
+    newMode_ = static_cast<SystemMode_Type>(mode_int);
     timestamp_ = std::chrono::system_clock::time_point(
         std::chrono::milliseconds(timestamp_ms));
 }

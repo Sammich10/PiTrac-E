@@ -44,7 +44,11 @@ std::unique_ptr<GSMessageInterface> GSMessageFactory::createFromZmqMessage(zmq_m
     }
 
     auto message = it->second();
-    message->fromZmqMessage(msg);
+    try {
+        message->fromZmqMessage(msg);
+    } catch (const std::exception &e) {
+        logger_->error("Failed to deserialize message for type %d: %s", static_cast<int>(message_type), e.what());
+    }
     return message;
 }
 } // namespace PiTrac

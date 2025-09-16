@@ -179,6 +179,9 @@ class GSMessagerBase
     }
 
   private:
+
+    GSMessageFactory message_factory_ = GSMessageFactory();
+
     void receiveLoop()
     {
         while (running_)
@@ -192,8 +195,8 @@ class GSMessagerBase
             int rc = zmq_msg_recv(&msg, socket_, 0);
             if (rc >= 0 && message_handler_)
             {
-                // std::unique_ptr<GSMessageInterface> message = GSMessageFactory::createFromZmqMessage(msg);
-                // message_handler_(std::move(message));
+                std::unique_ptr<GSMessageInterface> message = message_factory_.createFromZmqMessage(msg);
+                message_handler_(std::move(message));
             }
             else if (errno != EAGAIN)
             {
@@ -203,7 +206,8 @@ class GSMessagerBase
             zmq_msg_close(&msg);
         }
     }
-};
+}; // class GSMessagerBase
+
 } // namespace PiTrac
 
 #endif // ZMQ_MESSENGER_H

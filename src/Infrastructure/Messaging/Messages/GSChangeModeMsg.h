@@ -13,7 +13,7 @@ public:
 
 GSChangeModeMsg() = default;
 
-GSChangeModeMsg(SystemMode newMode) 
+GSChangeModeMsg(SystemMode_Type newMode) 
 : newMode_(newMode) 
 {}
 
@@ -35,12 +35,12 @@ void deserialize
 
 std::unique_ptr<GSMessageInterface> clone() const override;
 
-SystemMode getNewMode() const
+SystemMode_Type getNewMode() const
 {
     return newMode_;
 }
 
-void setNewMode(const SystemMode mode)
+void setNewMode(const SystemMode_Type mode)
 {
     newMode_ = mode;
 }
@@ -48,7 +48,7 @@ void setNewMode(const SystemMode mode)
 std::string toString() const override;
 
 private:
-    SystemMode newMode_;
+    SystemMode_Type newMode_;
 
 };
 
