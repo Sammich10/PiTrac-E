@@ -2,16 +2,14 @@
 #define AGENT_COMMANDS_H
 
 #include <string>
-#include "Common/System/SystemModes.h"
+#include "Common/System/System.h"
 
 namespace PiTrac
 {
-
 enum class AgentCommandType
 {
     ChangeMode
 };
-
 } // namespace PiTrac
 
 #endif // AGENT_COMMANDS_H

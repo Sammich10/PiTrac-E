@@ -1,2 +1,1 @@
-add_subdirectory(ManagerBase)
 add_subdirectory(SystemManager)

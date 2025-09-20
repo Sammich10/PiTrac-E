@@ -3,13 +3,13 @@ project(CameraAgent)
 file(GLOB CAMERA_AGENT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/FrameProcessor/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/FrameProcessor/*.h
 )
 
-add_library(${PROJECT_NAME} SHARED
-    ${CAMERA_AGENT_SOURCES}
-)
+add_executable(CameraAgent ${CAMERA_AGENT_SOURCES})
 
-target_link_libraries(${PROJECT_NAME}
+target_link_libraries(CameraAgent
     PUBLIC
     Messaging
     GSCameraInterface

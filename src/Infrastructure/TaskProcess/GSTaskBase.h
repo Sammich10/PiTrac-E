@@ -2,19 +2,23 @@
 #define GSTASKBASE_H
 
 #include "Common/Utils/Logging/GSLogger.h"
-#include "Common/System/SystemModes.h"
-#include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
+#include "Common/System/System.h"
+#include "Common/System/Endpoints.h"
 #include <string>
 #include <vector>
 #include <memory>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/wait.h>
+#include <sys/prctl.h>
 #include <signal.h>
 #include <atomic>
 #include <chrono>
 #include <functional>
-#include <thread>
-#include <mutex>
+#include <cstring>
+#include <sstream>
+#include <iomanip>
+#include <random>
 
 namespace PiTrac
 {
@@ -23,285 +27,160 @@ enum class TaskStatus
     NotStarted,
     Starting,
     Running,
+    Paused,
     Stopping,
     Stopped,
+    Timeout,
     Failed,
     Crashed
 };
 
 class GSTaskBase
 {
-  protected:
-
-    // @brief Name of the task for identification purposes / logging output
-    std::string task_name_;
-
-    // @brief Unique identifier for the task instance
-    std::string task_id_;
-
-    // @brief Current status of the task
-    TaskStatus status_;
-
-    // @brief Atomic flag indicating whether the task should stop execution
-    std::atomic<bool> should_stop_;
-
-    // @brief IPC endpoint for communication between the task and other
-    // components
-    std::string ipc_endpoint_;
-
-    // @brief Subscriber for receiving task-level commands
-    std::unique_ptr<GSMessagerBase> task_command_subscriber_;
-    
-    // @brief Time point marking when the task started execution
-    std::chrono::steady_clock::time_point start_time_;
-    // @brief Logger instance for logging task-related messages
-    std::shared_ptr<GSLogger> logger_;
-
-    // @brief Callback function to notify when the task status changes
-    std::function<void(TaskStatus)> status_change_callback_;
-    // @brief Callback function to notify when the process exits
-    std::function<void(pid_t, int)> process_exit_callback_;
-
   public:
-    /**
-     * @brief Constructs a GSTaskBase object with the specified name.
-     *
-     * @param name The name to assign to the task.
-     */
-    GSTaskBase
-    (
-        const std::string &name
-    );
 
-    /**
-     * @brief Virtual destructor for GSTaskBase.
-     *
-     * Ensures proper cleanup of derived classes when deleted through a base
-     * class pointer.
-     */
-    virtual ~GSTaskBase();
-
-    /**
-     * @brief Sets up the process required for the task.
-     *
-     * This pure virtual function should be implemented by derived classes to
-     * perform
-     * any necessary initialization or configuration before the task process
-     * starts.
-     *
-     * @return true if the setup was successful, false otherwise.
-     */
-    virtual bool setupProcess() = 0;
-
-    /**
-     * @brief Pure virtual function to execute the main processing logic of the
-     * task.
-     *
-     * This method must be implemented by derived classes to define the core
-     * behavior
-     * of the task. It is called to perform the primary operations associated
-     * with the task.
-     */
-    virtual void processMain() = 0;
-
-    /**
-     * @brief Cleans up resources and performs necessary finalization for the
-     * process.
-     *
-     * This pure virtual function should be implemented by derived classes to
-     * handle
-     * any cleanup operations required when the process is finished or
-     * terminated.
-     */
-    virtual void cleanupProcess() = 0;
-
-    /**
-     * @brief Starts the task process.
-     *
-     * This method initiates the execution of the task.
-     *
-     * @return true if the task started successfully, false otherwise.
-     */
-    bool start();
-
-    /**
-     * @brief Stops the execution of the task.
-     *
-     * This method stops the execution of the task gracefully.
-     */
-    void stop();
-
-    /**
-     * @brief Forcefully terminates the task, bypassing any graceful shutdown
-     * procedures.
-     *
-     * This method should be used with caution, as it may leave resources in an
-     * inconsistent state.
-     */
-    void forceKill();
-
-    /**
-     * @brief Retrieves the current status of the task.
-     *
-     * @return TaskStatus The current status of the task.
-     */
-    TaskStatus getStatus() const;
-
-    /**
-     * @brief Retrieves the name of the task.
-     *
-     * @return A constant reference to the task name as a std::string.
-     */
-    const std::string &getTaskName() const
+    GSTaskBase(const std::string &name)
+        : name_(name)
+        , task_id_(generateTaskId())
+        , logger_(GSLogger::getInstance())
+        , status_(TaskStatus::NotStarted)
+        , should_stop_(false)
     {
-        return task_name_;
+        logInfo("Task created: " + name_ + " [" + task_id_ + "]");
+        GSMessagerBase::createContext();
     }
 
-    /**
-     * @brief Retrieves the unique identifier of the task.
-     *
-     * @return A constant reference to the task's ID string.
-     */
+    ~GSTaskBase()
+    {
+        if (isRunning())
+        {
+            end();
+        }
+        GSMessagerBase::destroyContext();
+        logInfo("Task destroyed: " + name_);
+    }
+
+    bool run()
+    {
+        if (getStatus() == TaskStatus::Running)
+        {
+            logWarning("Task already running: " + name_);
+            return false;
+        }
+
+        logInfo("Starting task: " + name_);
+        changeStatus(TaskStatus::Starting);
+
+        start_time_ = std::chrono::steady_clock::now();
+        // Set process name
+        prctl(PR_SET_NAME, name_.c_str(), 0, 0, 0);
+
+        logInfo("Process started for task: " + name_);
+
+        try {
+            // Setup process environment
+            if (!setupProcess())
+            {
+                logError("Failed to setup process");
+                exit(1);
+            }
+            // Run main loop
+            processMain();
+        } catch (const std::exception &e) {
+            logError("Exception in process main for task: " + name_ + " - " +
+                     std::string(e.what()));
+            exit(1);
+        } catch (...) {
+            logError("Unknown exception in process main for task: " + name_);
+            exit(1);
+        }
+
+        // Cleanup
+        cleanupProcess();
+
+        logInfo("Process exiting for task: " + name_);
+        exit(0);
+
+        return true;
+    }
+
+    void end()
+    {
+        logInfo("Ending task: " + name_);
+
+        if (!isRunning())
+        {
+            logWarning("Task not running, cannot end: " + name_);
+            return;
+        }
+        preStopHook();
+
+        changeStatus(TaskStatus::Stopping);
+
+        should_stop_ = true;
+
+        auto runtime = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time_);
+
+        logInfo("Task " + name_ + " execution completed. Runtime: " +
+                std::to_string(runtime.count()) + "s, ");
+    }
+
+    void forceKill()
+    {
+        logInfo("Force killing task: " + name_);
+        exit(1);
+    }
+
+    TaskStatus getStatus() const
+    {
+        return status_;
+    }
+
+    bool isRunning() const
+    {
+        return status_ == TaskStatus::Running;
+    }
+
+    const std::string &getTaskName() const
+    {
+        return name_;
+    }
+
     const std::string &getTaskId() const
     {
         return task_id_;
     }
 
-    /**
-     * @brief Checks if the task is currently running.
-     *
-     * @return true if the task is running, false otherwise.
-     */
-    virtual bool isRunning() const;
-
-    /**
-     * @brief Sets the callback function to be invoked when the task status
-     * changes.
-     *
-     * @param callback A std::function that takes a TaskStatus parameter and
-     * returns void.
-     */
-    void setStatusChangeCallback(std::function<void(TaskStatus)> callback)
-    {
-        status_change_callback_ = callback;
-    }
-
-    /**
-     * @brief Sets the callback function to be invoked when the process exits.
-     *
-     * This function allows you to specify a callback that will be called with
-     * the
-     * process ID and exit code when the associated process terminates.
-     *
-     * @param callback A std::function taking a pid_t (process ID) and an int
-     *(exit code).
-     */
-    void setProcessExitCallback(std::function<void(pid_t, int)> callback)
-    {
-        process_exit_callback_ = callback;
-    }
-
   protected:
+    // @brief Name of the task for identification purposes / logging output
+    std::string name_;
+    // @brief Unique identifier for the task instance
+    std::string task_id_;
+    // @brief Current status of the task
+    std::atomic<TaskStatus> status_;
+    std::mutex status_mutex_;
+    // @brief Atomic flag indicating whether the task should stop execution
+    std::atomic<bool> should_stop_;
+    // @brief Time point marking when the task started execution
+    std::chrono::steady_clock::time_point start_time_;
+    // @brief Logger instance for logging task-related messages
+    std::shared_ptr<GSLogger> logger_;
 
-    /**
-     * @brief Logs an informational message.
-     *
-     * This function records the provided message as an informational log entry.
-     *
-     * @param message The message to be logged.
-     */
-    void logInfo
-    (
-        const std::string &message
-    );
-
-    /**
-     * @brief Logs a warning message.
-     *
-     * This function records a warning message, typically used to indicate
-     * non-critical issues or unexpected behavior that does not prevent
-     * program execution.
-     *
-     * @param message The warning message to be logged.
-     */
-    void logWarning
-    (
-        const std::string &message
-    );
-
-    /**
-     * @brief Logs an error message.
-     *
-     * This function records the provided error message for diagnostic or
-     * debugging purposes.
-     *
-     * @param message The error message to be logged.
-     */
-    void logError
-    (
-        const std::string &message
-    );
-
-    /**
-     * @brief Changes the status of the task to the specified new status.
-     *
-     * This method updates the current status of the task. It may trigger
-     * additional actions or notifications depending on the implementation.
-     *
-     * @param new_status The new status to set for the task.
-     */
-    void changeStatus
-    (
-        TaskStatus new_status
-    );
-
-    /**
-     * @brief Generates a unique identifier for a task.
-     *
-     * @return std::string A unique task identifier.
-     */
-    std::string generateTaskId
+    virtual bool setupProcess
     (
         void
-    );
+    ) = 0;
 
-    /**
-     * @brief Entry point for processing tasks.
-     *
-     * This method serves as the main entry point for executing the task's
-     * processing logic. It defines the startup flow for the task.
-     */
-    void processEntryPoint
+    virtual void processMain
     (
         void
-    );
+    ) = 0;
 
-    /**
-     * @brief Hook method called before the process is forked.
-     *
-     * This virtual function can be overridden to perform any setup or checks
-     * required before the process starts. Returning false will prevent the
-     * process from starting.
-     *
-     * @return true if the process can proceed to start; false otherwise.
-     */
-    virtual bool preStartHook
+    virtual void cleanupProcess
     (
         void
-    )
-    {
-        return true;
-    }
+    ) = 0;
 
-    /**
-     * @brief Hook method called before the task is stopped.
-     *
-     * This virtual function can be overridden by derived classes to implement
-     * custom behavior that should occur immediately before the task stops.
-     * The default implementation does nothing and returns true.
-     *
-     * @return true if the pre-stop actions were successful; false otherwise.
-     */
     virtual void preStopHook
     (
         void
@@ -309,28 +188,58 @@ class GSTaskBase
     {
     }
 
-    /**
-     * @brief Hook method called after the task has started.
-     *
-     * This virtual function can be overridden by derived classes to implement
-     * custom behavior that should occur immediately after the task starts.
-     * The default implementation does nothing.
-     */
-    virtual void postStopHook
-    (
-        void
-    )
+    void logInfo(const std::string &message)
     {
+        if (logger_)
+        {
+            logger_->info("[" + name_ + "] " + message);
+        }
     }
 
-    /**
-     * @brief Converts a TaskStatus enum value to its corresponding string
-     * representation.
-     *
-     * @param status The TaskStatus value to convert.
-     * @return A string representing the given TaskStatus value. Returns
-     *"Unknown" if the status is not recognized.
-     */
+    void logWarning(const std::string &message)
+    {
+        if (logger_)
+        {
+            logger_->warning("[" + name_ + "] " + message);
+        }
+    }
+
+    void logError(const std::string &message)
+    {
+        if (logger_)
+        {
+            logger_->error("[" + name_ + "] " + message);
+        }
+    }
+
+    void changeStatus(TaskStatus new_status)
+    {
+        std::lock_guard<std::mutex> lock(status_mutex_);
+        if (status_ != new_status)
+        {
+            logInfo(name_ + " status changed: " +
+                    taskStatusToString(status_) +
+                    " -> " + taskStatusToString(new_status));
+            status_ = new_status;
+        }
+    }
+
+    std::string generateTaskId()
+    {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_int_distribution<> dis(1000, 9999);
+
+        auto now = std::chrono::system_clock::now();
+        auto time_t = std::chrono::system_clock::to_time_t(now);
+
+        std::stringstream ss;
+        ss << name_ << "_" << std::put_time(std::localtime(&time_t), "%Y%m%d_%H%M%S")
+           << "_" << dis(gen);
+
+        return ss.str();
+    }
+
     static std::string taskStatusToString
     (
         const TaskStatus &status
@@ -344,10 +253,14 @@ class GSTaskBase
                 return "Starting";
             case TaskStatus::Running:
                 return "Running";
+            case TaskStatus::Paused:
+                return "Paused";
             case TaskStatus::Stopping:
                 return "Stopping";
             case TaskStatus::Stopped:
                 return "Stopped";
+            case TaskStatus::Timeout:
+                return "Timeout";
             case TaskStatus::Failed:
                 return "Failed";
             case TaskStatus::Crashed:

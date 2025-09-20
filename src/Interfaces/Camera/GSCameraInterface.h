@@ -70,7 +70,7 @@ class GSCameraInterface
         , resolutionX_(0)
         , resolutionY_(0)
         , focalLength_mm_(0)
-        , cameraManager_(cameraManager)
+        , cameraManager_(std::move(cameraManager))
         , camera_(nullptr)
         , allocator_(nullptr)
         , isConfigured_(false)

@@ -1,2 +1,0 @@
-add_subdirectory(CameraTask)
-add_subdirectory(SystemTask)

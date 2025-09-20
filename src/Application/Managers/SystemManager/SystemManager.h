@@ -2,42 +2,50 @@
 #define GS_SYSTEM_MANAGER_H
 
 #include "Application/Managers/ManagerBase/GSManagerBase.h"
-#include "Common/System/SystemModes.h"
+#include "Common/System/System.h"
 
 namespace PiTrac
 {
-/**
- * @class SystemManager
- * @brief Manages overall system operations and coordinates various components.
- *
- * The SystemManager is responsible for overseeing the entire system's
- *functionality,
- * coordinating among the system's active agents, triggering state transitions,
- *handling
- * events, and making high-level decisions based on system status and inputs.
- * It serves as the central control unit that ensures the system operates
- *correctly.
- */
 class SystemManager : public GSManagerBase
 {
-public:
+  public:
 
-SystemManager();
-virtual ~SystemManager();
-bool setup() override;
-bool initialize() override;
-void execute() override;
-void cleanup() override;
+    SystemManager();
+    virtual ~SystemManager();
 
-private:
+  protected:
 
-void handleCommand(std::unique_ptr<GSMessageInterface> message);
-void handleModeChange(SystemMode_Type new_mode);
+    std::unique_ptr<GSMessagerBase> task_reg_receiver_;
+    std::unique_ptr<GSMessagerBase> task_status_subscriber_;
+    std::unique_ptr<GSMessagerBase> system_command_listener_;
 
-std::unique_ptr<GSMessagerBase> mode_command_messager_;
+    bool setupProcess() override;
+    void cleanupProcess() override;
+    bool execute() override;
 
-std::function<void(std::unique_ptr<GSMessageInterface>)> command_handler_;
+  private:
 
+    void taskRegistrationHandler
+    (
+        std::unique_ptr<MessageInterface> message
+    );
+    void handleExternalCommand
+    (
+        std::unique_ptr<MessageInterface> message
+    );
+// void handleModeChange(SystemMode_Type new_mode);
+
+    typedef struct
+    {
+        std::string task_name;
+        uint64_t task_pid;
+    } RegisteredTask;
+
+    std::list<RegisteredTask> registered_tasks_;
+
+    std::unique_ptr<GSMessagerBase> mode_command_messager_;
+
+    std::function<void(std::unique_ptr<MessageInterface>)> command_handler_;
 };
 } // namespace PiTrac
 

@@ -2,9 +2,10 @@
 #define CAMERA_AGENT_H
 
 #include "Application/Agents/AgentBase/GSAgentBase.h"
+#include "Application/Agents/CameraAgent/FrameProcessor/FrameProcessorFactory.h"
 #include "Infrastructure/DataStructures/FrameBuffer.h"
 #include "Interfaces/Camera/GSCameraInterface.h"
-#include "Common/System/SystemModes.h"
+#include "Common/System/System.h"
 #include <opencv2/opencv.hpp>
 #include <thread>
 #include <atomic>
@@ -32,16 +33,15 @@ class CameraAgent : public GSAgentBase
      * @brief Constructs a CameraAgent object.
      *
      * @param camera_ Unique pointer to a GSCameraInterface instance
-     *representing the camera hardware interface.
+     * representing the camera hardware interface.
      * @param frame_buffer_ Shared pointer to a FrameBuffer instance used for
-     *storing captured frames.
+     * storing captured frames.
      * @param camera_index Index of the camera
      */
     CameraAgent
     (
-        std::unique_ptr<GSCameraInterface> camera_,
-        std::shared_ptr<FrameBuffer> frame_buffer_,
-        const uint32_t camera_index
+        const size_t camera_index,
+        const size_t frame_buffer_size
     );
 
     /**
@@ -59,48 +59,34 @@ class CameraAgent : public GSAgentBase
      *
      * @return true if setup was successful, false otherwise.
      */
-    bool setup() override;
-
-    /**
-     * @brief Initializes the camera agent.
-     *
-     * This method sets up the necessary resources and configurations required
-     * for the camera agent to operate.
-     * It opens the camera, performs initial configuration, and prepares the
-     * messaging system for frame publishing.
-     *
-     * @return true if initialization was successful, false otherwise.
-     */
-    bool initialize() override;
-
-    /**
-     * @brief Executes the main logic for the CameraAgent.
-     *
-     * This method starts the main capture loop for the camera agent, which
-     * continuously captures frames from the camera and publishes them to the
-     * messaging system.
-     */
-    void execute() override;
+    bool setupProcess() override;
 
     /**
      * @brief Cleans up resources used by the camera agent.
      *
      * This method releases any camera resources, and joins the capture thread.
      */
-    void cleanup() override;
+    void cleanupProcess() override;
 
   private:
+
+    void changeMode
+    (
+        PiTrac::SystemMode_Type new_mode
+    ) override;
+
     /**
      * @brief Continuously captures frames from the camera in a loop and
      * publishes them to the messaging system.
      */
-    void captureLoop();
+    void viewfinderLoop();
 
     std::shared_ptr<FrameBuffer> frame_buffer_;
     std::unique_ptr<GSCameraInterface> camera_;
     uint32_t camera_index_;
     std::atomic<bool> running_;
     uint64_t frame_counter_;
+    std::unique_ptr<FrameProcessor> frame_processor_;
 };
 } // namespace PiTrac
 

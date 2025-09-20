@@ -1,6 +1,11 @@
 #ifndef GSAgent_H
 #define GSAgent_H
 
+#include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
+#include "Infrastructure/Messaging/Messages/MessageTypes.h"
+#include "Infrastructure/Messaging/Messages/Internal/ChangeModeMsg.h"
+#include "Infrastructure/Messaging/Messages/Internal/RegisterTaskMsg.h"
+#include "Infrastructure/TaskProcess/GSTaskBase.h"
 #include "Common/Utils/Logging/GSLogger.h"
 #include <string>
 #include <thread>
@@ -9,211 +14,142 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <sstream>
+#include <iomanip>
 
 namespace PiTrac
 {
-enum class AgentStatus
+class GSAgentBase : public GSTaskBase
 {
-    NotStarted,
-    Initializing,
-    Running,
-    Paused,
-    Stopping,
-    Completed,
-    Failed,
-    Timeout
-};
-
-enum class AgentPriority
-{
-    Low = 0,
-    Normal = 1,
-    High = 2,
-    Critical = 3
-};
-
-class GSAgentBase
-{
-  protected:
-    std::string agent_name_;
-    std::string agent_id_;
-    AgentStatus status_;
-    AgentPriority priority_;
-
-    std::atomic<bool> should_stop_;
-    std::atomic<bool> should_pause_;
-    std::atomic<bool> is_running_;
-
-    std::thread agent_thread_;
-
-    // Timing and performance
-    std::chrono::steady_clock::time_point start_time_;
-    std::chrono::steady_clock::time_point end_time_;
-    std::chrono::milliseconds timeout_duration_;
-
-    // Statistics
-    std::atomic<uint64_t> iterations_completed_;
-    std::atomic<uint64_t> errors_count_;
-
-    // Callbacks
-    std::function<void(AgentStatus)> status_change_callback_;
-    std::function<void(const std::string &)> error_callback_;
-
-    // Logger
-    std::shared_ptr<GSLogger> logger_;
-
   public:
     GSAgentBase
     (
-        const std::string &name,
-        AgentPriority priority = AgentPriority::Normal
-    );
-    virtual ~GSAgentBase();
-
-    // Core lifecycle methods (pure virtual)
-    virtual bool setup() = 0;
-    virtual bool initialize() = 0;
-    virtual void execute() = 0;
-    virtual void cleanup() = 0;
-
-    // Agent control methods
-    bool start();
-    void stop();
-    void pause();
-    void resume();
-    bool waitForCompletion
-    (
-        std::chrono::milliseconds timeout = std::chrono::milliseconds::max()
-    );
-
-    // Status and info methods
-    AgentStatus getStatus() const;
-    AgentPriority getPriority() const;
-    void setPriority
-    (
-        AgentPriority priority
-    );
-
-    const std::string &getAgentName() const
+        const std::string &name
+    )
+        : GSTaskBase(name)
+        , agent_control_subscriber_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Subscriber))
+        , agent_control_endpoint_(Endpoints::getAgentTaskEndpoint())
+        , lm_mode_(SystemMode_Type::MAX_MODE)
     {
-        return agent_name_;
+        message_handler_ = [this](std::unique_ptr<MessageInterface> message) {
+                               this->messageHandler(std::move(message));
+                           };
+        logInfo("Agent created: " + name_ + " [" + task_id_ + "]");
     }
 
-    const std::string &getAgentId() const
+    ~GSAgentBase()
     {
-        return agent_id_;
-    }
-
-    // Performance metrics
-    std::chrono::duration<double> getRuntime() const;
-    uint64_t getIterationsCompleted() const
-    {
-        return iterations_completed_.load();
-    }
-
-    uint64_t getErrorsCount() const
-    {
-        return errors_count_.load();
-    }
-
-    double getIterationsPerSecond() const;
-
-    // Configuration
-    void setTimeout(std::chrono::milliseconds timeout)
-    {
-        timeout_duration_ = timeout;
-    }
-
-    void setStatusChangeCallback(std::function<void(AgentStatus)> callback)
-    {
-        status_change_callback_ = callback;
-    }
-
-    void setErrorCallback(std::function<void(const std::string &)> callback)
-    {
-        error_callback_ = callback;
-    }
-
-    // Thread safety helpers
-    bool isRunning() const
-    {
-        return is_running_.load();
-    }
-
-    bool shouldStop() const
-    {
-        return should_stop_.load();
-    }
-
-    bool shouldPause() const
-    {
-        return should_pause_.load();
-    }
-
-    // Utility methods for derived classes
-    void incrementIterations()
-    {
-        iterations_completed_++;
-    }
-
-    void incrementErrors()
-    {
-        errors_count_++;
-    }
-
-    void logInfo
-    (
-        const std::string &message
-    );
-    void logWarning
-    (
-        const std::string &message
-    );
-    void logError
-    (
-        const std::string &message
-    );
-
-    // Agent state management for derived classes
-    void setStatus
-    (
-        AgentStatus status
-    );
-    void handlePause();
-    bool checkTimeout();
-
-    static std::string agentStatusToString(const AgentStatus &status)
-    {
-        switch (status)
+        if (agent_thread_.joinable())
         {
-            case AgentStatus::NotStarted:
-                return "NotStarted";
-            case AgentStatus::Initializing:
-                return "Initializing";
-            case AgentStatus::Running:
-                return "Running";
-            case AgentStatus::Paused:
-                return "Paused";
-            case AgentStatus::Stopping:
-                return "Stopping";
-            case AgentStatus::Completed:
-                return "Completed";
-            case AgentStatus::Failed:
-                return "Failed";
-            case AgentStatus::Timeout:
-                return "Timeout";
+            end();
+            agent_thread_.join();
+        }
+        logInfo("Agent destroyed: " + name_);
+    }
+
+  protected:
+
+    std::thread agent_thread_;
+    std::unique_ptr<GSMessagerBase> agent_control_subscriber_;
+    std::unique_ptr<GSMessagerBase> task_status_publisher_;
+    std::string agent_control_endpoint_;
+    std::function<void(std::unique_ptr<MessageInterface>)> message_handler_;
+    PiTrac::SystemMode_Type lm_mode_;
+    std::atomic<bool> run_;
+    std::mutex mode_mutex_;
+
+    // Override processMain, calls execute in a new thread. This will be
+    // the main entry point for the agent.
+    void processMain() override
+    {
+        if (getStatus() == TaskStatus::Running)
+        {
+            logWarning("Agent already running: " + name_);
+            return;
+        }
+
+        if (getStatus() == TaskStatus::Paused)
+        {
+            changeStatus(TaskStatus::Running);
+            logInfo("Resuming agent: " + name_);
+            return;
+        }
+        GSMessagerBase task_reg_messager(GSMessagerBase::SocketType::Request);
+        task_reg_messager.connect(Endpoints::getTaskRegistrationEndpoint());
+        RegisterTaskMsg reg_msg(getpid(), name_);
+        task_reg_messager.sendMessage(reg_msg);
+        auto reply = task_reg_messager.receiveMessage<RegisterTaskMsg>(5000);
+        if(reply)
+        {
+            logInfo("Agent registered with SystemManager: " + reply->toString());
+        }
+        else
+        {
+            logWarning("No reply from SystemManager on agent registration");
+        }
+        execute();
+    }
+
+    // The primary execution loop for an agent is to listen for control messages
+    // and handle them accordingly.
+    void execute()
+    {
+        logInfo("Starting agent: " + name_);
+        changeStatus(TaskStatus::Running);
+        run_.store(true);
+        // Connect to the control endpoint
+        agent_control_subscriber_->connect(agent_control_endpoint_);
+        agent_control_subscriber_->startReceiving(message_handler_);
+        logInfo("Agent connected to control endpoint: " + agent_control_endpoint_);
+
+        // Main loop
+        while (!should_stop_.load())
+        {
+            // TODO: Add periodic agent task logic... perhaps health checks,
+            // status updates, etc.
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            logInfo("Agent " + name_ + " is running in mode: " + System::systemModeToString(lm_mode_));
+        }
+
+        // Cleanup
+        agent_control_subscriber_->stop();
+        logInfo("Agent has stopped: " + name_);
+    }
+
+    void messageHandler(std::unique_ptr<MessageInterface> message)
+    {
+        logInfo("Received message: " + message->toString());
+        // Handle messages here, e.g., mode change commands
+        const Message_Type type = message->getMessageType();
+        switch(type)
+        {
+            case Message_Type::ChangeMode:
+            {
+                auto mode_msg = dynamic_cast<ChangeModeMsg *>(message.get());
+                if(mode_msg)
+                {
+                    std::lock_guard<std::mutex> lock(mode_mutex_);
+                    lm_mode_ = mode_msg->getNewMode();
+                    logInfo("Mode changed to: " + std::to_string(static_cast<int>(lm_mode_)));
+                    changeMode(lm_mode_);
+                }
+                break;
+            }
+            // TODO: Handle events
+            // Case Message_Type::Event:
+            //     handleEvent(dynamic_cast<GSEventMsg*>(message.get()));
+            //     break;
             default:
-                return "Unknown";
+                logWarning("Unknown message type received: " + message->toString());
+                break;
         }
     }
 
-  private:
-    void agentWrapper();
-    void changeStatus
+    virtual void changeMode
     (
-        AgentStatus new_status
-    );
-    std::string generateAgentId();
+        PiTrac::SystemMode_Type new_mode
+    ) = 0;
+    // virtual void handleEvent(/*GSEventMsg* event_msg*/) = 0;
 };
 } // namespace PiTrac
 
