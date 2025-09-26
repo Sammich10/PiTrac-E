@@ -28,7 +28,9 @@ namespace PiTrac
  * - Use isEmpty(), isFull(), size(), and capacity() to query buffer status.
  *
  * @note Thread Safety: This class is not thread-safe. The intended use is a
- * single-producer, single-consumer scenario.
+ * single-producer, single-consumer scenario. Under this model, the only time
+ * the implementer needs to ensure synchronization is when resizing the buffer.
+ * There are no protections against concurrent access from multiple threads.
  *
  * @note Frames are stored as deep copies (using cv::Mat::clone()) to avoid
  * shared data issues.
@@ -150,6 +152,24 @@ class FrameBuffer
     size_t capacity() const
     {
         return capacity_;
+    }
+
+    void clear()
+    {
+        head_ = 0;
+        tail_ = 0;
+        frame_buffer_.clear();
+    }
+
+    void resize(const size_t &new_capacity)
+    {
+        if (new_capacity == 0)
+        {
+            throw std::invalid_argument("FrameBuffer capacity must be greater than zero.");
+        }
+        clear();
+        frame_buffer_.resize(new_capacity);
+        capacity_ = new_capacity;
     }
 
   private:

@@ -2,7 +2,6 @@
 
 namespace PiTrac
 {
-
 void RegisterTaskMsg::serialize(msgpack::sbuffer &buffer) const
 {
     msgpack::packer<msgpack::sbuffer> packer(buffer);
@@ -38,7 +37,7 @@ void RegisterTaskMsg::deserialize(const char *data, size_t size)
         std::chrono::milliseconds(timestamp_ms));
 }
 
-std::unique_ptr<MessageInterface> RegisterTaskMsg::clone() const 
+std::unique_ptr<MessageInterface> RegisterTaskMsg::clone() const
 {
     auto cloned = std::make_unique<RegisterTaskMsg>(taskPid_, taskName_);
     cloned->timestamp_ = timestamp_;
@@ -51,5 +50,4 @@ std::string RegisterTaskMsg::toString() const
 {
     return "RegisterTask: ID=" + std::to_string(taskPid_) + ", Name=" + taskName_;
 }
-
 } // namespace PiTrac

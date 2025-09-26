@@ -14,7 +14,7 @@ namespace PiTrac
  * @note All endpoints should be defined here to maintain consistency.
  *
  * @todo At some point, these endpoints should be defined in a configuration
- *file
+ * file
  * and loaded at runtime to allow for easier changes without recompilation.
  */
 class Endpoints

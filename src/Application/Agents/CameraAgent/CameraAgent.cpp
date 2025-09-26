@@ -4,9 +4,10 @@
 
 namespace PiTrac
 {
-CameraAgent::CameraAgent(const size_t camera_index, const size_t frame_buffer_size)
-    : GSAgentBase("CameraAgent" + std::to_string(camera_index))
-    , frame_buffer_(std::make_shared<FrameBuffer>(frame_buffer_size))
+CameraAgent::CameraAgent(const size_t camera_index)
+    : GSAgentBase("CameraAgent_" + std::to_string(camera_index))
+    , frame_buffer_(std::make_shared<FrameBuffer>(64)) // Default buffer size of
+                                                       // 64 frames
     , frame_processor_(FrameProcessorFactory::create(frame_buffer_, camera_index))
     , camera_(nullptr)
     , camera_index_(camera_index)
@@ -91,6 +92,11 @@ void CameraAgent::changeMode(PiTrac::SystemMode_Type new_mode)
         case SystemMode_Type::VIEWFINDER:
             logInfo("Starting viewfinder mode for: " + name_);
             agent_thread_ = std::thread(&CameraAgent::viewfinderLoop, this);
+            if(frame_processor_->isRunning())
+            {
+                frame_processor_->stop();
+            }
+            frame_processor_->streamFrames();
             break;
         default:
             logInfo("Unimplemented mode for CameraAgent: " + std::to_string(static_cast<int>(new_mode)) + " for: " + name_);

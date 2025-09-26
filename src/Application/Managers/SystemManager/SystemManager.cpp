@@ -1,6 +1,4 @@
 #include "Application/Managers/SystemManager/SystemManager.h"
-#include "Infrastructure/Messaging/Messages/Internal/ChangeModeMsg.h"
-#include "Infrastructure/Messaging/Messages/Internal/RegisterTaskMsg.h"
 
 namespace PiTrac
 {
@@ -58,24 +56,62 @@ void SystemManager::cleanupProcess()
 void SystemManager::handleExternalCommand(std::unique_ptr<MessageInterface> message)
 {
     logInfo("Received external command: " + message->toString());
-    // Handle external commands here
-    // For example, if it's a ChangeModeMsg, we can change the system mode
-    if(message->getMessageType() == Message_Type::ChangeMode)
+    if(message->getMessageType() == Message_Type::SystemCommand)
     {
-        auto mode_msg = dynamic_cast<ChangeModeMsg *>(message.get());
-        if(mode_msg)
+        logInfo("Handling SystemCommand message");
+        auto cmd_msg = dynamic_cast<SystemCommandMsg *>(message.get());
+        if(cmd_msg)
         {
-            // handleModeChange(mode_msg->getNewMode());
+            switch(cmd_msg->getCommandID())
+            {
+                case SystemCommandMsg::CommandID::SetMode:
+                    logInfo("Handling SetMode command");
+                    SystemCommandMsg::SetModePayload mode_change_payload_;
+                    if(!extractCommandPayload<SystemCommandMsg::SetModePayload>(*cmd_msg, mode_change_payload_))
+                    {
+                        logError("Failed to extract SetModePayload from SystemCommandMsg");
+                        break;
+                    }
+                    handleModeChangeCommand(mode_change_payload_);
+                    break;
+                default:
+                    logWarning("Received unknown command ID in SystemCommandMsg: " + std::to_string(static_cast<int>(cmd_msg->getCommandID())));
+                    break;
+            }
         }
         else
         {
-            logError("Failed to cast message to ChangeModeMsg in external command handler");
+            logError("Failed to cast message to SystemCommandMsg in external command handler");
         }
+        AckMessage ack_msg(std::move(message), AckMessage::Status::Success);
+        system_command_listener_->sendMessage(ack_msg);
     }
     else
     {
-        logWarning("Received unknown message type in external command handler: " + std::to_string(static_cast<int>(message->getMessageType())));
+        logWarning("Received unexpected message type in external command handler: " + std::to_string(static_cast<int>(message->getMessageType())));
+        AckMessage ack_msg(std::move(message), AckMessage::Status::Failure);
+        system_command_listener_->sendMessage(ack_msg);
     }
+}
+
+template<typename T>
+bool SystemManager::extractCommandPayload(const SystemCommandMsg &msg, T &payload) const
+{
+    try
+    {
+        payload = std::get<T>(msg.getPayload());
+        return true;
+    }
+    catch (const std::bad_variant_access &e)
+    {
+        logError("Failed to extract command payload from SystemCommandMsg: " + std::string(e.what()));
+        return false;
+    }
+}
+
+void SystemManager::handleModeChangeCommand(const SystemCommandMsg::SetModePayload &payload)
+{
+    logInfo("Changing system mode to: " + std::to_string(static_cast<int>(payload.mode)));
 }
 
 void SystemManager::taskRegistrationHandler(std::unique_ptr<MessageInterface> message)

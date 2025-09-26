@@ -2,6 +2,10 @@
 #define GS_SYSTEM_MANAGER_H
 
 #include "Application/Managers/ManagerBase/GSManagerBase.h"
+#include "Infrastructure/Messaging/Messages/Internal/ChangeModeMsg.h"
+#include "Infrastructure/Messaging/Messages/External/SystemCommandMsg.h"
+#include "Infrastructure/Messaging/Messages/External/AckMessage.h"
+#include "Infrastructure/Messaging/Messages/Internal/RegisterTaskMsg.h"
 #include "Common/System/System.h"
 
 namespace PiTrac
@@ -18,6 +22,7 @@ class SystemManager : public GSManagerBase
     std::unique_ptr<GSMessagerBase> task_reg_receiver_;
     std::unique_ptr<GSMessagerBase> task_status_subscriber_;
     std::unique_ptr<GSMessagerBase> system_command_listener_;
+    std::unique_ptr<GSMessagerBase> mode_command_publisher_;
 
     bool setupProcess() override;
     void cleanupProcess() override;
@@ -33,7 +38,18 @@ class SystemManager : public GSManagerBase
     (
         std::unique_ptr<MessageInterface> message
     );
-// void handleModeChange(SystemMode_Type new_mode);
+
+    template<typename T>
+    bool extractCommandPayload
+    (
+        const SystemCommandMsg &msg,
+        T &payload
+    ) const;
+
+    void handleModeChangeCommand
+    (
+        const SystemCommandMsg::SetModePayload &payload
+    );
 
     typedef struct
     {

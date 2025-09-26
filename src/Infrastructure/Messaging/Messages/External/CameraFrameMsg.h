@@ -7,7 +7,7 @@
 
 namespace PiTrac
 {
-class GSCameraFrameMessage : public MessageBase
+class CameraFrameMsg : public MessageBase
 {
   private:
     cv::Mat frame_;
@@ -17,11 +17,11 @@ class GSCameraFrameMessage : public MessageBase
     double fps_;
 
   public:
-    GSCameraFrameMessage() = default;
+    CameraFrameMsg() = default;
 
-    GSCameraFrameMessage(const std::string &camera_id,
-                         const cv::Mat &frame,
-                         uint64_t frame_number)
+    CameraFrameMsg(const std::string &camera_id,
+                   const cv::Mat &frame,
+                   uint64_t frame_number)
         : camera_id_(camera_id),
         frame_(frame.clone()),
         frame_number_(frame_number),

@@ -6,52 +6,50 @@
 
 namespace PiTrac
 {
-
 class ChangeModeMsg : public MessageBase
 {
-public:
+  public:
 
-ChangeModeMsg() = default;
+    ChangeModeMsg() = default;
 
-ChangeModeMsg(SystemMode_Type newMode) 
-: newMode_(newMode) 
-{}
+    ChangeModeMsg(SystemMode_Type newMode)
+        : newMode_(newMode)
+    {
+    }
 
-Message_Type getMessageType() const override
-{
-    return Message_Type::ChangeMode;
-}
+    Message_Type getMessageType() const override
+    {
+        return Message_Type::ChangeMode;
+    }
 
-void serialize
-(
-    msgpack::sbuffer &buffer
-) const override;
+    void serialize
+    (
+        msgpack::sbuffer &buffer
+    ) const override;
 
-void deserialize
-(
-    const char *data,
-    size_t size
-) override;
+    void deserialize
+    (
+        const char *data,
+        size_t size
+    ) override;
 
-std::unique_ptr<MessageInterface> clone() const override;
+    std::unique_ptr<MessageInterface> clone() const override;
 
-SystemMode_Type getNewMode() const
-{
-    return newMode_;
-}
+    SystemMode_Type getNewMode() const
+    {
+        return newMode_;
+    }
 
-void setNewMode(const SystemMode_Type mode)
-{
-    newMode_ = mode;
-}
+    void setNewMode(const SystemMode_Type mode)
+    {
+        newMode_ = mode;
+    }
 
-std::string toString() const override;
+    std::string toString() const override;
 
-private:
+  private:
     SystemMode_Type newMode_;
-
 };
-
 } // namespace PiTrac
 
 #endif // GS_HOST_COMMAND_MSG_H

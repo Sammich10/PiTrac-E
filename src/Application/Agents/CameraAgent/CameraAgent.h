@@ -32,16 +32,11 @@ class CameraAgent : public GSAgentBase
     /**
      * @brief Constructs a CameraAgent object.
      *
-     * @param camera_ Unique pointer to a GSCameraInterface instance
-     * representing the camera hardware interface.
-     * @param frame_buffer_ Shared pointer to a FrameBuffer instance used for
-     * storing captured frames.
      * @param camera_index Index of the camera
      */
     CameraAgent
     (
-        const size_t camera_index,
-        const size_t frame_buffer_size
+        const size_t camera_index
     );
 
     /**

@@ -4,9 +4,9 @@ namespace PiTrac
 {
 void *GSMessagerBase::context_ = nullptr;
 
-GSMessagerBase::GSMessagerBase(SocketType type) 
-: socket_(nullptr)
-, running_(false)
+GSMessagerBase::GSMessagerBase(SocketType type)
+    : socket_(nullptr)
+    , running_(false)
 {
     if (!context_)
     {
@@ -36,7 +36,7 @@ GSMessagerBase::GSMessagerBase(SocketType type)
             break;
         default: throw std::invalid_argument("Invalid socket type");
     }
-    
+
     socket_ = zmq_socket(context_, socket_type);
     if (!socket_)
     {
@@ -68,7 +68,7 @@ void GSMessagerBase::connect(const std::string &endpoint)
     if (rc != 0)
     {
         throw std::runtime_error("Failed to connect to " + endpoint + ": " +
-                                    zmq_strerror(errno));
+                                 zmq_strerror(errno));
     }
 }
 
@@ -78,7 +78,7 @@ void GSMessagerBase::subscribe(const std::string &topic)
     if (rc != 0)
     {
         throw std::runtime_error("Failed to subscribe to topic: " +
-                                    std::string(zmq_strerror(errno)));
+                                 std::string(zmq_strerror(errno)));
     }
 }
 
@@ -145,8 +145,17 @@ void GSMessagerBase::receiveLoop()
         {
             printf("Received message of size %d\n", rc);
             // Create message from received ZMQ message
-            std::unique_ptr<MessageInterface> message = message_factory_.createFromZmqMessage(msg);
-            message_handler_(std::move(message));
+            try
+            {
+                std::unique_ptr<MessageInterface> message = message_factory_.createFromZmqMessage(msg);
+                message_handler_(std::move(message));
+            }
+            catch (const std::exception &e)
+            {
+                zmq_msg_close(&msg);
+                printf("Error creating message from ZMQ message: %s\n", e.what());
+                continue; // Skip this message and continue
+            }
         }
         else if (errno != EAGAIN)
         {

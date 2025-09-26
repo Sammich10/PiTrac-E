@@ -2,7 +2,6 @@
 
 namespace PiTrac
 {
-
 void ChangeModeMsg::serialize(msgpack::sbuffer &buffer) const
 {
     msgpack::packer<msgpack::sbuffer> packer(buffer);
@@ -38,7 +37,7 @@ void ChangeModeMsg::deserialize(const char *data, size_t size)
         std::chrono::milliseconds(timestamp_ms));
 }
 
-std::unique_ptr<MessageInterface> ChangeModeMsg::clone() const 
+std::unique_ptr<MessageInterface> ChangeModeMsg::clone() const
 {
     auto cloned = std::make_unique<ChangeModeMsg>(newMode_);
     cloned->timestamp_ = timestamp_;
@@ -50,5 +49,4 @@ std::string ChangeModeMsg::toString() const
 {
     return "ChangeMode: " + std::to_string(static_cast<int>(newMode_));
 }
-
 }

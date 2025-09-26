@@ -10,7 +10,6 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
-#include <sys/prctl.h>
 #include <signal.h>
 #include <atomic>
 #include <chrono>
@@ -72,8 +71,6 @@ class GSTaskBase
         changeStatus(TaskStatus::Starting);
 
         start_time_ = std::chrono::steady_clock::now();
-        // Set process name
-        prctl(PR_SET_NAME, name_.c_str(), 0, 0, 0);
 
         logInfo("Process started for task: " + name_);
 
@@ -188,7 +185,7 @@ class GSTaskBase
     {
     }
 
-    void logInfo(const std::string &message)
+    void logInfo(const std::string &message) const
     {
         if (logger_)
         {
@@ -196,7 +193,7 @@ class GSTaskBase
         }
     }
 
-    void logWarning(const std::string &message)
+    void logWarning(const std::string &message) const
     {
         if (logger_)
         {
@@ -204,7 +201,7 @@ class GSTaskBase
         }
     }
 
-    void logError(const std::string &message)
+    void logError(const std::string &message) const
     {
         if (logger_)
         {

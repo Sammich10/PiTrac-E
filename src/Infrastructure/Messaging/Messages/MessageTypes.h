@@ -3,16 +3,18 @@
 
 namespace PiTrac
 {
-    enum class Message_Type
-    {
-        CameraFrame,
-        CameraFrameRaw,
-        ChangeMode,
-        RegisterTask,
-        TaskStatus,
-        Event,
-        // Future messages here...
-    };
+enum class Message_Type
+{
+    CameraFrame,
+    CameraFrameRaw,
+    ChangeMode,
+    RegisterTask,
+    TaskStatus,
+    Event,
+    SystemCommand,
+    AckMessage,
+    // Future messages here...
+};
 } // namespace PiTrac
 
 #endif // GS_MESSAGE_TYPES_H

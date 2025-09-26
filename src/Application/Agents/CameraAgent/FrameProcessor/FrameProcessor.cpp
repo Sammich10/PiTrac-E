@@ -4,12 +4,13 @@ namespace PiTrac
 {
 FrameProcessor::FrameProcessor(std::shared_ptr<FrameBuffer> frame_buffer, const uint32_t camera_id)
     : frame_buffer_(std::move(frame_buffer)),
-      camera_id_(camera_id),
-      frame_counter_(0),
-      should_stop_(false)
+    camera_id_(camera_id),
+    frame_counter_(0),
+    should_stop_(false),
+    running_(false),
+    frame_publisher_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Publisher)),
+    name_("FrameProcessor " + std::to_string(camera_id_))
 {
-    name_ = name_ + " " + std::to_string(camera_id_);
-    frame_publisher_ = std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Publisher);
 }
 
 FrameProcessor::~FrameProcessor()
@@ -19,8 +20,7 @@ FrameProcessor::~FrameProcessor()
 
 bool FrameProcessor::init()
 {
-    frame_publisher_endpoint_ = Endpoints::getCameraStreamEndpoint(camera_id_);
-    frame_publisher_->bind(frame_publisher_endpoint_);
+    frame_publisher_->bind(Endpoints::getCameraStreamEndpoint(camera_id_));
     return true;
 }
 
@@ -28,13 +28,15 @@ void FrameProcessor::streamFrames()
 {
     if (processing_thread_.joinable())
     {
-        logWarning("FrameProcessor is already processing frames! Stopping current processing.");
+        // logWarning("FrameProcessor is already processing frames! Stopping
+        // current processing.");
         should_stop_ = true;
         processing_thread_.join();
     }
     should_stop_ = false;
     processing_thread_ = std::thread(&FrameProcessor::streamingLoop, this);
-    logInfo("FrameProcessor started streaming frames on " + frame_publisher_endpoint_);
+    // logInfo("FrameProcessor started streaming frames on " +
+    // Endpoints::getCameraStreamEndpoint(camera_id_));
 }
 
 void FrameProcessor::streamingLoop()
@@ -44,7 +46,7 @@ void FrameProcessor::streamingLoop()
         cv::Mat frame;
         if (frame_buffer_->getFrame(frame))
         {
-            GSCameraFrameMessage frame_msg;
+            CameraFrameMsg frame_msg;
             frame_msg.setCameraId(std::to_string(camera_id_));
             frame_msg.setFrame(frame);
             frame_msg.setFrameNumber(frame_counter_++);
@@ -54,5 +56,4 @@ void FrameProcessor::streamingLoop()
         }
     }
 }
-
 } // namespace PiTrac

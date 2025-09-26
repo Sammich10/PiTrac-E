@@ -3,7 +3,7 @@
 
 namespace PiTrac
 {
-void GSCameraFrameMessage::serialize(msgpack::sbuffer &buffer) const
+void CameraFrameMsg::serialize(msgpack::sbuffer &buffer) const
 {
     msgpack::packer<msgpack::sbuffer> packer(buffer);
 
@@ -29,14 +29,14 @@ void GSCameraFrameMessage::serialize(msgpack::sbuffer &buffer) const
     packer.pack(encoded_frame);
 }
 
-void GSCameraFrameMessage::deserialize(const char *data, size_t size)
+void CameraFrameMsg::deserialize(const char *data, size_t size)
 {
     msgpack::object_handle oh = msgpack::unpack(data, size);
     msgpack::object obj = oh.get();
 
     if (obj.type != msgpack::type::ARRAY || obj.via.array.size != 7)
     {
-        throw std::runtime_error("Invalid GSCameraFrameMessage format");
+        throw std::runtime_error("Invalid CameraFrameMsg format");
     }
 
     // Unpack fields
@@ -68,9 +68,9 @@ void GSCameraFrameMessage::deserialize(const char *data, size_t size)
     frame_ = deserializeMatFromBuffer(encoded_frame);
 }
 
-std::unique_ptr<MessageInterface> GSCameraFrameMessage::clone() const
+std::unique_ptr<MessageInterface> CameraFrameMsg::clone() const
 {
-    auto cloned = std::make_unique<GSCameraFrameMessage>(camera_id_, frame_, frame_number_);
+    auto cloned = std::make_unique<CameraFrameMsg>(camera_id_, frame_, frame_number_);
     cloned->timestamp_ = timestamp_;
     cloned->capture_timestamp_ = capture_timestamp_;
     cloned->fps_ = fps_;
@@ -78,8 +78,8 @@ std::unique_ptr<MessageInterface> GSCameraFrameMessage::clone() const
     return cloned;
 }
 
-void GSCameraFrameMessage::serializeMatToBuffer(const cv::Mat &mat,
-                                                std::vector<uint8_t> &buffer) const
+void CameraFrameMsg::serializeMatToBuffer(const cv::Mat &mat,
+                                          std::vector<uint8_t> &buffer) const
 {
     if (mat.empty())
     {
@@ -95,7 +95,7 @@ void GSCameraFrameMessage::serializeMatToBuffer(const cv::Mat &mat,
     cv::imencode(".jpg", mat, buffer, compression_params);
 }
 
-cv::Mat GSCameraFrameMessage::deserializeMatFromBuffer(const std::vector<uint8_t> &buffer) const
+cv::Mat CameraFrameMsg::deserializeMatFromBuffer(const std::vector<uint8_t> &buffer) const
 {
     if (buffer.empty())
     {
@@ -106,7 +106,7 @@ cv::Mat GSCameraFrameMessage::deserializeMatFromBuffer(const std::vector<uint8_t
     return cv::imdecode(buffer, cv::IMREAD_COLOR);
 }
 
-std::string GSCameraFrameMessage::toString() const
+std::string CameraFrameMsg::toString() const
 {
     std::ostringstream oss;
     oss << MessageBase::toString()

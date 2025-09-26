@@ -29,16 +29,27 @@ class FrameProcessor
     ~FrameProcessor();
 
     bool init();
-    bool stop() { should_stop_ = true; if (processing_thread_.joinable()) { processing_thread_.join(); } return true; }
-    bool isRunning() const { return running_; }
+    bool stop()
+    {
+        should_stop_ = true; if (processing_thread_.joinable())
+        {
+            processing_thread_.join();
+        }
+        return true;
+    }
+
+    bool isRunning() const
+    {
+        return running_;
+    }
+
     void streamFrames();
 
   private:
-    
+
     void streamingLoop();
     std::shared_ptr<FrameBuffer> frame_buffer_;
     std::unique_ptr<GSMessagerBase> frame_publisher_;
-    std::string frame_publisher_endpoint_;
     uint32_t camera_id_;
     size_t frame_counter_;
     std::string name_;

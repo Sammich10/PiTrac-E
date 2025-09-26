@@ -1,6 +1,8 @@
 #include "Infrastructure/Messaging/Messages/MessageBase.h"
 #include "Infrastructure/Messaging/Messages/MessageFactory.h"
 #include "Infrastructure/Messaging/Messages/External/CameraFrameMsg.h"
+#include "Infrastructure/Messaging/Messages/External/SystemCommandMsg.h"
+#include "Infrastructure/Messaging/Messages/External/AckMessage.h"
 #include "Infrastructure/Messaging/Messages/Internal/ChangeModeMsg.h"
 #include "Infrastructure/Messaging/Messages/Internal/RegisterTaskMsg.h"
 
@@ -9,10 +11,12 @@ namespace PiTrac
 MessageFactory::MessageFactory()
 {
     // Register message types
-    registerMessage<GSCameraFrameMessage>(Message_Type::CameraFrame);
+    registerMessage<CameraFrameMsg>(Message_Type::CameraFrame);
     // registerMessage<GSCameraFrameRawMessage>(Message_Type::CameraFrameRaw);
     registerMessage<ChangeModeMsg>(Message_Type::ChangeMode);
     registerMessage<RegisterTaskMsg>(Message_Type::RegisterTask);
+    registerMessage<SystemCommandMsg>(Message_Type::SystemCommand);
+    registerMessage<AckMessage>(Message_Type::AckMessage);
     // Future messages here...
 }
 

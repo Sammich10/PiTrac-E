@@ -5,7 +5,6 @@
 
 namespace PiTrac
 {
-
 enum class SystemStatus_Type
 {
     INITIALIZING = 0,
@@ -50,31 +49,30 @@ enum class LaunchMonitorState_Type
 
 class System
 {
-public: 
-System()=delete;
-~System()=delete;
+  public:
+    System() = delete;
+    ~System() = delete;
 
-static const std::string systemModeToString(SystemMode_Type mode)
-{
-    switch (mode)
+    static const std::string systemModeToString(SystemMode_Type mode)
     {
-        case SystemMode_Type::STARTING_UP:
-            return "STARTING_UP";
-        case SystemMode_Type::STANDBY:
-            return "STANDBY";
-        case SystemMode_Type::VIEWFINDER:
-            return "VIEWFINDER";
-        case SystemMode_Type::CALIBRATION:
-            return "CALIBRATION";
-        case SystemMode_Type::LAUNCH_MONITOR:
-            return "LAUNCH_MONITOR";
-        case SystemMode_Type::DIAGNOSTIC:
-            return "DIAGNOSTIC";
-        default:
-            return "UNKNOWN_MODE";
+        switch (mode)
+        {
+            case SystemMode_Type::STARTING_UP:
+                return "STARTING_UP";
+            case SystemMode_Type::STANDBY:
+                return "STANDBY";
+            case SystemMode_Type::VIEWFINDER:
+                return "VIEWFINDER";
+            case SystemMode_Type::CALIBRATION:
+                return "CALIBRATION";
+            case SystemMode_Type::LAUNCH_MONITOR:
+                return "LAUNCH_MONITOR";
+            case SystemMode_Type::DIAGNOSTIC:
+                return "DIAGNOSTIC";
+            default:
+                return "UNKNOWN_MODE";
+        }
     }
-}
-
 };
 } // namespace PiTrac
 
