@@ -20,6 +20,12 @@ enum class Status
 
 AckMessage() = default;
 
+AckMessage(Status status_code)
+: status_(status_code)
+, original_msg_(nullptr)
+{
+}
+
 AckMessage(std::unique_ptr<MessageInterface> original_msg, Status status_code)
 : status_(status_code)
 , original_msg_(std::move(original_msg))
@@ -37,7 +43,9 @@ Message_Type getMessageType() const override
 
 Status getStatus() const { return status_; }
 
-Message_Type getAckedMessageType() const { return original_msg_->getMessageType(); }
+Message_Type getAckedMessageType() const { 
+    return original_msg_ ? original_msg_->getMessageType() : Message_Type::AckMessage; 
+}
 
 std::unique_ptr<MessageInterface> clone() const override;
 

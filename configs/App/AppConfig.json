@@ -1,10 +1,37 @@
 {
-    "ProcessDefs": {
-        "AppMain": {
-            "Executable": "AppMain.exe",
-            "Arguments": [
-                
-            ]
+    "Executables": {
+        "SystemManager": {
+            "Enable": true,
+            "Executable": "SystemManager",
+            "Arguments": [],
+            "ProcessOptions": {
+                "processName": "SysMgr",
+                "cpuAffinity": [0, 1],
+                "priority": -5
+            }
+        },
+        "CameraAgent_1": {
+            "Enable": true,
+            "Executable": "CameraAgent",
+            "Arguments": ["0"],
+            "ProcessOptions": {
+                "processName": "CamAgent1",
+                "cpuAffinity": [2],
+                "priority": -15,
+                "schedPolicy": "SCHED_FIFO",
+                "schedPriority": 50,
+                "dumpable": true
+            }
+        },
+        "CameraAgent_2": {
+            "Enable": true,
+            "Executable": "CameraAgent",
+            "Arguments": ["1"],
+            "ProcessOptions": {
+                "processName": "CamAgent2",
+                "cpuAffinity": [3],
+                "priority": -10
+            }
         }
     }
 }

@@ -40,9 +40,9 @@ class Endpoints
         }
     }
 
-    static const std::string getTaskRegistrationEndpoint()
+    static const std::string getTaskControlEndpoint()
     {
-        return "ipc://task_registration_endpoint";
+        return "ipc://task_control_endpoint";
     }
 
     static const std::string getExternalCommandEndpoint()

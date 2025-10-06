@@ -8,7 +8,7 @@ FrameProcessor::FrameProcessor(std::shared_ptr<FrameBuffer> frame_buffer, const 
     frame_counter_(0),
     should_stop_(false),
     running_(false),
-    frame_publisher_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Publisher)),
+    frame_publisher_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Publisher)),
     name_("FrameProcessor " + std::to_string(camera_id_))
 {
 }

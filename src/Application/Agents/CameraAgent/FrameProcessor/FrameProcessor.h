@@ -1,9 +1,9 @@
 #ifndef FRAME_PROCESSOR_AGENT_H
 #define FRAME_PROCESSOR_AGENT_H
 
-#include "Application/Agents/AgentBase/GSAgentBase.h"
+#include "Application/Agents/AgentBase/AgentBase.h"
 #include "Infrastructure/DataStructures/FrameBuffer.h"
-#include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
+#include "Infrastructure/Messaging/Messagers/MessagerBase.h"
 #include "Infrastructure/Messaging/Messages/External/CameraFrameMsg.h"
 #include <opencv2/opencv.hpp>
 #include <thread>
@@ -49,7 +49,7 @@ class FrameProcessor
 
     void streamingLoop();
     std::shared_ptr<FrameBuffer> frame_buffer_;
-    std::unique_ptr<GSMessagerBase> frame_publisher_;
+    std::unique_ptr<MessagerBase> frame_publisher_;
     uint32_t camera_id_;
     size_t frame_counter_;
     std::string name_;

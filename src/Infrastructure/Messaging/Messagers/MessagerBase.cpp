@@ -1,12 +1,14 @@
-#include "Infrastructure/Messaging/Messagers/GSMessagerBase.h"
+#include "Infrastructure/Messaging/Messagers/MessagerBase.h"
 
 namespace PiTrac
 {
-void *GSMessagerBase::context_ = nullptr;
+void *MessagerBase::context_ = nullptr;
 
-GSMessagerBase::GSMessagerBase(SocketType type)
+MessagerBase::MessagerBase(SocketType type)
     : socket_(nullptr)
+    , socket_type_(type)
     , running_(false)
+    , logger_(GSLogger::getInstance())
 {
     if (!context_)
     {
@@ -34,6 +36,12 @@ GSMessagerBase::GSMessagerBase(SocketType type)
         case SocketType::Pull:
             socket_type = ZMQ_PULL;
             break;
+        case SocketType::Router:
+            socket_type = ZMQ_ROUTER;
+            break;
+        case SocketType::Dealer:
+            socket_type = ZMQ_DEALER;
+            break;
         default: throw std::invalid_argument("Invalid socket type");
     }
 
@@ -42,9 +50,10 @@ GSMessagerBase::GSMessagerBase(SocketType type)
     {
         throw std::runtime_error("Failed to create ZMQ socket");
     }
+    setTimeout(timeout_ms_);
 }
 
-GSMessagerBase::~GSMessagerBase()
+MessagerBase::~MessagerBase()
 {
     stop();
     if (socket_)
@@ -53,7 +62,18 @@ GSMessagerBase::~GSMessagerBase()
     }
 }
 
-void GSMessagerBase::bind(const std::string &endpoint)
+void MessagerBase::setTimeout(const int timeout_ms)
+{
+    timeout_ms_ = timeout_ms;
+    zmq_setsockopt(socket_, ZMQ_RCVTIMEO, &timeout_ms_, sizeof(timeout_ms_));
+}
+
+int MessagerBase::getTimeout() const
+{
+    return timeout_ms_;
+}
+
+void MessagerBase::bind(const std::string &endpoint)
 {
     int rc = zmq_bind(socket_, endpoint.c_str());
     if (rc != 0)
@@ -62,7 +82,7 @@ void GSMessagerBase::bind(const std::string &endpoint)
     }
 }
 
-void GSMessagerBase::connect(const std::string &endpoint)
+void MessagerBase::connect(const std::string &endpoint)
 {
     int rc = zmq_connect(socket_, endpoint.c_str());
     if (rc != 0)
@@ -72,7 +92,7 @@ void GSMessagerBase::connect(const std::string &endpoint)
     }
 }
 
-void GSMessagerBase::subscribe(const std::string &topic)
+void MessagerBase::subscribe(const std::string &topic)
 {
     int rc = zmq_setsockopt(socket_, ZMQ_SUBSCRIBE, topic.c_str(), topic.length());
     if (rc != 0)
@@ -82,7 +102,7 @@ void GSMessagerBase::subscribe(const std::string &topic)
     }
 }
 
-void GSMessagerBase::sendMessage(const MessageInterface &message)
+void MessagerBase::sendMessage(const MessageInterface &message)
 {
     zmq_msg_t msg;
     message.toZmqMessage(msg);
@@ -97,7 +117,7 @@ void GSMessagerBase::sendMessage(const MessageInterface &message)
     zmq_msg_close(&msg);
 }
 
-void GSMessagerBase::sendMessage(const MessageInterface &message, const std::string &topic)
+void MessagerBase::sendMessage(const MessageInterface &message, const std::string &topic)
 {
     // Send topic frame first
     zmq_msg_t topic_msg;
@@ -110,7 +130,7 @@ void GSMessagerBase::sendMessage(const MessageInterface &message, const std::str
     sendMessage(message);
 }
 
-void GSMessagerBase::startReceiving(std::function<void(std::unique_ptr<MessageInterface>)> handler)
+void MessagerBase::startReceiving(std::function<void(std::unique_ptr<MessageInterface>)> handler)
 {
     message_handler_ = handler;
     running_ = true;
@@ -119,7 +139,7 @@ void GSMessagerBase::startReceiving(std::function<void(std::unique_ptr<MessageIn
         });
 }
 
-void GSMessagerBase::stop()
+void MessagerBase::stop()
 {
     running_ = false;
     if (receive_thread_.joinable())
@@ -130,15 +150,12 @@ void GSMessagerBase::stop()
 
 MessageFactory message_factory_ = MessageFactory();
 
-void GSMessagerBase::receiveLoop()
+void MessagerBase::receiveLoop()
 {
     while (running_)
     {
         zmq_msg_t msg;
         zmq_msg_init(&msg);
-
-        int timeout = 100; // 100ms timeout
-        zmq_setsockopt(socket_, ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
 
         int rc = zmq_msg_recv(&msg, socket_, 0);
         if (rc >= 0 && message_handler_)
@@ -165,4 +182,5 @@ void GSMessagerBase::receiveLoop()
         zmq_msg_close(&msg);
     }
 }
-}
+
+} // namespace PiTrac

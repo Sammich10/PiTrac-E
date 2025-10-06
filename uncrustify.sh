@@ -35,6 +35,7 @@ while [[ $# -gt 0 ]]; do
         *)
             echo "Unknown option: $1"
             echo "Usage: $0 [-a|--all] | [-c|--changed] [-y|--yes]"
+            exit 0
             ;;
     esac
 done

@@ -4,6 +4,7 @@
 #include "Common/Utils/Logging/GSLogger.h"
 #include "Common/System/System.h"
 #include "Common/System/Endpoints.h"
+#include "Infrastructure/TaskProcess/TaskStatus.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -21,24 +22,12 @@
 
 namespace PiTrac
 {
-enum class TaskStatus
-{
-    NotStarted,
-    Starting,
-    Running,
-    Paused,
-    Stopping,
-    Stopped,
-    Timeout,
-    Failed,
-    Crashed
-};
 
-class GSTaskBase
+class TaskBase
 {
   public:
 
-    GSTaskBase(const std::string &name)
+    TaskBase(const std::string &name)
         : name_(name)
         , task_id_(generateTaskId())
         , logger_(GSLogger::getInstance())
@@ -46,16 +35,16 @@ class GSTaskBase
         , should_stop_(false)
     {
         logInfo("Task created: " + name_ + " [" + task_id_ + "]");
-        GSMessagerBase::createContext();
+        MessagerBase::createContext();
     }
 
-    ~GSTaskBase()
+    ~TaskBase()
     {
         if (isRunning())
         {
             end();
         }
-        GSMessagerBase::destroyContext();
+        MessagerBase::destroyContext();
         logInfo("Task destroyed: " + name_);
     }
 

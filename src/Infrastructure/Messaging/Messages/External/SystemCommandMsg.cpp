@@ -2,7 +2,6 @@
 
 namespace PiTrac
 {
-
 void SystemCommandMsg::serialize(msgpack::sbuffer &buffer) const
 {
     msgpack::packer<msgpack::sbuffer> packer(&buffer);
@@ -113,5 +112,4 @@ std::string SystemCommandMsg::toString() const
     }
     return result;
 }
-
 } // namespace PiTrac

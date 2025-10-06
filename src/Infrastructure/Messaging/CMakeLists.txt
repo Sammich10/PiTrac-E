@@ -7,6 +7,8 @@ file(GLOB MESSAGING_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Messages/Internal/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Messages/External/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Messages/External/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Messages/Common/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Messages/Common/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Messages/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/Messages/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Messagers/*.cpp

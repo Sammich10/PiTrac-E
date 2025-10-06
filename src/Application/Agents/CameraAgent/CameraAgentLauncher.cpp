@@ -48,31 +48,6 @@ int main(int argc, char *argv[])
     {
         size_t camera_index = std::stoul(argv[1]);
     }
-    // Parse optional argument 2 (CPU core index)
-    if(argc > 2 && !std::all_of(argv[2], argv[2] + std::strlen(argv[2]), ::isdigit))
-    {
-        printf("Invalid CPU core index argument, must be a non-negative integer less than %ld\n", PI_CPU_MAX);
-        return EXIT_FAILURE;
-    }
-    else
-    {
-        size_t cpu_id = std::stoul(argv[2]);
-        if(cpu_id > PI_CPU_MAX || cpu_id < 0)
-        {
-            printf("Invalid CPU core index, must be between 0 and %ld\n", PI_CPU_MAX);
-            return EXIT_FAILURE;
-        }
-        cpu_set_t mask;
-        CPU_ZERO(&mask);
-        CPU_SET(cpu_id, &mask); // Set to run on specified CPU
-        if(sched_setaffinity(0, sizeof(mask), &mask) != 0)
-        {
-            printf("Failed to set CPU affinity for Camera Agent Task\n");
-            return EXIT_FAILURE;
-        }
-        printf("Set Camera Agent Task to run on CPU %zu\n", cpu_id);
-    }
-
     size_t camera_index = std::stoul(argv[1]);
     try {
         printf("Starting Camera Agent Task Launcher\n");

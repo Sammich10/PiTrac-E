@@ -40,11 +40,6 @@ class ChangeModeMsg : public MessageBase
         return newMode_;
     }
 
-    void setNewMode(const SystemMode_Type mode)
-    {
-        newMode_ = mode;
-    }
-
     std::string toString() const override;
 
   private:

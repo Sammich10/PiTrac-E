@@ -1,7 +1,7 @@
 #ifndef CAMERA_AGENT_H
 #define CAMERA_AGENT_H
 
-#include "Application/Agents/AgentBase/GSAgentBase.h"
+#include "Application/Agents/AgentBase/AgentBase.h"
 #include "Application/Agents/CameraAgent/FrameProcessor/FrameProcessorFactory.h"
 #include "Infrastructure/DataStructures/FrameBuffer.h"
 #include "Interfaces/Camera/GSCameraInterface.h"
@@ -26,7 +26,7 @@ namespace PiTrac
  * On top of this, it will support different modes of operation to support
  * the functionality of the launch monitor system.
  */
-class CameraAgent : public GSAgentBase
+class CameraAgent : public AgentBase
 {
   public:
     /**

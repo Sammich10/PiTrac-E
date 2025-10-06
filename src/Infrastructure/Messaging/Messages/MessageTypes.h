@@ -13,6 +13,8 @@ enum class Message_Type
     Event,
     SystemCommand,
     AckMessage,
+    Heartbeat,
+    ShutdownNotification,
     // Future messages here...
 };
 } // namespace PiTrac

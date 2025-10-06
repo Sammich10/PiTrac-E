@@ -5,7 +5,7 @@
 namespace PiTrac
 {
 CameraAgent::CameraAgent(const size_t camera_index)
-    : GSAgentBase("CameraAgent_" + std::to_string(camera_index))
+    : AgentBase("CameraAgent_" + std::to_string(camera_index))
     , frame_buffer_(std::make_shared<FrameBuffer>(64)) // Default buffer size of
                                                        // 64 frames
     , frame_processor_(FrameProcessorFactory::create(frame_buffer_, camera_index))

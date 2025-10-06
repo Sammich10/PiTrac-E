@@ -4,28 +4,28 @@ namespace PiTrac
 {
 SystemManager::SystemManager()
     : GSManagerBase("SystemManager")
-    , task_reg_receiver_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Reply))
-    , system_command_listener_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Reply))
-    , task_status_subscriber_(std::make_unique<GSMessagerBase>(GSMessagerBase::SocketType::Subscriber))
+    , task_control_router_(std::make_unique<MessageRouter>())
+    , system_command_listener_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Reply))
 {
 }
 
 SystemManager::~SystemManager()
 {
-    task_reg_receiver_.reset();
+    task_control_router_.reset();
 }
 
 bool SystemManager::setupProcess()
 {
-    task_reg_receiver_->bind(Endpoints::getTaskRegistrationEndpoint());
-    task_reg_receiver_->startReceiving(
-        std::bind(&SystemManager::taskRegistrationHandler, this, std::placeholders::_1)
+    logInfo("Setting up task control router");
+    task_control_router_->bind(Endpoints::getTaskControlEndpoint());
+    task_control_router_->startReceivingWithIdentity(
+        std::bind(&SystemManager::taskControlMessageHandler, this, std::placeholders::_1)
         );
+    logInfo("Setting up system command listener");
     system_command_listener_->bind(Endpoints::getExternalCommandEndpoint());
     system_command_listener_->startReceiving(
-        std::bind(&SystemManager::handleExternalCommand, this, std::placeholders::_1)
+        std::bind(&SystemManager::externalMessageHandler, this, std::placeholders::_1)
         );
-    task_status_subscriber_->connect(Endpoints::getTaskStatusEndpoint());
     return true;
 }
 
@@ -43,17 +43,14 @@ bool SystemManager::execute()
 void SystemManager::cleanupProcess()
 {
     logInfo("Stopping task registration and command listeners");
-    task_reg_receiver_->stop();
-    task_reg_receiver_.reset();
-    logInfo("Stopping task status subscriber and command listener");
+    task_control_router_->stop();
+    task_control_router_.reset();
+    logInfo("Stopping system command listener");
     system_command_listener_->stop();
     system_command_listener_.reset();
-    logInfo("Stopping task status subscriber");
-    task_status_subscriber_->stop();
-    task_status_subscriber_.reset();
 }
 
-void SystemManager::handleExternalCommand(std::unique_ptr<MessageInterface> message)
+void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> message)
 {
     logInfo("Received external command: " + message->toString());
     if(message->getMessageType() == Message_Type::SystemCommand)
@@ -112,36 +109,204 @@ bool SystemManager::extractCommandPayload(const SystemCommandMsg &msg, T &payloa
 void SystemManager::handleModeChangeCommand(const SystemCommandMsg::SetModePayload &payload)
 {
     logInfo("Changing system mode to: " + std::to_string(static_cast<int>(payload.mode)));
+    broadcastModeChange(payload.mode);
+    mode_ = payload.mode;
 }
 
-void SystemManager::taskRegistrationHandler(std::unique_ptr<MessageInterface> message)
+// Enhanced handler for ROUTER-DEALER pattern with identity
+void SystemManager::taskControlMessageHandler(std::unique_ptr<MessagerBase::IdentityMessage> identity_message)
 {
-    logInfo("Received task registration message: " + message->toString());
-    if(message->getMessageType() != Message_Type::RegisterTask)
+    const std::string &sender_identity = identity_message->sender_identity;
+    std::unique_ptr<MessageInterface> &message = identity_message->message;
+
+    logInfo("Received message from identity [" + sender_identity + "]: " + message->toString());
+
+    const Message_Type type = message->getMessageType();
+    switch(type)
     {
-        logWarning("Received unexpected message type in task registration handler: " + std::to_string(static_cast<int>(message->getMessageType())));
-        return;
-    }
-    auto reg_msg = dynamic_cast<RegisterTaskMsg *>(message.get());
-    if(!reg_msg)
-    {
-        logError("Failed to cast message to RegisterTaskMsg in task registration handler");
-        return;
-    }
-    for(const RegisteredTask &task : registered_tasks_)
-    {
-        if(task.task_pid == reg_msg->getTaskPid() || task.task_name == reg_msg->getTaskName())
+        case Message_Type::RegisterTask:
         {
-            logInfo("Task already registered: " + task.task_name + " [" + std::to_string(task.task_pid) + "]");
-            return;
+            handleAgentRegistration(sender_identity, *dynamic_cast<RegisterTaskMsg *>(message.get()));
+            break;
+        }
+        case Message_Type::Heartbeat:
+        {
+            handleAgentHeartbeat(sender_identity, *dynamic_cast<HeartbeatMsg *>(message.get()));
+            break;
+        }
+        default:
+            logWarning("Received unknown message type from identity [" + sender_identity + "]: " +
+                       std::to_string(static_cast<int>(type)));
+            sendAcknowledgmentToAgent(sender_identity, *message, false);
+            break;
+    }
+}
+
+void SystemManager::handleAgentRegistration(const std::string &identity, const RegisterTaskMsg &reg_msg)
+{
+    std::lock_guard<std::mutex> lock(agents_mutex_);
+
+    // Check if identity already exists
+    {
+        std::lock_guard<std::mutex> router_lock(router_mutex_);
+        if (registered_agents_.find(identity) != registered_agents_.end())
+        {
+            logWarning("Identity [" + identity + "] is already registered, replacing previous registration");
+        }
+        RegisteredAgent agent(reg_msg.getTaskName(), reg_msg.getTaskPid(), identity);
+        registered_agents_[identity] = agent;
+        agent_name_to_identity_[reg_msg.getTaskName()] = identity;
+    }
+
+    logInfo("Agent registered: " + reg_msg.getTaskName() +
+            " (PID: " + std::to_string(reg_msg.getTaskPid()) +
+            ", Identity: " + identity + ")");
+
+    // Log all currently registered agents
+    logInfo("Total registered agents: " + std::to_string(registered_agents_.size()));
+    for (const auto &pair : registered_agents_)
+    {
+        logInfo("  - Identity: " + pair.first + ", Name: " + pair.second.task_name +
+                ", PID: " + std::to_string(pair.second.task_pid));
+    }
+
+    logInfo("Acknowledging registration to agent: " + reg_msg.getTaskName());
+    // Send acknowledgment back to agent
+    try {
+        // Create a simple ack message (without embedding the original message)
+        AckMessage ack_msg(AckMessage::Status::Success);
+        logInfo("Sending AckMessage to identity: " + identity);
+
+        // Protect router socket access from concurrent async handlers
+        {
+            std::lock_guard<std::mutex> router_lock(router_mutex_);
+            task_control_router_->sendMessageToIdentity(ack_msg, identity);
+        }
+
+        logInfo("AckMessage sent successfully to: " + identity);
+    } catch (const std::exception &e) {
+        logError("Failed to send registration ack to " + identity + ": " + std::string(e.what()));
+    }
+
+    try{
+        sendModeChangeToAgent(reg_msg.getTaskName(), mode_);
+    } catch (const std::exception &e) {
+        logError("Failed to send initial mode to " + reg_msg.getTaskName() + ": " + std::string(e.what()));
+    }
+    logInfo("Sent initial mode " + std::to_string(static_cast<int>(mode_)) + " to agent: " + reg_msg.getTaskName());
+    logInfo("Registration complete for agent: " + reg_msg.getTaskName());
+}
+
+void SystemManager::handleAgentHeartbeat(const std::string &identity, const HeartbeatMsg &heartbeat)
+{
+    std::lock_guard<std::mutex> lock(agents_mutex_);
+
+    auto it = registered_agents_.find(identity);
+    if(it != registered_agents_.end())
+    {
+        it->second.last_seen = std::chrono::system_clock::now();
+        logInfo("Heartbeat received from: " + it->second.task_name);
+        // sendAcknowledgmentToAgent(identity, heartbeat, true);
+    }
+    else
+    {
+        logWarning("Received heartbeat from unregistered identity: " + identity);
+        // sendAcknowledgmentToAgent(identity, heartbeat, false);
+    }
+}
+
+void SystemManager::sendAcknowledgmentToAgent(const std::string &identity, const MessageInterface &original_message, bool success)
+{
+    AckMessage ack_msg(std::move(original_message.clone()),
+                       success ? AckMessage::Status::Success : AckMessage::Status::Failure);
+    try {
+        std::lock_guard<std::mutex> router_lock(router_mutex_);
+        task_control_router_->sendMessageToIdentity(ack_msg, identity);
+    } catch (const std::exception &e) {
+        logError("Failed to send acknowledgment to " + identity + ": " + std::string(e.what()));
+    }
+}
+
+void SystemManager::sendModeChangeToAgent(const std::string &agent_name, SystemMode_Type new_mode)
+{
+    std::lock_guard<std::mutex> lock(agents_mutex_);
+
+    auto it = agent_name_to_identity_.find(agent_name);
+    if(it != agent_name_to_identity_.end())
+    {
+        const std::string &identity = it->second;
+        auto agent_it = registered_agents_.find(identity);
+        if(agent_it != registered_agents_.end())
+        {
+            ChangeModeMsg mode_msg(new_mode);
+            try {
+                std::lock_guard<std::mutex> router_lock(router_mutex_);
+                task_control_router_->sendMessageToIdentity(mode_msg, identity);
+                agent_it->second.current_mode = new_mode;
+                logInfo("Sent mode change to " + agent_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
+            } catch (const std::exception &e) {
+                logError("Failed to send mode change to " + agent_name + ": " + std::string(e.what()));
+            }
+        }
+        else
+        {
+            logWarning("Agent identity not found in registered agents: " + identity);
         }
     }
-    RegisteredTask new_task;
-    new_task.task_name = reg_msg->getTaskName();
-    new_task.task_pid = reg_msg->getTaskPid();
-    registered_tasks_.push_back(new_task);
-    task_reg_receiver_->sendMessage(*reg_msg); // Echo back the registration
-                                               // message as confirmation
-    logInfo("Registered new task: " + new_task.task_name + " [" + std::to_string(new_task.task_pid) + "]");
+    else
+    {
+        logWarning("Agent name not found: " + agent_name);
+    }
+}
+
+void SystemManager::broadcastModeChange(SystemMode_Type new_mode)
+{
+    std::lock_guard<std::mutex> lock(agents_mutex_);
+
+    for(const auto & [identity, agent] : registered_agents_)
+    {
+        ChangeModeMsg mode_msg(new_mode);
+        try {
+            std::lock_guard<std::mutex> router_lock(router_mutex_);
+            task_control_router_->sendMessageToIdentity(mode_msg, identity);
+            registered_agents_[identity].current_mode = new_mode;
+            logInfo("Broadcasted mode change to " + agent.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
+        } catch (const std::exception &e) {
+            logError("Failed to broadcast mode change to " + agent.task_name + ": " + std::string(e.what()));
+        }
+    }
+}
+
+void SystemManager::checkAgentTimeouts()
+{
+    std::lock_guard<std::mutex> lock(agents_mutex_);
+    auto now = std::chrono::system_clock::now();
+    for(auto it = registered_agents_.begin(); it != registered_agents_.end(); )
+    {
+        auto duration = std::chrono::duration_cast<std::chrono::seconds>(now - it->second.last_seen).count();
+        if(duration > 10) // 10 seconds timeout
+        {
+            logWarning("Agent timed out: " + it->second.task_name + " (Identity: " + it->first + ")");
+            agent_name_to_identity_.erase(it->second.task_name);
+            it = registered_agents_.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
+std::vector<SystemManager::RegisteredAgent> SystemManager::getActiveAgents()
+{
+    std::lock_guard<std::mutex> lock(agents_mutex_);
+    std::vector<RegisteredAgent> agents;
+
+    for(const auto & [identity, agent] : registered_agents_)
+    {
+        agents.push_back(agent);
+    }
+
+    return agents;
 }
 } // namespace PiTrac
