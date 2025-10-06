@@ -232,7 +232,6 @@ class AgentBase : public TaskBase
         HeartbeatMsg heartbeat(getpid(), name_, getStatus(), lm_mode_);
         try {
             agent_control_->sendMessage(heartbeat);
-            logInfo("Heartbeat sent to SystemManager");
         } catch (const std::exception& e) {
             logError("Failed to send heartbeat: " + std::string(e.what()));
         }

@@ -40,16 +40,18 @@ class SystemManager : public GSManagerBase
 
         RegisteredAgent() = default;
         RegisteredAgent(const std::string &name, uint64_t pid, const std::string &identity)
-            : task_name(name), task_pid(pid), zmq_identity(identity),
-            last_seen(std::chrono::system_clock::now())
+            : task_name(name)
+            , task_pid(pid)
+            , zmq_identity(identity)
+            , last_seen(std::chrono::system_clock::now())
         {
         }
     };
 
-    std::map<std::string, RegisteredAgent> registered_agents_; // identity ->
-                                                               // agent info
-    std::map<std::string, std::string> agent_name_to_identity_; // name ->
-                                                                // identity
+    // Map identities with registered agents
+    std::map<std::string, RegisteredAgent> registered_agents_;
+    // Map agent names to their ZeroMQ identities
+    std::map<std::string, std::string> agent_name_to_identity_;
     std::mutex agents_mutex_;
     std::mutex router_mutex_; // Protect router socket access from async
                               // handlers
@@ -85,7 +87,7 @@ class SystemManager : public GSManagerBase
     // Command distribution
     void sendModeChangeToAgent
     (
-        const std::string &agent_name,
+        const std::string &identity,
         SystemMode_Type new_mode
     );
     void broadcastModeChange

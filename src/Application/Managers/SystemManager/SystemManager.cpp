@@ -119,14 +119,14 @@ void SystemManager::taskControlMessageHandler(std::unique_ptr<MessagerBase::Iden
     const std::string &sender_identity = identity_message->sender_identity;
     std::unique_ptr<MessageInterface> &message = identity_message->message;
 
-    logInfo("Received message from identity [" + sender_identity + "]: " + message->toString());
-
     const Message_Type type = message->getMessageType();
     switch(type)
     {
         case Message_Type::RegisterTask:
         {
             handleAgentRegistration(sender_identity, *dynamic_cast<RegisterTaskMsg *>(message.get()));
+            // Send initial mode to the newly registered agent to synchronize its state with the system
+            sendModeChangeToAgent(sender_identity, mode_);
             break;
         }
         case Message_Type::Heartbeat:
@@ -188,12 +188,6 @@ void SystemManager::handleAgentRegistration(const std::string &identity, const R
         logError("Failed to send registration ack to " + identity + ": " + std::string(e.what()));
     }
 
-    try{
-        sendModeChangeToAgent(reg_msg.getTaskName(), mode_);
-    } catch (const std::exception &e) {
-        logError("Failed to send initial mode to " + reg_msg.getTaskName() + ": " + std::string(e.what()));
-    }
-    logInfo("Sent initial mode " + std::to_string(static_cast<int>(mode_)) + " to agent: " + reg_msg.getTaskName());
     logInfo("Registration complete for agent: " + reg_msg.getTaskName());
 }
 
@@ -205,13 +199,14 @@ void SystemManager::handleAgentHeartbeat(const std::string &identity, const Hear
     if(it != registered_agents_.end())
     {
         it->second.last_seen = std::chrono::system_clock::now();
-        logInfo("Heartbeat received from: " + it->second.task_name);
-        // sendAcknowledgmentToAgent(identity, heartbeat, true);
+        logInfo("Heartbeat received from: [" + it->second.task_name + "] " + 
+                "PID: [" + std::to_string(heartbeat.getPid()) + "]" + 
+                ", Status: [" + taskStatusToString(heartbeat.getStatus()) + "]" +
+                ", Mode: [" + System::systemModeToString(heartbeat.getMode()) + "]");
     }
     else
     {
         logWarning("Received heartbeat from unregistered identity: " + identity);
-        // sendAcknowledgmentToAgent(identity, heartbeat, false);
     }
 }
 
@@ -227,36 +222,28 @@ void SystemManager::sendAcknowledgmentToAgent(const std::string &identity, const
     }
 }
 
-void SystemManager::sendModeChangeToAgent(const std::string &agent_name, SystemMode_Type new_mode)
+void SystemManager::sendModeChangeToAgent(const std::string &identity, SystemMode_Type new_mode)
 {
     std::lock_guard<std::mutex> lock(agents_mutex_);
 
-    auto it = agent_name_to_identity_.find(agent_name);
-    if(it != agent_name_to_identity_.end())
+    auto agent_it = registered_agents_.find(identity);
+    if(agent_it != registered_agents_.end())
     {
-        const std::string &identity = it->second;
-        auto agent_it = registered_agents_.find(identity);
-        if(agent_it != registered_agents_.end())
-        {
-            ChangeModeMsg mode_msg(new_mode);
-            try {
-                std::lock_guard<std::mutex> router_lock(router_mutex_);
-                task_control_router_->sendMessageToIdentity(mode_msg, identity);
-                agent_it->second.current_mode = new_mode;
-                logInfo("Sent mode change to " + agent_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
-            } catch (const std::exception &e) {
-                logError("Failed to send mode change to " + agent_name + ": " + std::string(e.what()));
-            }
-        }
-        else
-        {
-            logWarning("Agent identity not found in registered agents: " + identity);
+        ChangeModeMsg mode_msg(new_mode);
+        try {
+            std::lock_guard<std::mutex> router_lock(router_mutex_);
+            task_control_router_->sendMessageToIdentity(mode_msg, identity);
+            agent_it->second.current_mode = new_mode;
+            logInfo("Sent mode change to " + agent_it->second.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
+        } catch (const std::exception &e) {
+            logError("Failed to send mode change to " + agent_it->second.task_name + ": " + std::string(e.what()));
         }
     }
     else
     {
-        logWarning("Agent name not found: " + agent_name);
+        logWarning("Agent identity not found in registered agents: " + identity);
     }
+
 }
 
 void SystemManager::broadcastModeChange(SystemMode_Type new_mode)
