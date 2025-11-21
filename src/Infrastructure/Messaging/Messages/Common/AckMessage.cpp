@@ -2,14 +2,14 @@
 
 namespace PiTrac
 {
-
 void AckMessage::serialize(msgpack::sbuffer &buffer) const
 {
     msgpack::packer<msgpack::sbuffer> packer(buffer);
     packer.pack_array(3); // Just message type, timestamp, and status
     packCommonFields(packer);
     packer.pack(static_cast<int>(status_));
-    // Note: We don't serialize the original message to avoid circular dependencies
+    // Note: We don't serialize the original message to avoid circular
+    // dependencies
     // The original message is kept for local reference but not transmitted
 }
 
@@ -20,8 +20,8 @@ void AckMessage::deserialize(const char *data, size_t size)
 
     if (obj.type != msgpack::type::ARRAY || obj.via.array.size != 3)
     {
-        throw std::runtime_error("Invalid AckMessage format - expected array with 3 elements, got " + 
-                                std::to_string(obj.via.array.size));
+        throw std::runtime_error("Invalid AckMessage format - expected array with 3 elements, got " +
+                                 std::to_string(obj.via.array.size));
     }
 
     int message_type;
@@ -58,8 +58,7 @@ std::unique_ptr<MessageInterface> AckMessage::clone() const
 std::string AckMessage::toString() const
 {
     return "AckMessage: Status=" + std::to_string(static_cast<int>(status_)) +
-           ", OriginalMessageType=" + (original_msg_ ? 
-               std::to_string(static_cast<int>(original_msg_->getMessageType())) : "None");
+           ", OriginalMessageType=" + (original_msg_ ?
+                                       std::to_string(static_cast<int>(original_msg_->getMessageType())) : "None");
 }
-
 } // namespace PiTrac

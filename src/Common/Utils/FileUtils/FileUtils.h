@@ -153,6 +153,17 @@ class FileUtils
  */
     static std::vector<std::string> getPathDirectories();
 
+    static std::string getDirectoryFromPath
+    (
+        const std::string &filePath
+    );
+
+    static bool readFileToString
+    (
+        const std::string &filePath,
+        std::string &outContent
+    );
+
   private:
 /**
  * @brief Checks if a file is executable.

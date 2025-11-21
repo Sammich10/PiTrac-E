@@ -125,7 +125,8 @@ void SystemManager::taskControlMessageHandler(std::unique_ptr<MessagerBase::Iden
         case Message_Type::RegisterTask:
         {
             handleAgentRegistration(sender_identity, *dynamic_cast<RegisterTaskMsg *>(message.get()));
-            // Send initial mode to the newly registered agent to synchronize its state with the system
+            // Send initial mode to the newly registered agent to synchronize
+            // its state with the system
             sendModeChangeToAgent(sender_identity, mode_);
             break;
         }
@@ -199,8 +200,8 @@ void SystemManager::handleAgentHeartbeat(const std::string &identity, const Hear
     if(it != registered_agents_.end())
     {
         it->second.last_seen = std::chrono::system_clock::now();
-        logInfo("Heartbeat received from: [" + it->second.task_name + "] " + 
-                "PID: [" + std::to_string(heartbeat.getPid()) + "]" + 
+        logInfo("Heartbeat received from: [" + it->second.task_name + "] " +
+                "PID: [" + std::to_string(heartbeat.getPid()) + "]" +
                 ", Status: [" + taskStatusToString(heartbeat.getStatus()) + "]" +
                 ", Mode: [" + System::systemModeToString(heartbeat.getMode()) + "]");
     }
@@ -243,7 +244,6 @@ void SystemManager::sendModeChangeToAgent(const std::string &identity, SystemMod
     {
         logWarning("Agent identity not found in registered agents: " + identity);
     }
-
 }
 
 void SystemManager::broadcastModeChange(SystemMode_Type new_mode)

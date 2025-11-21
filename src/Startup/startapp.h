@@ -20,7 +20,6 @@
 
 namespace PiTrac
 {
-
 // Alias for convenience
 using ProcessOptions = AppConfig::ProcessOptions;
 
@@ -35,18 +34,18 @@ class StartApp
      *
      * @param[in] executable The path to the executable to run.
      * @param[in] args The arguments to pass to the executable.
-     * @param[in] processOpts Process configuration options (prctl, affinity, etc.)
+     * @param[in] processOpts Process configuration options (prctl, affinity,
+     * etc.)
      *
      * @return The process ID of the started process.
      */
     const static pid_t startProcess
     (
-        const std::string& executable,
-        const std::vector<std::string>& args,
-        const ProcessOptions& processOpts = {}
+        const std::string &executable,
+        const std::vector<std::string> &args,
+        const ProcessOptions &processOpts = {}
     );
 };
-
 } // namespace PiTrac
 
 #endif // STARTAPP_HPP

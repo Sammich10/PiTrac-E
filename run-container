@@ -121,5 +121,5 @@ podman run -it --rm \
     --gidmap ${HOST_GID}:0:1 \
     -u ${HOST_UID}:${HOST_GID} \
     --entrypoint "/bin/bash" \
-    --name pitrac-builder \
+    --name pitrac-software-builder \
     "${CONTAINER_IMAGE}"

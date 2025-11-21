@@ -8,16 +8,18 @@
 
 namespace PiTrac
 {
-
 class MessageRouter : public MessagerBase
 {
-public:
-    MessageRouter() : MessagerBase(SocketType::Router) {}
-    
+  public:
+    MessageRouter() : MessagerBase(SocketType::Router)
+    {
+    }
+
     virtual ~MessageRouter() = default;
 
     // Router-specific send method - sends to specific dealer identity
-    void sendMessageToIdentity(
+    void sendMessageToIdentity
+    (
         const MessageInterface &message,
         const std::string &identity
     );
@@ -35,28 +37,36 @@ public:
     }
 
     // Router-specific receiving with identity tracking
-    void startReceivingWithIdentity(
+    void startReceivingWithIdentity
+    (
         std::function<void(std::unique_ptr<MessagerBase::IdentityMessage>)> handler
     );
 
     // Override base receiving to use identity-aware version
-    void startReceiving(
+    void startReceiving
+    (
         std::function<void(std::unique_ptr<MessageInterface>)> handler
     ) override;
 
     // Broadcast message to all known dealer identities
-    void broadcastMessage(const MessageInterface &message);
+    void broadcastMessage
+    (
+        const MessageInterface &message
+    );
 
     // Get list of known dealer identities
     std::vector<std::string> getConnectedDealers() const;
 
     // Check if a specific dealer is connected
-    bool isDealerConnected(const std::string &identity) const;
+    bool isDealerConnected
+    (
+        const std::string &identity
+    ) const;
 
-protected:
+  protected:
     void receiveLoop() override;
 
-private:
+  private:
     // Receive message with identity information
     std::unique_ptr<MessagerBase::IdentityMessage> receiveMessageWithIdentity();
 
@@ -69,9 +79,11 @@ private:
     std::set<std::string> connected_dealers_;
 
     // Helper to add/update dealer connection
-    void updateDealerConnection(const std::string &identity);
+    void updateDealerConnection
+    (
+        const std::string &identity
+    );
 };
-
 } // namespace PiTrac
 
 #endif // MESSAGE_ROUTER_H

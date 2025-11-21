@@ -87,8 +87,9 @@ class MessagerBase
         const std::string &topic
     );
 
-    // Structure to hold message with sender identity (used by router/dealer classes)
-    struct IdentityMessage 
+    // Structure to hold message with sender identity (used by router/dealer
+    // classes)
+    struct IdentityMessage
     {
         std::string sender_identity;
         std::unique_ptr<MessageInterface> message;
@@ -128,21 +129,36 @@ class MessagerBase
 
   protected:
     // Protected members for derived classes
-    void* getSocket() { return socket_; }
-    SocketType getSocketType() const { return socket_type_; }
-    bool isRunning() const { return running_.load(); }
-    void setRunning(bool running) { running_.store(running); }
+    void *getSocket()
+    {
+        return socket_;
+    }
+
+    SocketType getSocketType() const
+    {
+        return socket_type_;
+    }
+
+    bool isRunning() const
+    {
+        return running_.load();
+    }
+
+    void setRunning(bool running)
+    {
+        running_.store(running);
+    }
 
     MessageFactory message_factory_ = MessageFactory();
 
     virtual void receiveLoop();
-    
+
     // Thread management - accessible to derived classes
     std::thread receive_thread_;
     std::function<void(std::unique_ptr<MessageInterface>)> message_handler_;
     std::function<void(std::unique_ptr<IdentityMessage>)> identity_message_handler_;
     std::shared_ptr<GSLogger> logger_;
-    
+
   private:
     static void *context_;
     void *socket_;
@@ -150,7 +166,6 @@ class MessagerBase
     std::atomic<bool> running_;
     int timeout_ms_ = 1000; // Default: 1 second
 }; // class MessagerBase
-
 } // namespace PiTrac
 
 #endif // ZMQ_MESSENGER_H

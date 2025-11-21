@@ -129,6 +129,26 @@ std::vector<std::string> FileUtils::getPathDirectories()
     return directories;
 }
 
+std::string FileUtils::getDirectoryFromPath(const std::string &filePath)
+{
+    std::filesystem::path pathObj(filePath);
+    return pathObj.parent_path().string();
+}
+
+bool FileUtils::readFileToString(const std::string &filePath, std::string &outContent)
+{
+    std::ifstream fileStream(filePath);
+    if (!fileStream.is_open())
+    {
+        return false;
+    }
+
+    outContent.assign((std::istreambuf_iterator<char>(fileStream)),
+                      std::istreambuf_iterator<char>());
+    fileStream.close();
+    return true;
+}
+
 bool FileUtils::isExecutable(const std::string &filePath)
 {
     if (!std::filesystem::exists(filePath))

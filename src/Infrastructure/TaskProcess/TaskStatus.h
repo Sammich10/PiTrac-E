@@ -3,7 +3,6 @@
 
 namespace PiTrac
 {
-
 enum class TaskStatus
 {
     NotStarted,
@@ -16,7 +15,6 @@ enum class TaskStatus
     Failed,
     Crashed
 };
-
 } // namespace PiTrac
 
 #endif // TASKSTATUS_H

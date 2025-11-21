@@ -168,10 +168,8 @@ class GSLogger
     logger_level logLevel_;
     std::string logFileName_;
     boost::shared_ptr<boost::log::sinks::text_file_backend> fileBackend_;
-    boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend> >
-    fileSink_;
-    boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> >
-    consoleSink_;
+    boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend> > fileSink_;
+    boost::shared_ptr<boost::log::sinks::synchronous_sink<boost::log::sinks::text_ostream_backend> > consoleSink_;
     boost::log::sources::severity_logger<boost::log::trivial::severity_level> logger_;
 
     static std::shared_ptr<GSLogger> instance_;

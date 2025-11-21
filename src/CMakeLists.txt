@@ -88,6 +88,16 @@ else()
     set(MSGPACK_CXX_LIBS ${msgpack-cxx_LIBRARIES})
 endif()
 
+# Find SQLite3
+find_package(SQLite3 REQUIRED)
+if(NOT SQLite3_FOUND)
+    message(FATAL_ERROR "SQLite3 not found. Please install SQLite3 or set the SQLite3_DIR environment variable.")
+    return()
+else()
+    include_directories(${SQLite3_INCLUDE_DIRS})
+    set(SQLITE3_LIBS ${SQLite3_LIBRARIES})
+endif()
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Calibration)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Common)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Interfaces)

@@ -8,14 +8,14 @@
 
 namespace PiTrac
 {
-
 class MessagerFactory
 {
-public:
+  public:
     // Create appropriate messager based on socket type
     static std::unique_ptr<MessagerBase> createMessager(MessagerBase::SocketType type)
     {
-        switch (type) {
+        switch (type)
+        {
             case MessagerBase::SocketType::Router:
                 return std::make_unique<MessageRouter>();
             case MessagerBase::SocketType::Dealer:
@@ -24,23 +24,23 @@ public:
                 return std::make_unique<MessagerBase>(type);
         }
     }
-    
+
     // Convenience methods for specific types
     static std::unique_ptr<MessageRouter> createRouter()
     {
         return std::make_unique<MessageRouter>();
     }
-    
-    static std::unique_ptr<MessageDealer> createDealer(const std::string& identity = "")
+
+    static std::unique_ptr<MessageDealer> createDealer(const std::string &identity = "")
     {
         auto dealer = std::make_unique<MessageDealer>();
-        if (!identity.empty()) {
+        if (!identity.empty())
+        {
             dealer->setIdentity(identity);
         }
         return dealer;
     }
 };
-
 } // namespace PiTrac
 
 #endif // MESSAGER_FACTORY_H

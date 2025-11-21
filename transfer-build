@@ -1,0 +1,104 @@
+#!/bin/bash
+
+# This script transfers build artifacts from the source directory to the destination directory.
+
+SOURCE_BIN_DIR=./build/bin
+SOURCE_LIB_DIR=./build/lib
+SOURCE_CFG_DIR=./configs/App
+
+DEST_BIN_DIR=/usr/bin
+DEST_LIB_DIR=/usr/lib
+DEST_CFG_DIR=/etc/pitrac/configs
+
+PITRAC_IP=192.168.1.82
+PITRAC_HOSTNAME=pitrac-pi
+PITRAC_USER="root"
+
+PITRAC_TARGET="${PITRAC_USER}@${PITRAC_HOSTNAME}"
+
+while :; do
+    case $1 in
+        -h|--help)
+            echo "Usage: $0"
+            echo "This script transfers build artifacts from the source directories to the destination directories."
+            exit 0
+            ;;
+        --src-bin-dir)
+            SOURCE_BIN_DIR="$2"
+            shift 2
+            ;;
+        --src-lib-dir)
+            SOURCE_LIB_DIR="$2"
+            shift 2
+            ;;
+        --src-cfg-dir)
+            SOURCE_CFG_DIR="$2"
+            shift 2
+            ;;
+        --dest-bin-dir)
+            DEST_BIN_DIR="$2"
+            shift 2
+            ;;
+        --dest-lib-dir)
+            DEST_LIB_DIR="$2"
+            shift 2
+            ;;
+        --dest-cfg-dir)
+            DEST_CFG_DIR="$2"
+            shift 2
+            ;;
+        --pitrac-ip)
+            PITRAC_IP="$2"
+            shift 2
+            ;;
+        --pitrac-hostname)
+            PITRAC_HOSTNAME="$2"
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+echo "Transferring binaries from ${SOURCE_BIN_DIR} to ${DEST_BIN_DIR}"
+echo "Transferring libraries from ${SOURCE_LIB_DIR} to ${DEST_LIB_DIR}"
+echo "Transferring configuration files from ${SOURCE_CFG_DIR} to ${DEST_CFG_DIR}"
+
+# Ping the target device to ensure it's reachable
+ping -c 1 ${PITRAC_HOSTNAME} > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "Error: Unable to reach ${PITRAC_HOSTNAME} directly, trying IP ${PITRAC_IP}."
+    ping -c 1 ${PITRAC_IP} > /dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Error: Unable to reach ${PITRAC_HOSTNAME} or IP ${PITRAC_IP}. Exiting."
+        exit 1
+    else
+        PITRAC_TARGET="${PITRAC_USER}@${PITRAC_IP}"
+        echo "Using IP address ${PITRAC_IP} for transfer."
+    fi
+fi
+
+# Transfer binaries
+scp -r ${SOURCE_BIN_DIR}/* ${PITRAC_TARGET}:${DEST_BIN_DIR}/
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to transfer binaries."
+    exit 1
+fi
+
+# Transfer libraries
+scp -r ${SOURCE_LIB_DIR}/* ${PITRAC_TARGET}:${DEST_LIB_DIR}/
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to transfer libraries."
+    exit 1
+fi
+
+# Transfer configuration files
+scp -r ${SOURCE_CFG_DIR}/* ${PITRAC_TARGET}:${DEST_CFG_DIR}/
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to transfer configuration files."
+    exit 1
+fi
+
+echo "Transfer completed successfully."
+exit 0

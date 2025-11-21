@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <json/json.h>
 #include "structdef/AppConfig.h"
+#include "structdef/CalConfig.h"
 
 namespace PiTrac
 {
@@ -59,6 +60,16 @@ class JsonParser
         AppConfig &config,
         const std::string &filePath,
         const std::string &key = "Executables"
+    );
+
+    /**
+     * Parse CalConfig from JSON file
+     * @param filePath Path to the JSON configuration file
+     * @return CalConfig struct with parsed data
+     */
+    static CalConfig parseCalConfig
+    (
+        const std::string &filePath
     );
 
   private:

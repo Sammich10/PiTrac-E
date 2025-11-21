@@ -182,5 +182,4 @@ void MessagerBase::receiveLoop()
         zmq_msg_close(&msg);
     }
 }
-
 } // namespace PiTrac

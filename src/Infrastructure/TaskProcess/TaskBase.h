@@ -22,7 +22,6 @@
 
 namespace PiTrac
 {
-
 class TaskBase
 {
   public:

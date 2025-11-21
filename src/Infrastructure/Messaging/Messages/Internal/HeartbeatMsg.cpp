@@ -3,7 +3,6 @@
 
 namespace PiTrac
 {
-
 void HeartbeatMsg::serialize(msgpack::sbuffer &buffer) const
 {
     msgpack::packer<msgpack::sbuffer> packer(buffer);
@@ -57,11 +56,10 @@ std::unique_ptr<MessageInterface> HeartbeatMsg::clone() const
 std::string HeartbeatMsg::toString() const
 {
     auto time_t = std::chrono::system_clock::to_time_t(timestamp_);
-    return "HeartbeatMsg[PID:" + std::to_string(pid_) + 
-            ", Agent:" + agent_name_ + 
-            ", Status:" + std::to_string(static_cast<int>(status_)) +
-            ", Mode:" + System::systemModeToString(mode_) +
-            ", Time:" + std::to_string(time_t) + "]";
+    return "HeartbeatMsg[PID:" + std::to_string(pid_) +
+           ", Agent:" + agent_name_ +
+           ", Status:" + std::to_string(static_cast<int>(status_)) +
+           ", Mode:" + System::systemModeToString(mode_) +
+           ", Time:" + std::to_string(time_t) + "]";
 }
-
 }

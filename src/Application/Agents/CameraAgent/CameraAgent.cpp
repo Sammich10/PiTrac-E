@@ -8,7 +8,7 @@ CameraAgent::CameraAgent(const size_t camera_index)
     : AgentBase("CameraAgent_" + std::to_string(camera_index))
     , frame_buffer_(std::make_shared<FrameBuffer>(64)) // Default buffer size of
                                                        // 64 frames
-    , frame_processor_(FrameProcessorFactory::create(frame_buffer_, camera_index))
+    , frame_processor_(nullptr)
     , camera_(nullptr)
     , camera_index_(camera_index)
     , running_(false)
@@ -41,8 +41,6 @@ bool CameraAgent::setupProcess()
     camera_->setFrameRate(15.0f); // 15 FPS
     camera_->setFocalLength(2.8f);
     camera_->setTriggerMode(TriggerMode::FREE_RUNNING);
-
-    frame_processor_->init();
 
     logInfo("Initializing CameraAgent for: " + name_);
 
@@ -92,11 +90,24 @@ void CameraAgent::changeMode(PiTrac::SystemMode_Type new_mode)
         case SystemMode_Type::VIEWFINDER:
             logInfo("Starting viewfinder mode for: " + name_);
             agent_thread_ = std::thread(&CameraAgent::viewfinderLoop, this);
-            if(frame_processor_->isRunning())
+            // Initialize and start frame processor
+            if(!frame_processor_)
             {
-                frame_processor_->stop();
+                frame_processor_ = FrameProcessorFactory::create(FrameProcessor::ProcessorType::STREAMING, frame_buffer_, camera_index_);
+                if(!frame_processor_)
+                {
+                    logError("Failed to create FrameProcessor for: " + name_);
+                    run_.store(false);
+                    break;
+                }
+                if(!frame_processor_->init())
+                {
+                    logError("Failed to initialize FrameProcessor for: " + name_);
+                    run_.store(false);
+                    break;
+                }
             }
-            frame_processor_->streamFrames();
+            frame_processor_->start();
             break;
         default:
             logInfo("Unimplemented mode for CameraAgent: " + std::to_string(static_cast<int>(new_mode)) + " for: " + name_);

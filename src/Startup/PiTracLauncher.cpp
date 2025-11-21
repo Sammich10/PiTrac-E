@@ -120,6 +120,6 @@ int main(int argc, char *argv[])
         std::cerr << "Unknown command: " << command << std::endl;
         return EXIT_FAILURE;
     }
-   
+
     return 0;
 }

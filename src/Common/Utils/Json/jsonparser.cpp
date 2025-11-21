@@ -1,4 +1,4 @@
-#include "JsonParser.h"
+#include "Common/Utils/Json/jsonparser.h"
 #include <iostream>
 
 namespace PiTrac
@@ -233,5 +233,68 @@ AppConfig::ProcessOptions JsonParser::parseProcessOptions(const Json::Value &opt
     }
 
     return opts;
+}
+
+CalConfig JsonParser::parseCalConfig(const std::string &filePath)
+{
+    // Read and parse JSON file
+    std::ifstream file(filePath);
+    if (!file.is_open())
+    {
+        throw std::runtime_error("Could not open JSON file: " + filePath);
+    }
+
+    Json::Value root;
+    Json::CharReaderBuilder builder;
+    std::string errors;
+
+    if (!Json::parseFromStream(builder, file, &root, &errors))
+    {
+        throw std::runtime_error("Failed to parse JSON: " + errors);
+    }
+
+    CalConfig config;
+    // Parse SchemaVersion
+    if (root.isMember("SchemaVersion") && root["SchemaVersion"].isString())
+    {
+        std::string versionStr = root["SchemaVersion"].asString();
+        size_t dotPos = versionStr.find('.');
+        if (dotPos != std::string::npos)
+        {
+            config.SchemaVersionMajor = std::stoul(versionStr.substr(0, dotPos));
+            config.SchemaVersionMinor = std::stoul(versionStr.substr(dotPos + 1));
+        }
+        else
+        {
+            config.SchemaVersionMajor = std::stoul(versionStr);
+            config.SchemaVersionMinor = 0;
+        }
+    }
+    else
+    {
+        throw std::runtime_error("'SchemaVersion' field is required and must be a string");
+    }
+
+    // Parse SchemaFile
+    if (root.isMember("SchemaFile") && root["SchemaFile"].isString())
+    {
+        config.SchemaFile = root["SchemaFile"].asString();
+    }
+    else
+    {
+        throw std::runtime_error("'SchemaFile' field is required and must be a string");
+    }
+
+    // Parse DatabaseFile
+    if (root.isMember("DatabaseFile") && root["DatabaseFile"].isString())
+    {
+        config.DatabaseFile = root["DatabaseFile"].asString();
+    }
+    else
+    {
+        throw std::runtime_error("'DatabaseFile' field is required and must be a string");
+    }
+
+    return config;
 }
 } // namespace PiTrac
