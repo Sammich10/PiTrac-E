@@ -1,0 +1,69 @@
+{
+  "message_name": "HeartbeatMsg",
+  "description": "Internal heartbeat message for monitoring agent health and status",
+  "message_type": "Heartbeat",
+  "fields": {
+    "pid": {
+      "type": "int64",
+      "description": "Process ID of the sending agent"
+    },
+    "agent_name": {
+      "type": "string",
+      "description": "Name/identifier of the sending agent"
+    },
+    "task_status": {
+      "type": "int32",
+      "description": "Current task status (0=NotStarted, 1=Starting, 2=Running, 3=Paused, 4=Stopping, 5=Stopped, 6=Timeout, 7=Failed, 8=Crashed)"
+    },
+    "system_mode": {
+      "type": "int32",
+      "description": "Current system mode (0=STARTING_UP, 1=STANDBY, 2=VIEWFINDER, 3=CALIBRATION, 4=LAUNCH_MONITOR, 5=DIAGNOSTIC)"
+    }
+  },
+  "enums": {
+    "TaskStatus": {
+      "description": "Task execution status",
+      "values": {
+        "NotStarted": 0,
+        "Starting": 1,
+        "Running": 2,
+        "Paused": 3,
+        "Stopping": 4,
+        "Stopped": 5,
+        "Timeout": 6,
+        "Failed": 7,
+        "Crashed": 8
+      }
+    }
+  },
+  "custom_methods": [
+    {
+      "name": "isHealthy",
+      "return_type": "bool",
+      "body": "return task_status_ == 2;"
+    },
+    {
+      "name": "isRunning",
+      "return_type": "bool",
+      "body": "return task_status_ == 2;"
+    },
+    {
+      "name": "isCrashed",
+      "return_type": "bool",
+      "body": "return task_status_ == 8;"
+    },
+    {
+      "name": "getTaskStatusString",
+      "return_type": "std::string",
+      "body": "const char* statuses[] = {\"NotStarted\", \"Starting\", \"Running\", \"Paused\", \"Stopping\", \"Stopped\", \"Timeout\", \"Failed\", \"Crashed\"}; return (task_status_ >= 0 && task_status_ <= 8) ? statuses[task_status_] : \"UNKNOWN\";"
+    },
+    {
+      "name": "getSystemModeString", 
+      "return_type": "std::string",
+      "body": "const char* modes[] = {\"STARTING_UP\", \"STANDBY\", \"VIEWFINDER\", \"CALIBRATION\", \"LAUNCH_MONITOR\", \"DIAGNOSTIC\"}; return (system_mode_ >= 0 && system_mode_ <= 5) ? modes[system_mode_] : \"UNKNOWN\";"
+    }
+  ],
+  "notes": [
+    "Simple heartbeat message for agent health monitoring"
+  ]
+}

@@ -4,11 +4,11 @@
 #include "Application/Managers/ManagerBase/GSManagerBase.h"
 #include "Infrastructure/Messaging/Messagers/MessageRouter.h"
 #include "Infrastructure/Messaging/Messagers/MessagerBase.h"
-#include "Infrastructure/Messaging/Messages/Internal/ChangeModeMsg.h"
-#include "Infrastructure/Messaging/Messages/External/SystemCommandMsg.h"
-#include "Infrastructure/Messaging/Messages/Common/AckMessage.h"
-#include "Infrastructure/Messaging/Messages/Internal/RegisterTaskMsg.h"
-#include "Infrastructure/Messaging/Messages/Internal/HeartbeatMsg.h"
+#include "Infrastructure/Messaging/Messages/ChangeModeMsg.h"
+#include "Infrastructure/Messaging/Messages/SystemCommandMsg.h"
+#include "Infrastructure/Messaging/Messages/AckMessage.h"
+#include "Infrastructure/Messaging/Messages/RegisterTaskMsg.h"
+#include "Infrastructure/Messaging/Messages/HeartbeatMsg.h"
 #include "Common/System/System.h"
 #include <chrono>
 #include <map>
@@ -108,7 +108,6 @@ class SystemManager : public GSManagerBase
     ) const;
     void handleModeChangeCommand
     (
-        const SystemCommandMsg::SetModePayload &payload
     );
 
     // Current system mode

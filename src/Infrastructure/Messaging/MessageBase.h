@@ -10,32 +10,54 @@ namespace PiTrac
 class MessageBase : public MessageInterface
 {
   public:
-    MessageBase();
+    MessageBase() = default;
 
     virtual ~MessageBase() = default;
 
     // Timestamp operations
-    std::chrono::system_clock::time_point getTimestamp() const override;
+    std::chrono::system_clock::time_point getTimestamp() const override
+    {
+        return timestamp_;
+    }
 
     void setTimestamp
     (
         const std::chrono::system_clock::time_point &timestamp
-    ) override;
+    ) override
+    {
+        timestamp_ = timestamp;
+    }
 
     // ZMQ message operations implementation
     void toZmqMessage
     (
         zmq_msg_t &msg
-    ) const override;
+    ) const override
+    {
+        msgpack::sbuffer buffer;
+        serialize(buffer);
+        zmq_msg_init_size(&msg, buffer.size());
+        memcpy(zmq_msg_data(&msg), buffer.data(), buffer.size());
+    }
 
     void fromZmqMessage
     (
         zmq_msg_t &msg
-    ) override;
+    ) override
+    {
+        deserialize(static_cast<const char *>(zmq_msg_data(&msg)), zmq_msg_size(&msg));
+    }
 
     // Utility methods
-    std::string toString() const override;
-
+    std::string toString() const override
+    {
+        std::ostringstream oss;
+        oss << "Message Type: " << static_cast<int>(getMessageType())
+            << ", Timestamp: " << std::chrono::duration_cast<std::chrono::milliseconds>(
+                   timestamp_.time_since_epoch()).count() << " ms since epoch";
+        return oss.str();
+    }
+    std::unique_ptr<MessageInterface> clone() const override = 0;
   protected:
     // Helper for serializing common fields
     template<typename Packer>

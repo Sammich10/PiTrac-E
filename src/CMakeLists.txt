@@ -98,12 +98,41 @@ else()
     set(SQLITE3_LIBS ${SQLite3_LIBRARIES})
 endif()
 
+# Message generation setup - simplified (actual generation happens in Makefile)
+set(GENERATED_MSG_DIR "${CMAKE_SOURCE_DIR}/src/Infrastructure/Messaging/Messages/Generated")
+
+# Ensure generated directory exists
+file(MAKE_DIRECTORY ${GENERATED_MSG_DIR})
+
+# Find generated source files (may be empty initially)
+file(GLOB_RECURSE GENERATED_MSG_SOURCES "${GENERATED_MSG_DIR}/*.cpp")
+file(GLOB_RECURSE GENERATED_MSG_HEADERS "${GENERATED_MSG_DIR}/*.h")
+
+# Store generated sources for later use
+if(GENERATED_MSG_SOURCES)
+    set(PITRAC_GENERATED_SOURCES ${GENERATED_MSG_SOURCES})
+endif()
+
+# Add subdirectories
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Calibration)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Common)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Interfaces)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Infrastructure)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Application)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Startup)
+
+# Now that the pitrac target is defined, add generated sources
+if(TARGET pitrac)
+    # Add generated sources to the project
+    if(PITRAC_GENERATED_SOURCES)
+        target_sources(pitrac PRIVATE ${PITRAC_GENERATED_SOURCES})
+        message(STATUS "Added ${PITRAC_GENERATED_SOURCES} generated message sources")
+    else()
+        message(STATUS "No generated message sources found - run 'make messages' first")
+    endif()
+else()
+    message(WARNING "pitrac target not found - generated message sources will not be linked")
+endif()
 
 option(BUILD_TESTS "Build unit tests" ON)
 

@@ -3,7 +3,7 @@
 
 #include "Application/Agents/CameraAgent/FrameProcessor/FrameProcessor.h"
 #include "Infrastructure/Messaging/Messagers/MessagerBase.h"
-#include "Infrastructure/Messaging/Messages/External/CameraFrameMsg.h"
+#include "Infrastructure/Messaging/Messages/CameraFrameMsg.h"
 
 namespace PiTrac
 {
@@ -23,6 +23,8 @@ class FrameStreamer : public FrameProcessor
   private:
     void processingLoop() override;
     std::unique_ptr<MessagerBase> frame_publisher_;
+    uint64_t frame_count_ = 0;
+    double fps_ = 0.0;
 };
 }
 

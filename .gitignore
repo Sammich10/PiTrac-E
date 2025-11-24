@@ -10,3 +10,14 @@
 build
 sdk
 tmp
+
+# Generated message files
+src/Infrastructure/Messaging/Messages/
+!src/Infrastructure/Messaging/Messages/.gitkeep
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python

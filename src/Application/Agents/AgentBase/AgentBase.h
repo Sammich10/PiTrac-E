@@ -3,10 +3,10 @@
 
 #include "Infrastructure/Messaging/Messagers/MessageDealer.h"
 #include "Infrastructure/Messaging/Messages/MessageTypes.h"
-#include "Infrastructure/Messaging/Messages/Internal/ChangeModeMsg.h"
-#include "Infrastructure/Messaging/Messages/Internal/RegisterTaskMsg.h"
-#include "Infrastructure/Messaging/Messages/Internal/HeartbeatMsg.h"
-#include "Infrastructure/Messaging/Messages/Common/AckMessage.h"
+#include "Infrastructure/Messaging/Messages/ChangeModeMsg.h"
+#include "Infrastructure/Messaging/Messages/RegisterTaskMsg.h"
+#include "Infrastructure/Messaging/Messages/HeartbeatMsg.h"
+#include "Infrastructure/Messaging/Messages/AckMessage.h"
 #include "Infrastructure/TaskProcess/TaskBase.h"
 #include "Common/Utils/Logging/GSLogger.h"
 #include <string>
@@ -112,7 +112,7 @@ class AgentBase : public TaskBase
                         continue; // Retry
                     }
                     auto ack_msg = dynamic_cast<AckMessage *>(response.get());
-                    if(ack_msg->getStatus() != AckMessage::Status::Success)
+                    if(static_cast<AckMessage::AckStatus>(ack_msg->getAck_status()) != AckMessage::AckStatus::Success)
                     {
                         logError("Registration failed, received NACK: " + ack_msg->toString());
                         continue; // Retry
@@ -208,7 +208,7 @@ class AgentBase : public TaskBase
                 {
                     std::lock_guard<std::mutex> lock(mode_mutex_);
                     PiTrac::SystemMode_Type old_mode = lm_mode_;
-                    lm_mode_ = mode_msg->getNewMode();
+                    lm_mode_ = static_cast<PiTrac::SystemMode_Type>(mode_msg->getNew_mode());
                     logInfo("Mode changed from " + System::systemModeToString(old_mode) +
                             " to " + System::systemModeToString(lm_mode_));
                     changeMode(lm_mode_);
@@ -239,7 +239,7 @@ class AgentBase : public TaskBase
     // ROUTER-DEALER pattern helper methods
     void sendHeartbeat()
     {
-        HeartbeatMsg heartbeat(getpid(), name_, getStatus(), lm_mode_);
+        HeartbeatMsg heartbeat(getpid(), name_, (int32_t)getStatus(), (int32_t)lm_mode_);
         try {
             agent_control_->sendMessage(heartbeat);
         } catch (const std::exception &e) {

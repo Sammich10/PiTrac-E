@@ -32,7 +32,7 @@ class FrameProcessor
     (
         std::shared_ptr<FrameBuffer> frame_buffer,
         const uint32_t camera_id
-    )
+    )  
         : frame_buffer_(std::move(frame_buffer)),
         camera_id_(camera_id),
         frame_counter_(0),

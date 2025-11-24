@@ -59,20 +59,21 @@ void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> mes
         auto cmd_msg = dynamic_cast<SystemCommandMsg *>(message.get());
         if(cmd_msg)
         {
-            switch(cmd_msg->getCommandID())
+            SystemCommandMsg::CommandID command_id = static_cast<SystemCommandMsg::CommandID>(cmd_msg->getCommand_id());
+            switch(command_id)
             {
                 case SystemCommandMsg::CommandID::SetMode:
                     logInfo("Handling SetMode command");
-                    SystemCommandMsg::SetModePayload mode_change_payload_;
-                    if(!extractCommandPayload<SystemCommandMsg::SetModePayload>(*cmd_msg, mode_change_payload_))
-                    {
-                        logError("Failed to extract SetModePayload from SystemCommandMsg");
-                        break;
-                    }
-                    handleModeChangeCommand(mode_change_payload_);
+                    // SystemCommandMsg::SetModePayload mode_change_payload_;
+                    // if(!extractCommandPayload<SystemCommandMsg::SetModePayload>(*cmd_msg, mode_change_payload_))
+                    // {
+                    //     logError("Failed to extract SetModePayload from SystemCommandMsg");
+                    //     break;
+                    // }
+                    // handleModeChangeCommand(mode_change_payload_);
                     break;
                 default:
-                    logWarning("Received unknown command ID in SystemCommandMsg: " + std::to_string(static_cast<int>(cmd_msg->getCommandID())));
+                    logWarning("Received unknown command ID in SystemCommandMsg: " + std::to_string(static_cast<int>(cmd_msg->getCommand_id())));
                     break;
             }
         }
@@ -80,37 +81,26 @@ void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> mes
         {
             logError("Failed to cast message to SystemCommandMsg in external command handler");
         }
-        AckMessage ack_msg(std::move(message), AckMessage::Status::Success);
-        system_command_listener_->sendMessage(ack_msg);
+        // AckMessage ack_msg(std::move(message), AckMessage::AckStatus::Success);
+        // system_command_listener_->sendMessage(ack_msg);
     }
     else
     {
         logWarning("Received unexpected message type in external command handler: " + std::to_string(static_cast<int>(message->getMessageType())));
-        AckMessage ack_msg(std::move(message), AckMessage::Status::Failure);
-        system_command_listener_->sendMessage(ack_msg);
+        // AckMessage ack_msg(std::move(message), AckMessage::AckStatus::Failure);
+        // system_command_listener_->sendMessage(ack_msg);
     }
 }
 
 template<typename T>
 bool SystemManager::extractCommandPayload(const SystemCommandMsg &msg, T &payload) const
 {
-    try
-    {
-        payload = std::get<T>(msg.getPayload());
-        return true;
-    }
-    catch (const std::bad_variant_access &e)
-    {
-        logError("Failed to extract command payload from SystemCommandMsg: " + std::string(e.what()));
-        return false;
-    }
+    return true;
 }
 
-void SystemManager::handleModeChangeCommand(const SystemCommandMsg::SetModePayload &payload)
+void SystemManager::handleModeChangeCommand()
 {
-    logInfo("Changing system mode to: " + std::to_string(static_cast<int>(payload.mode)));
-    broadcastModeChange(payload.mode);
-    mode_ = payload.mode;
+    
 }
 
 // Enhanced handler for ROUTER-DEALER pattern with identity
@@ -175,13 +165,13 @@ void SystemManager::handleAgentRegistration(const std::string &identity, const R
     // Send acknowledgment back to agent
     try {
         // Create a simple ack message (without embedding the original message)
-        AckMessage ack_msg(AckMessage::Status::Success);
+        // AckMessage ack_msg(AckMessage::AckStatus::Success);
         logInfo("Sending AckMessage to identity: " + identity);
 
         // Protect router socket access from concurrent async handlers
         {
             std::lock_guard<std::mutex> router_lock(router_mutex_);
-            task_control_router_->sendMessageToIdentity(ack_msg, identity);
+            // task_control_router_->sendMessageToIdentity(ack_msg, identity);
         }
 
         logInfo("AckMessage sent successfully to: " + identity);
@@ -202,8 +192,8 @@ void SystemManager::handleAgentHeartbeat(const std::string &identity, const Hear
         it->second.last_seen = std::chrono::system_clock::now();
         logInfo("Heartbeat received from: [" + it->second.task_name + "] " +
                 "PID: [" + std::to_string(heartbeat.getPid()) + "]" +
-                ", Status: [" + taskStatusToString(heartbeat.getStatus()) + "]" +
-                ", Mode: [" + System::systemModeToString(heartbeat.getMode()) + "]");
+                ", Status: [" + taskStatusToString(static_cast<TaskStatus>(heartbeat.getTask_status())) + "]" +
+                ", Mode: [" + System::systemModeToString(static_cast<SystemMode_Type>(heartbeat.getSystem_mode())) + "]");
     }
     else
     {
@@ -213,14 +203,14 @@ void SystemManager::handleAgentHeartbeat(const std::string &identity, const Hear
 
 void SystemManager::sendAcknowledgmentToAgent(const std::string &identity, const MessageInterface &original_message, bool success)
 {
-    AckMessage ack_msg(std::move(original_message.clone()),
-                       success ? AckMessage::Status::Success : AckMessage::Status::Failure);
-    try {
-        std::lock_guard<std::mutex> router_lock(router_mutex_);
-        task_control_router_->sendMessageToIdentity(ack_msg, identity);
-    } catch (const std::exception &e) {
-        logError("Failed to send acknowledgment to " + identity + ": " + std::string(e.what()));
-    }
+    // AckMessage ack_msg(std::move(original_message.clone()),
+    //                    success ? AckMessage::AckStatus::Success : AckMessage::AckStatus::Failure);
+    // try {
+    //     std::lock_guard<std::mutex> router_lock(router_mutex_);
+    //     task_control_router_->sendMessageToIdentity(ack_msg, identity);
+    // } catch (const std::exception &e) {
+    //     logError("Failed to send acknowledgment to " + identity + ": " + std::string(e.what()));
+    // }
 }
 
 void SystemManager::sendModeChangeToAgent(const std::string &identity, SystemMode_Type new_mode)
@@ -230,7 +220,7 @@ void SystemManager::sendModeChangeToAgent(const std::string &identity, SystemMod
     auto agent_it = registered_agents_.find(identity);
     if(agent_it != registered_agents_.end())
     {
-        ChangeModeMsg mode_msg(new_mode);
+        ChangeModeMsg mode_msg((int32_t)new_mode);
         try {
             std::lock_guard<std::mutex> router_lock(router_mutex_);
             task_control_router_->sendMessageToIdentity(mode_msg, identity);
@@ -252,7 +242,7 @@ void SystemManager::broadcastModeChange(SystemMode_Type new_mode)
 
     for(const auto & [identity, agent] : registered_agents_)
     {
-        ChangeModeMsg mode_msg(new_mode);
+        ChangeModeMsg mode_msg((int32_t)new_mode);
         try {
             std::lock_guard<std::mutex> router_lock(router_mutex_);
             task_control_router_->sendMessageToIdentity(mode_msg, identity);

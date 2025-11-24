@@ -1,0 +1,130 @@
+{
+  "message_name": "AckMessage",
+  "description": "Acknowledgment message that contains the original message data for confirmation",
+  "message_type": "AckMessage",
+  "fields": {
+    "ack_status": {
+      "type": "int32",
+      "description": "Acknowledgment status (0=Success, 1=Failure, 2=Invalid, 3=Timeout)"
+    },
+    "original_message_type": {
+      "type": "int32", 
+      "description": "Type of the original message being acknowledged"
+    },
+    "original_message_data": {
+      "type": "binary",
+      "description": "Serialized data of the original message"
+    },
+    "original_timestamp": {
+      "type": "uint64",
+      "description": "Timestamp of the original message in microseconds since epoch"
+    },
+    "ack_timestamp": {
+      "type": "uint64",
+      "description": "Timestamp when acknowledgment was created"
+    },
+    "error_message": {
+      "type": "string",
+      "description": "Error description if status is Failure or Invalid"
+    },
+    "processing_time_ms": {
+      "type": "int32",
+      "description": "Time taken to process the original message in milliseconds"
+    },
+    "metadata": {
+      "type": "map",
+      "key_type": "string",
+      "value_type": "string",
+      "description": "Additional acknowledgment metadata"
+    }
+  },
+  "enums": {
+    "AckStatus": {
+      "description": "Acknowledgment status codes",
+      "values": {
+        "Success": 0,
+        "Failure": 1,
+        "Invalid": 2,
+        "Timeout": 3,
+        "Retry": 4,
+        "Partial": 5
+      }
+    }
+  },
+  "custom_methods": [
+    {
+      "name": "isSuccess",
+      "return_type": "bool",
+      "body": "return ack_status_ == 0;"
+    },
+    {
+      "name": "isFailure",
+      "return_type": "bool",
+      "body": "return ack_status_ == 1;"
+    },
+    {
+      "name": "isValid",
+      "return_type": "bool",
+      "body": "return ack_status_ != 2;"
+    },
+    {
+      "name": "hasOriginalMessage",
+      "return_type": "bool",
+      "body": "return !original_message_data_.empty();"
+    },
+    {
+      "name": "getOriginalMessageSize",
+      "return_type": "size_t",
+      "body": "return original_message_data_.size();"
+    },
+    {
+      "name": "setSuccess",
+      "return_type": "void",
+      "body": "ack_status_ = 0; error_message_.clear();"
+    },
+    {
+      "name": "setFailure",
+      "return_type": "void",
+      "parameters": [{"name": "error_msg", "type": "const std::string&"}],
+      "body": "ack_status_ = 1; error_message_ = error_msg;"
+    },
+    {
+      "name": "setTimeout",
+      "return_type": "void",
+      "body": "ack_status_ = 3; error_message_ = \"Timeout occurred\";"
+    },
+    {
+      "name": "getProcessingTimeMs",
+      "return_type": "int32_t",
+      "body": "return processing_time_ms_;"
+    }
+  ],
+  "static_methods": [
+    {
+      "name": "createSuccessAck",
+      "return_type": "AckMessage",
+      "parameters": [
+        {"name": "original_msg", "type": "const MessageInterface&"},
+        {"name": "processing_time", "type": "int32_t", "default": "0"}
+      ],
+      "description": "Factory method to create a success acknowledgment"
+    },
+    {
+      "name": "createFailureAck", 
+      "return_type": "AckMessage",
+      "parameters": [
+        {"name": "original_msg", "type": "const MessageInterface&"},
+        {"name": "error_msg", "type": "const std::string&"},
+        {"name": "processing_time", "type": "int32_t", "default": "0"}
+      ],
+      "description": "Factory method to create a failure acknowledgment"
+    }
+  ],
+  "notes": [
+    "This version includes the complete original message data for full confirmation",
+    "The original_message_data field contains the serialized msgpack of the original message",
+    "This allows the sender to verify exactly what was received and processed",
+    "Includes processing time tracking for performance monitoring",
+    "Extensible metadata field for additional ack information"
+  ]
+}

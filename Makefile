@@ -8,7 +8,7 @@ CMAKEFLAGS=-DCMAKE_TOOLCHAIN_FILE=$(OECORE_NATIVE_SYSROOT)/usr/share/cmake/OEToo
 default: pitrac
 
 .PHONY: pitrac
-pitrac: 
+pitrac: messages
 	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS)
 	cmake --build $(BUILD_DIR)
 
@@ -16,6 +16,47 @@ pitrac:
 pitrac_debug: 
 	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS)
 	cmake --build $(BUILD_DIR)
+
+.PHONY: help
+help:
+	@echo "PiTrac Build System"
+	@echo "==================="
+	@echo "Main targets:"
+	@echo "  pitrac           - Build the main application (default)"
+	@echo "  pitrac_debug     - Build with debug configuration"
+	@echo ""
+	@echo "Message generation:"
+	@echo "  messages         - Generate message classes from schemas"
+	@echo "  clean-messages   - Remove all generated message files"
+	@echo "  regen-messages   - Clean and regenerate all messages"
+	@echo ""
+	@echo "Testing:"
+	@echo "  build_tests      - Build unit tests"
+	@echo "  run_tests        - Run all unit tests"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  clean            - Clean build directory"
+	@echo "  help             - Show this help message"
+# Message generation variables
+SCHEMAS_DIR = src/Infrastructure/Messaging/Messages/Schemas
+GENERATED_MSG_DIR = src/Infrastructure/Messaging/Messages
+MESSAGE_GENERATOR = tools/MessageGenerator/GenerateMessages.py
+
+.PHONY: messages
+messages:
+	@echo "Generating unified message classes from all schemas..."
+	@mkdir -p $(GENERATED_MSG_DIR)
+	/usr/bin/python3 $(MESSAGE_GENERATOR) $(SCHEMAS_DIR) $(GENERATED_MSG_DIR)
+	@echo "Unified message generation complete!"
+
+.PHONY: clean-messages
+clean-messages:
+	rm -rf $(GENERATED_MSG_DIR)/*.h
+	rm -rf $(GENERATED_MSG_DIR)/*.cpp
+	touch $(GENERATED_MSG_DIR)/.gitkeep
+	
+.PHONY: regen-messages
+regen-messages: clean-messages messages
 
 .PHONY: build_tests
 build_tests: pitrac
@@ -37,15 +78,3 @@ all: pitrac build_tests
 .PHONY: clean
 clean:
 	cmake -E remove_directory $(BUILD_DIR)
-
-.PHONY: help
-help:
-	@echo "Available targets:"
-	@echo "  pitrac       - Build the main application"
-	@echo "  pitrac_debug - Build the main application in debug mode"
-	@echo "  build_tests  - Build all unit tests"
-	@echo "  run_tests    - Build and run all tests"
-	@echo "  test_colorsys- Build and run only colorsys tests"
-	@echo "  all          - Build application and tests"
-	@echo "  clean        - Clean build directory"
-	@echo "  help         - Show this help message"

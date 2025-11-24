@@ -1,0 +1,32 @@
+{
+  "message_name": "SystemCommandMsg",
+  "description": "System command message for controlling application modes and operations",
+  "message_type": "SystemCommand",
+  "fields": {
+    "command_id": {
+      "type": "int32",
+      "description": "Command identifier (0=SetMode, 1=Calibrate)"
+    },
+    "command_params": {
+      "type": "map",
+      "key_type": "string",
+      "value_type": "string",
+      "description": "Additional command parameters for future extensibility"
+    }
+  },
+  "enums": {
+    "CommandID": {
+      "description": "Available system commands",
+      "values": {
+        "SetMode": 0,
+        "Calibrate": 1
+      }
+    }
+  },
+  "notes": [
+    "This simplified schema represents the complex std::variant payload as separate fields",
+    "The original uses std::variant<SetModePayload> which is more type-safe",
+    "For the generator, we flatten this to simpler fields while preserving functionality",
+    "command_params map allows for future extensibility without schema changes"
+  ]
+}

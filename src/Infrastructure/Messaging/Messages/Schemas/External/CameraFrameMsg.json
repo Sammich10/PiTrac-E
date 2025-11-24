@@ -1,0 +1,35 @@
+{
+  "message_name": "CameraFrameMsg",
+  "description": "Camera frame data with encoded image and metadata",
+  "message_type": "CameraFrame",
+  "fields": {
+    "camera_id": {
+      "type": "string",
+      "description": "Unique camera identifier"
+    },
+    "frame_number": {
+      "type": "uint64",
+      "description": "Sequential frame number"
+    },
+    "capture_timestamp": {
+      "type": "uint64",
+      "description": "Capture time in microseconds since epoch"
+    },
+    "fps": {
+      "type": "float64",
+      "description": "Frames per second"
+    },
+    "image_data": {
+      "type": "binary",
+      "description": "Encoded image data (JPEG/PNG/etc)"
+    },
+    "metadata": {
+      "type": "map",
+      "key_type": "string",
+      "value_type": "string",
+      "description": "Additional frame metadata (codec, quality, etc)"
+    }
+  },
+  "custom_methods": [
+  ]
+}
