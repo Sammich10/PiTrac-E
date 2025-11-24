@@ -100,14 +100,9 @@ class SystemManager : public GSManagerBase
     std::vector<RegisteredAgent> getActiveAgents();
 
     // External command handling
-    template<typename T>
-    bool extractCommandPayload
+    bool handleModeChangeCommand
     (
-        const SystemCommandMsg &msg,
-        T &payload
-    ) const;
-    void handleModeChangeCommand
-    (
+        const SystemCommandMsg &cmd_msg
     );
 
     // Current system mode

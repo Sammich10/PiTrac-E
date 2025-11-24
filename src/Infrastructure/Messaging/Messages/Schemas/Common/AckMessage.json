@@ -27,10 +27,6 @@
       "type": "string",
       "description": "Error description if status is Failure or Invalid"
     },
-    "processing_time_ms": {
-      "type": "int32",
-      "description": "Time taken to process the original message in milliseconds"
-    },
     "metadata": {
       "type": "map",
       "key_type": "string",
@@ -92,32 +88,6 @@
       "name": "setTimeout",
       "return_type": "void",
       "body": "ack_status_ = 3; error_message_ = \"Timeout occurred\";"
-    },
-    {
-      "name": "getProcessingTimeMs",
-      "return_type": "int32_t",
-      "body": "return processing_time_ms_;"
-    }
-  ],
-  "static_methods": [
-    {
-      "name": "createSuccessAck",
-      "return_type": "AckMessage",
-      "parameters": [
-        {"name": "original_msg", "type": "const MessageInterface&"},
-        {"name": "processing_time", "type": "int32_t", "default": "0"}
-      ],
-      "description": "Factory method to create a success acknowledgment"
-    },
-    {
-      "name": "createFailureAck", 
-      "return_type": "AckMessage",
-      "parameters": [
-        {"name": "original_msg", "type": "const MessageInterface&"},
-        {"name": "error_msg", "type": "const std::string&"},
-        {"name": "processing_time", "type": "int32_t", "default": "0"}
-      ],
-      "description": "Factory method to create a failure acknowledgment"
     }
   ],
   "notes": [

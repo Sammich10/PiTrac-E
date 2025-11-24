@@ -63,15 +63,24 @@ void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> mes
             switch(command_id)
             {
                 case SystemCommandMsg::CommandID::SetMode:
+                {
+
                     logInfo("Handling SetMode command");
-                    // SystemCommandMsg::SetModePayload mode_change_payload_;
-                    // if(!extractCommandPayload<SystemCommandMsg::SetModePayload>(*cmd_msg, mode_change_payload_))
-                    // {
-                    //     logError("Failed to extract SetModePayload from SystemCommandMsg");
-                    //     break;
-                    // }
-                    // handleModeChangeCommand(mode_change_payload_);
+                    const bool modeChangeSuccess = handleModeChangeCommand(*cmd_msg);
+                    const AckMessage::AckStatus status = modeChangeSuccess ? AckMessage::AckStatus::Success : AckMessage::AckStatus::Failure;
+                    AckMessage ack_msg_setmode(
+                        static_cast<int32_t>(status),
+                        static_cast<int32_t>(message->getMessageType()),
+                        {}, // original message data omitted for brevity
+                        message->getTimestamp().time_since_epoch().count(), // original timestamp omitted for brevity
+                        static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
+                            std::chrono::system_clock::now().time_since_epoch()).count()),
+                            modeChangeSuccess ? "" : "Failed to change system mode",
+                            {}  // metadata omitted for brevity    
+                    );
+                    system_command_listener_->sendMessage(ack_msg_setmode);   
                     break;
+                }
                 default:
                     logWarning("Received unknown command ID in SystemCommandMsg: " + std::to_string(static_cast<int>(cmd_msg->getCommand_id())));
                     break;
@@ -92,15 +101,42 @@ void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> mes
     }
 }
 
-template<typename T>
-bool SystemManager::extractCommandPayload(const SystemCommandMsg &msg, T &payload) const
+bool SystemManager::handleModeChangeCommand(const SystemCommandMsg &cmd_msg)
 {
+    std::map<std::string, std::string> params = cmd_msg.getCommand_params();
+    std::string mode_str = "";
+    auto it = params.find("mode");
+    if(it == params.end())
+    {
+        logError("SetMode command missing 'mode' parameter");
+        logError("Received message: " + cmd_msg.toString());
+        return false;
+    }
+    else
+    {
+        mode_str = it->second;
+    }
+    SystemMode_Type new_mode = System::stringToSystemMode(mode_str);
+    if(new_mode == SystemMode_Type::MAX_MODE)
+    {
+        logError("SetMode command received invalid mode string: " + mode_str);
+        return false;
+    }
+    {
+        std::lock_guard<std::mutex> lock(agents_mutex_);
+        if(new_mode != mode_)
+        {
+            logInfo("Changing system mode from " + System::systemModeToString(mode_) +
+                    " to " + System::systemModeToString(new_mode));
+            mode_ = new_mode;
+            broadcastModeChange(new_mode);
+        }
+        else
+        {
+            logInfo("System already in requested mode: " + System::systemModeToString(new_mode));
+        }
+    }
     return true;
-}
-
-void SystemManager::handleModeChangeCommand()
-{
-    
 }
 
 // Enhanced handler for ROUTER-DEALER pattern with identity
