@@ -62,7 +62,7 @@ class Endpoints
 
     static const std::string getHostEndpoint()
     {
-        return "tcp://192.168.86.32:6000";
+        return "tcp://192.168.100.71:8000";
     }
 
   private:

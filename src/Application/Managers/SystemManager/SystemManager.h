@@ -53,8 +53,7 @@ class SystemManager : public GSManagerBase
     // Map agent names to their ZeroMQ identities
     std::map<std::string, std::string> agent_name_to_identity_;
     std::mutex agents_mutex_;
-    std::mutex router_mutex_; // Protect router socket access from async
-                              // handlers
+    std::mutex router_mutex_; 
 
     // Message handlers
     void taskControlMessageHandler
@@ -81,7 +80,13 @@ class SystemManager : public GSManagerBase
     (
         const std::string &identity,
         const MessageInterface &original_message,
-        bool success = true
+        const bool success = true
+    );
+
+    void sendAcknowledgementToHost
+    (
+        const MessageInterface &original_message, 
+        const bool success = true
     );
 
     // Command distribution

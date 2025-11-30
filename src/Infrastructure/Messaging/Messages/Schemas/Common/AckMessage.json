@@ -11,27 +11,9 @@
       "type": "int32", 
       "description": "Type of the original message being acknowledged"
     },
-    "original_message_data": {
-      "type": "binary",
-      "description": "Serialized data of the original message"
-    },
     "original_timestamp": {
       "type": "uint64",
       "description": "Timestamp of the original message in microseconds since epoch"
-    },
-    "ack_timestamp": {
-      "type": "uint64",
-      "description": "Timestamp when acknowledgment was created"
-    },
-    "error_message": {
-      "type": "string",
-      "description": "Error description if status is Failure or Invalid"
-    },
-    "metadata": {
-      "type": "map",
-      "key_type": "string",
-      "value_type": "string",
-      "description": "Additional acknowledgment metadata"
     }
   },
   "enums": {
@@ -62,32 +44,6 @@
       "name": "isValid",
       "return_type": "bool",
       "body": "return ack_status_ != 2;"
-    },
-    {
-      "name": "hasOriginalMessage",
-      "return_type": "bool",
-      "body": "return !original_message_data_.empty();"
-    },
-    {
-      "name": "getOriginalMessageSize",
-      "return_type": "size_t",
-      "body": "return original_message_data_.size();"
-    },
-    {
-      "name": "setSuccess",
-      "return_type": "void",
-      "body": "ack_status_ = 0; error_message_.clear();"
-    },
-    {
-      "name": "setFailure",
-      "return_type": "void",
-      "parameters": [{"name": "error_msg", "type": "const std::string&"}],
-      "body": "ack_status_ = 1; error_message_ = error_msg;"
-    },
-    {
-      "name": "setTimeout",
-      "return_type": "void",
-      "body": "ack_status_ = 3; error_message_ = \"Timeout occurred\";"
     }
   ],
   "notes": [

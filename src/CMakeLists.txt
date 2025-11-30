@@ -121,23 +121,3 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Infrastructure)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Application)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Startup)
 
-# Now that the pitrac target is defined, add generated sources
-if(TARGET pitrac)
-    # Add generated sources to the project
-    if(PITRAC_GENERATED_SOURCES)
-        target_sources(pitrac PRIVATE ${PITRAC_GENERATED_SOURCES})
-        message(STATUS "Added ${PITRAC_GENERATED_SOURCES} generated message sources")
-    else()
-        message(STATUS "No generated message sources found - run 'make messages' first")
-    endif()
-else()
-    message(WARNING "pitrac target not found - generated message sources will not be linked")
-endif()
-
-option(BUILD_TESTS "Build unit tests" ON)
-
-if(BUILD_TESTS)
-    message(STATUS "Building unit tests")
-    enable_testing()
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
-endif()

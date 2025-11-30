@@ -5,10 +5,13 @@ CMAKEFLAGS=-DCMAKE_TOOLCHAIN_FILE=$(OECORE_NATIVE_SYSROOT)/usr/share/cmake/OEToo
 		-G "Ninja" \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-default: pitrac
+default: pitrac-src
 
 .PHONY: pitrac
-pitrac: messages
+pitrac: cpp-messages pitrac-src
+
+.PHONY: pitrac-src
+pitrac-src:
 	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS)
 	cmake --build $(BUILD_DIR)
 
@@ -27,7 +30,7 @@ help:
 	@echo ""
 	@echo "Message generation:"
 	@echo "  message-types    - Generate message type enumerations"
-	@echo "  messages         - Generate C++ message classes from schemas"
+	@echo "  cpp-messages         - Generate C++ message classes from schemas"
 	@echo "  python-messages  - Generate Python message classes for Flask"
 	@echo "  all-messages     - Generate message types and all message classes"
 	@echo "  clean-messages   - Remove all generated message files"
@@ -54,8 +57,8 @@ message-types:
 	/usr/bin/python3 $(MESSAGE_TYPES_GENERATOR) $(SCHEMAS_DIR) $(FLASK_MESSAGES_DIR)
 	@echo "Message types generation complete!"
 
-.PHONY: messages
-messages:
+.PHONY: cpp-messages
+cpp-messages:
 	@echo "Generating unified message classes from all schemas..."
 	@mkdir -p $(GENERATED_MSG_DIR)
 	/usr/bin/python3 $(CPP_MESSAGE_GENERATOR) $(SCHEMAS_DIR) $(GENERATED_MSG_DIR)
@@ -70,7 +73,7 @@ python-messages: message-types
 	@echo "External and Common Python message generation complete!"
 
 .PHONY: all-messages
-all-messages: message-types messages python-messages
+all-messages: message-types cpp-messages python-messages
 
 .PHONY: clean-messages
 clean-messages:

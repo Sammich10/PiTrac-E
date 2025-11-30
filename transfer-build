@@ -10,7 +10,7 @@ DEST_BIN_DIR=/usr/bin
 DEST_LIB_DIR=/usr/lib
 DEST_CFG_DIR=/etc/pitrac/configs
 
-PITRAC_IP=192.168.1.82
+PITRAC_IP=192.168.100.212
 PITRAC_HOSTNAME=pitrac-pi
 PITRAC_USER="root"
 

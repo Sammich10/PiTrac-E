@@ -67,37 +67,25 @@ void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> mes
 
                     logInfo("Handling SetMode command");
                     const bool modeChangeSuccess = handleModeChangeCommand(*cmd_msg);
-                    const AckMessage::AckStatus status = modeChangeSuccess ? AckMessage::AckStatus::Success : AckMessage::AckStatus::Failure;
-                    AckMessage ack_msg_setmode(
-                        static_cast<int32_t>(status),
-                        static_cast<int32_t>(message->getMessageType()),
-                        {}, // original message data omitted for brevity
-                        message->getTimestamp().time_since_epoch().count(), // original timestamp omitted for brevity
-                        static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(
-                            std::chrono::system_clock::now().time_since_epoch()).count()),
-                            modeChangeSuccess ? "" : "Failed to change system mode",
-                            {}  // metadata omitted for brevity    
-                    );
-                    system_command_listener_->sendMessage(ack_msg_setmode);   
+                    sendAcknowledgementToHost(*message, modeChangeSuccess);
                     break;
                 }
                 default:
                     logWarning("Received unknown command ID in SystemCommandMsg: " + std::to_string(static_cast<int>(cmd_msg->getCommand_id())));
+                    sendAcknowledgementToHost(*message, false);
                     break;
             }
         }
         else
         {
+            sendAcknowledgementToHost(*message, false);
             logError("Failed to cast message to SystemCommandMsg in external command handler");
         }
-        // AckMessage ack_msg(std::move(message), AckMessage::AckStatus::Success);
-        // system_command_listener_->sendMessage(ack_msg);
+        
     }
     else
     {
         logWarning("Received unexpected message type in external command handler: " + std::to_string(static_cast<int>(message->getMessageType())));
-        // AckMessage ack_msg(std::move(message), AckMessage::AckStatus::Failure);
-        // system_command_listener_->sendMessage(ack_msg);
     }
 }
 
@@ -201,16 +189,8 @@ void SystemManager::handleAgentRegistration(const std::string &identity, const R
     // Send acknowledgment back to agent
     try {
         // Create a simple ack message (without embedding the original message)
-        // AckMessage ack_msg(AckMessage::AckStatus::Success);
-        logInfo("Sending AckMessage to identity: " + identity);
-
-        // Protect router socket access from concurrent async handlers
-        {
-            std::lock_guard<std::mutex> router_lock(router_mutex_);
-            // task_control_router_->sendMessageToIdentity(ack_msg, identity);
-        }
-
-        logInfo("AckMessage sent successfully to: " + identity);
+        sendAcknowledgmentToAgent(identity, reg_msg, true);
+        logInfo("Ack message sent successfully to: " + identity);
     } catch (const std::exception &e) {
         logError("Failed to send registration ack to " + identity + ": " + std::string(e.what()));
     }
@@ -237,16 +217,41 @@ void SystemManager::handleAgentHeartbeat(const std::string &identity, const Hear
     }
 }
 
-void SystemManager::sendAcknowledgmentToAgent(const std::string &identity, const MessageInterface &original_message, bool success)
+void SystemManager::sendAcknowledgmentToAgent(const std::string &identity, const MessageInterface &original_message, const bool success)
 {
-    // AckMessage ack_msg(std::move(original_message.clone()),
-    //                    success ? AckMessage::AckStatus::Success : AckMessage::AckStatus::Failure);
-    // try {
-    //     std::lock_guard<std::mutex> router_lock(router_mutex_);
-    //     task_control_router_->sendMessageToIdentity(ack_msg, identity);
-    // } catch (const std::exception &e) {
-    //     logError("Failed to send acknowledgment to " + identity + ": " + std::string(e.what()));
-    // }
+    AckMessage ack(
+        static_cast<int32_t>(success ? AckMessage::AckStatus::Success : AckMessage::AckStatus::Failure),
+        static_cast<int32_t>(original_message.getMessageType()),
+        original_message.getTimestamp().time_since_epoch().count()
+    );
+    try
+    {
+        std::lock_guard<std::mutex> router_lock(router_mutex_);
+        task_control_router_->sendMessageToIdentity(ack, identity);
+        logInfo("Sent acknowledgment to agent: " + identity);
+    }
+    catch (const std::exception &e)
+    {
+        logError("Failed to send acknowledgment to " + identity + ": " + std::string(e.what()));
+    }
+}
+
+void SystemManager::sendAcknowledgementToHost(const MessageInterface &original_message, const bool success)
+{
+    AckMessage ack(
+        static_cast<int32_t>(success ? AckMessage::AckStatus::Success : AckMessage::AckStatus::Failure),
+        static_cast<int32_t>(original_message.getMessageType()),
+        original_message.getTimestamp().time_since_epoch().count()
+    );
+    try
+    {
+        system_command_listener_->sendMessage(ack);
+        logInfo("Sent acknowledgment to host for message type " + std::to_string(static_cast<int>(original_message.getMessageType())));
+    }
+    catch (const std::exception &e)
+    {
+        logError("Failed to send acknowledgment to host: " + std::string(e.what()));
+    }
 }
 
 void SystemManager::sendModeChangeToAgent(const std::string &identity, SystemMode_Type new_mode)
