@@ -3,8 +3,6 @@ project(CameraAgent)
 file(GLOB CAMERA_AGENT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/FrameProcessor/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/FrameProcessor/*.h
 )
 
 add_executable(CameraAgent ${CAMERA_AGENT_SOURCES})

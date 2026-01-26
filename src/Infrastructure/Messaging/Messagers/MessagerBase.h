@@ -8,6 +8,7 @@
 #include <functional>
 #include <thread>
 #include <atomic>
+#include <chrono>
 
 namespace PiTrac
 {
@@ -42,15 +43,21 @@ class MessagerBase
             {
                 throw std::runtime_error("Failed to create ZMQ context");
             }
+            context_ref_count_ = 0;
         }
+        context_ref_count_++;
     }
 
     static void destroyContext()
     {
-        if (context_)
+        if (context_ && context_ref_count_ > 0)
         {
-            zmq_ctx_destroy(context_);
-            context_ = nullptr;
+            context_ref_count_--;
+            if (context_ref_count_ == 0)
+            {
+                zmq_ctx_destroy(context_);
+                context_ = nullptr;
+            }
         }
     }
 
@@ -153,6 +160,18 @@ class MessagerBase
 
     virtual void receiveLoop();
 
+    // Hook for derived classes to perform actions after a message is
+    // successfully received
+    virtual void onMessageReceived()
+    {
+    }
+
+    // Hook for derived classes to perform actions after a message is
+    // successfully sent
+    virtual void onMessageSent()
+    {
+    }
+
     // Thread management - accessible to derived classes
     std::thread receive_thread_;
     std::function<void(std::unique_ptr<MessageInterface>)> message_handler_;
@@ -161,6 +180,7 @@ class MessagerBase
 
   private:
     static void *context_;
+    static int context_ref_count_;
     void *socket_;
     SocketType socket_type_;
     std::atomic<bool> running_;

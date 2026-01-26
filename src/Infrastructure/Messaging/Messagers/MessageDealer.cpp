@@ -20,45 +20,6 @@ std::optional<std::string> MessageDealer::getIdentity() const
     return identity_;
 }
 
-void MessageDealer::sendMessage(const MessageInterface &message)
-{
-    void *socket = getSocket();
-
-    // For DEALER-ROUTER communication, send empty frame first (like REQ socket)
-    // This makes it compatible with ROUTER expecting [identity][empty][message]
-    zmq_msg_t empty_frame;
-    zmq_msg_init(&empty_frame);
-    int rc = zmq_msg_send(&empty_frame, socket, ZMQ_SNDMORE);
-    if (rc < 0)
-    {
-        zmq_msg_close(&empty_frame);
-        throw std::runtime_error("Failed to send empty frame: " + std::string(zmq_strerror(errno)));
-    }
-
-    // Send the actual message
-    zmq_msg_t msg;
-    message.toZmqMessage(msg);
-    rc = zmq_msg_send(&msg, socket, 0);
-    if (rc < 0)
-    {
-        zmq_msg_close(&msg);
-        throw std::runtime_error("Failed to send message: " + std::string(zmq_strerror(errno)));
-    }
-
-    updateConnectionStatus();
-}
-
-void MessageDealer::startReceiving(std::function<void(std::unique_ptr<MessageInterface>)> handler)
-{
-    message_handler_ = handler;
-    setRunning(true);
-
-    // Use base class thread management - assign to the base class member
-    receive_thread_ = std::thread([this]() {
-            receiveLoop();
-        });
-}
-
 std::unique_ptr<MessageInterface> MessageDealer::sendRequestAndWaitForResponse(
     const MessageInterface &request,
     int timeout_ms)
@@ -158,76 +119,14 @@ bool MessageDealer::isConnectedToRouter() const
     return connected_to_router_;
 }
 
-void MessageDealer::receiveLoop()
+void MessageDealer::onMessageReceived()
 {
-    while (isRunning())
-    {
-        void *socket = getSocket();
+    updateConnectionStatus();
+}
 
-        // Set timeout for non-blocking receive
-        int timeout = 100; // 100ms timeout
-        zmq_setsockopt(socket, ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
-
-        // Check if there are multiple parts (empty frame + message)
-        // This handles responses from ROUTER that send [empty][message] format
-        zmq_msg_t first_msg;
-        zmq_msg_init(&first_msg);
-
-        int rc = zmq_msg_recv(&first_msg, socket, 0);
-        if (rc >= 0)
-        {
-            // Check if this is a multi-part message
-            int more;
-            size_t more_size = sizeof(more);
-            zmq_getsockopt(socket, ZMQ_RCVMORE, &more, &more_size);
-
-            if (more)
-            {
-                // This was an empty frame, receive the actual message
-                zmq_msg_close(&first_msg);
-
-                zmq_msg_t msg;
-                zmq_msg_init(&msg);
-                rc = zmq_msg_recv(&msg, socket, 0);
-
-                if (rc >= 0 && message_handler_)
-                {
-                    try {
-                        std::unique_ptr<MessageInterface> message = message_factory_.createFromZmqMessage(msg);
-                        message_handler_(std::move(message));
-                        updateConnectionStatus();
-                    } catch (const std::exception &e) {
-                        printf("Error creating message from ZMQ message in dealer: %s\n", e.what());
-                    }
-                }
-                zmq_msg_close(&msg);
-            }
-            else
-            {
-                // This is a single frame message
-                if (message_handler_)
-                {
-                    try {
-                        std::unique_ptr<MessageInterface> message = message_factory_.createFromZmqMessage(first_msg);
-                        message_handler_(std::move(message));
-                        updateConnectionStatus();
-                    } catch (const std::exception &e) {
-                        printf("Error creating message from ZMQ message in dealer: %s\n", e.what());
-                    }
-                }
-                zmq_msg_close(&first_msg);
-            }
-        }
-        else if (errno != EAGAIN)
-        {
-            // Real error occurred
-            if (isRunning())
-            {
-                printf("Error in dealer receive loop: %s\n", zmq_strerror(errno));
-            }
-            break;
-        }
-    }
+void MessageDealer::onMessageSent()
+{
+    updateConnectionStatus();
 }
 
 void MessageDealer::updateConnectionStatus()

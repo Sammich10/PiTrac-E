@@ -11,7 +11,7 @@
             }
         },
         "CameraAgent_1": {
-            "Enable": false,
+            "Enable": true,
             "Executable": "CameraAgent",
             "Arguments": ["0"],
             "ProcessOptions": {
@@ -24,7 +24,7 @@
             }
         },
         "CameraAgent_2": {
-            "Enable": false,
+            "Enable": true,
             "Executable": "CameraAgent",
             "Arguments": ["1"],
             "ProcessOptions": {

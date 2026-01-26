@@ -44,9 +44,7 @@ void MessageRouter::sendMessageToIdentity(const MessageInterface &message, const
         zmq_msg_close(&msg);
         throw std::runtime_error("Failed to send message frame: " + std::string(zmq_strerror(errno)));
     }
-
-    // Track this dealer as connected
-    updateDealerConnection(identity);
+    zmq_msg_close(&msg);
 }
 
 void MessageRouter::startReceivingWithIdentity(std::function<void(std::unique_ptr<MessagerBase::IdentityMessage>)> handler)

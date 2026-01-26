@@ -36,7 +36,6 @@ class AgentBase : public TaskBase
         message_handler_ = [this](std::unique_ptr<MessageInterface> message) {
                                this->messageHandler(std::move(message));
                            };
-        logInfo("Agent created: " + name_ + " [" + task_id_ + "]");
     }
 
     ~AgentBase()
@@ -152,7 +151,7 @@ class AgentBase : public TaskBase
         changeStatus(TaskStatus::Running);
         run_.store(true);
 
-        logInfo("Agent connected to SystemManager via ROUTER-DEALER pattern: " + agent_control_endpoint_);
+        logInfo(getTaskName() + " connected to SystemManager");
 
         // Main loop - send periodic heartbeats and handle incoming commands
         while (!should_stop_.load())
@@ -207,9 +206,16 @@ class AgentBase : public TaskBase
                 if(mode_msg)
                 {
                     std::lock_guard<std::mutex> lock(mode_mutex_);
+                    SystemMode_Type new_mode = static_cast<SystemMode_Type>(mode_msg->getNew_mode());
+                    if(new_mode == lm_mode_)
+                    {
+                        logInfo("Agent already in mode " + System::systemModeToString(lm_mode_) + ": " + name_);
+                        command_success = true;
+                        break;
+                    }
                     PiTrac::SystemMode_Type old_mode = lm_mode_;
                     lm_mode_ = static_cast<PiTrac::SystemMode_Type>(mode_msg->getNew_mode());
-                    logInfo("Mode changed from " + System::systemModeToString(old_mode) +
+                    logInfo("Changing mode from " + System::systemModeToString(old_mode) +
                             " to " + System::systemModeToString(lm_mode_));
                     changeMode(lm_mode_);
                     command_success = true;
@@ -226,7 +232,6 @@ class AgentBase : public TaskBase
                 break;
         }
 
-        // Send acknowledgment back to SystemManager (ROUTER-DEALER pattern)
         // sendCommandAcknowledgment(type, command_success);
     }
 
@@ -249,15 +254,15 @@ class AgentBase : public TaskBase
 
     void sendCommandAcknowledgment(Message_Type command_type, bool success, const std::string &error_msg = "")
     {
-        // AckMessage ack(getpid(), name_, command_type, success, error_msg);
+        // ackmessage ack(getpid(), name_, command_type, success, error_msg);
         // try {
-        //     agent_control_->sendMessage(ack);
-        //     std::string status = success ? "SUCCESS" : "FAILED";
-        //     logInfo("Command acknowledgment sent: " +
+        //     agent_control_->sendmessage(ack);
+        //     std::string status = success ? "success" : "failed";
+        //     loginfo("command acknowledgment sent: " +
         // std::to_string(static_cast<int>(command_type)) +
         //            " - " + status);
         // } catch (const std::exception& e) {
-        //     logError("Failed to send command acknowledgment: " +
+        //     logerror("failed to send command acknowledgment: " +
         // std::string(e.what()));
         // }
     }

@@ -77,19 +77,33 @@ class System
     static const SystemMode_Type stringToSystemMode(const std::string &mode_str)
     {
         if (mode_str == "STARTING_UP")
+        {
             return SystemMode_Type::STARTING_UP;
+        }
         else if (mode_str == "STANDBY")
+        {
             return SystemMode_Type::STANDBY;
+        }
         else if (mode_str == "VIEWFINDER")
+        {
             return SystemMode_Type::VIEWFINDER;
+        }
         else if (mode_str == "CALIBRATION")
+        {
             return SystemMode_Type::CALIBRATION;
+        }
         else if (mode_str == "LAUNCH_MONITOR")
+        {
             return SystemMode_Type::LAUNCH_MONITOR;
+        }
         else if (mode_str == "DIAGNOSTIC")
+        {
             return SystemMode_Type::DIAGNOSTIC;
+        }
         else
+        {
             return SystemMode_Type::MAX_MODE; // Unknown mode
+        }
     }
 };
 } // namespace PiTrac

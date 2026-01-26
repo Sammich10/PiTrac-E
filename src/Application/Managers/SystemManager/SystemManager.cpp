@@ -6,6 +6,8 @@ SystemManager::SystemManager()
     : GSManagerBase("SystemManager")
     , task_control_router_(std::make_unique<MessageRouter>())
     , system_command_listener_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Reply))
+    , frame_collector_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Pull))
+    , frame_publisher_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Publisher))
 {
 }
 
@@ -26,6 +28,14 @@ bool SystemManager::setupProcess()
     system_command_listener_->startReceiving(
         std::bind(&SystemManager::externalMessageHandler, this, std::placeholders::_1)
         );
+
+    logInfo("Setting up frame forwarding system");
+    frame_collector_->bind(Endpoints::getFrameCollectionEndpoint());
+    frame_collector_->startReceiving(
+        std::bind(&SystemManager::frameForwardingHandler, this, std::placeholders::_1)
+        );
+    frame_publisher_->bind(Endpoints::getFrameStreamEndpoint());
+
     return true;
 }
 
@@ -47,6 +57,10 @@ void SystemManager::cleanupProcess()
     task_control_router_.reset();
     logInfo("Stopping system command listener");
     system_command_listener_->stop();
+
+    logInfo("Stopping frame forwarding system");
+    frame_collector_->stop();
+    frame_publisher_->stop();
     system_command_listener_.reset();
 }
 
@@ -64,7 +78,6 @@ void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> mes
             {
                 case SystemCommandMsg::CommandID::SetMode:
                 {
-
                     logInfo("Handling SetMode command");
                     const bool modeChangeSuccess = handleModeChangeCommand(*cmd_msg);
                     sendAcknowledgementToHost(*message, modeChangeSuccess);
@@ -81,7 +94,6 @@ void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> mes
             sendAcknowledgementToHost(*message, false);
             logError("Failed to cast message to SystemCommandMsg in external command handler");
         }
-        
     }
     else
     {
@@ -104,6 +116,11 @@ bool SystemManager::handleModeChangeCommand(const SystemCommandMsg &cmd_msg)
     {
         mode_str = it->second;
     }
+    // Convert to uppercase
+    std::transform(mode_str.begin(), mode_str.end(), mode_str.begin(),
+                   [](unsigned char c) {
+            return std::toupper(c);
+        });
     SystemMode_Type new_mode = System::stringToSystemMode(mode_str);
     if(new_mode == SystemMode_Type::MAX_MODE)
     {
@@ -111,7 +128,6 @@ bool SystemManager::handleModeChangeCommand(const SystemCommandMsg &cmd_msg)
         return false;
     }
     {
-        std::lock_guard<std::mutex> lock(agents_mutex_);
         if(new_mode != mode_)
         {
             logInfo("Changing system mode from " + System::systemModeToString(mode_) +
@@ -223,7 +239,7 @@ void SystemManager::sendAcknowledgmentToAgent(const std::string &identity, const
         static_cast<int32_t>(success ? AckMessage::AckStatus::Success : AckMessage::AckStatus::Failure),
         static_cast<int32_t>(original_message.getMessageType()),
         original_message.getTimestamp().time_since_epoch().count()
-    );
+        );
     try
     {
         std::lock_guard<std::mutex> router_lock(router_mutex_);
@@ -242,7 +258,7 @@ void SystemManager::sendAcknowledgementToHost(const MessageInterface &original_m
         static_cast<int32_t>(success ? AckMessage::AckStatus::Success : AckMessage::AckStatus::Failure),
         static_cast<int32_t>(original_message.getMessageType()),
         original_message.getTimestamp().time_since_epoch().count()
-    );
+        );
     try
     {
         system_command_listener_->sendMessage(ack);
@@ -277,10 +293,10 @@ void SystemManager::sendModeChangeToAgent(const std::string &identity, SystemMod
     }
 }
 
-void SystemManager::broadcastModeChange(SystemMode_Type new_mode)
+bool SystemManager::broadcastModeChange(SystemMode_Type new_mode)
 {
     std::lock_guard<std::mutex> lock(agents_mutex_);
-
+    // Send the mode change to all registered agents
     for(const auto & [identity, agent] : registered_agents_)
     {
         ChangeModeMsg mode_msg((int32_t)new_mode);
@@ -291,8 +307,10 @@ void SystemManager::broadcastModeChange(SystemMode_Type new_mode)
             logInfo("Broadcasted mode change to " + agent.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
         } catch (const std::exception &e) {
             logError("Failed to broadcast mode change to " + agent.task_name + ": " + std::string(e.what()));
+            return false;
         }
     }
+    return true;
 }
 
 void SystemManager::checkAgentTimeouts()
@@ -326,5 +344,21 @@ std::vector<SystemManager::RegisteredAgent> SystemManager::getActiveAgents()
     }
 
     return agents;
+}
+
+void SystemManager::frameForwardingHandler(std::unique_ptr<MessageInterface> message)
+{
+    // Simply forward any received frame data to Flask
+    if (message)
+    {
+        try
+        {
+            frame_publisher_->sendMessage(*message);
+        }
+        catch (const std::exception &e)
+        {
+            logError("Failed to forward frame: " + std::string(e.what()));
+        }
+    }
 }
 } // namespace PiTrac

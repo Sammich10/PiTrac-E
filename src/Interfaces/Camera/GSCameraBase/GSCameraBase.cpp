@@ -205,6 +205,26 @@ bool GSCameraBase::startContinuousCapture()
             cameraStarted_ = true;
         }
 
+        // Recreate requests if they're empty (invalidated by stop)
+        if (requests_.empty())
+        {
+            logger_->info("Recreating requests after camera restart...");
+            if (config_ && !config_->empty())
+            {
+                libcamera::Stream *stream = config_->at(0).stream();
+                if (!allocateBuffersForStream(stream))
+                {
+                    logger_->error("Failed to recreate requests");
+                    return false;
+                }
+            }
+            else
+            {
+                logger_->error("No valid configuration for request recreation");
+                return false;
+            }
+        }
+
         // Queue initial requests
         for (auto &request : requests_)
         {
@@ -221,12 +241,27 @@ bool GSCameraBase::startContinuousCapture()
 
 bool GSCameraBase::stopContinuousCapture()
 {
+    if (!isCapturing_)
+    {
+        return true; // Already stopped
+    }
+
+    logger_->info("Stopping continuous capture...");
     isCapturing_ = false;
 
     if (cameraStarted_)
     {
-        camera_->stop();
-        cameraStarted_ = false;
+        try {
+            // Give pending requests time to complete before stopping camera
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+            camera_->stop();
+            cameraStarted_ = false;
+
+            logger_->info("Camera stopped successfully");
+        } catch (const std::exception &e) {
+            logger_->error("Exception stopping camera: " + std::string(e.what()));
+        }
     }
 
     return true;
@@ -535,7 +570,17 @@ void GSCameraBase::requestComplete(libcamera::Request *request)
     }
     else
     {
-        logger_->error("Request completed with error status: " + std::to_string(request->status()));
+        // During shutdown, we expect RequestCancelled errors (status 2)
+        if (request->status() == 2 && !isCapturing_) // RequestCancelled during
+                                                     // shutdown
+        {
+            // This is expected during shutdown - don't log as error
+            logger_->info("Request cancelled during shutdown (expected)");
+        }
+        else
+        {
+            logger_->error("Request completed with error status: " + std::to_string(request->status()));
+        }
     }
 }
 
@@ -580,8 +625,8 @@ cv::Mat GSCameraBase::unpack10BitBayer(void *data, int width, int height, size_t
 
     // Convert to 8-bit for OpenCV compatibility (shift right by 2 bits)
     cv::Mat result8bit;
-    result.convertTo(result8bit, CV_8UC1, 1.0 / 4.0);  // Divide by 4 to convert
-                                                       // 10-bit to 8-bit
+    // 10-bit range (0-1023) should map to 8-bit range (0-255)
+    result.convertTo(result8bit, CV_8UC1, 255.0 / 1023.0);
 
     return result8bit;
 }

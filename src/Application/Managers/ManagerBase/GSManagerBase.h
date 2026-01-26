@@ -26,7 +26,6 @@ class GSManagerBase : public TaskBase
     )
         : TaskBase(name)
     {
-        logInfo("Manager created: " + name_ + " [" + task_id_ + "]");
     }
 
     ~GSManagerBase()

@@ -54,9 +54,10 @@ class MessageBase : public MessageInterface
         std::ostringstream oss;
         oss << "Message Type: " << static_cast<int>(getMessageType())
             << ", Timestamp: " << std::chrono::duration_cast<std::chrono::milliseconds>(
-                   timestamp_.time_since_epoch()).count() << " ms since epoch";
+            timestamp_.time_since_epoch()).count() << " ms since epoch";
         return oss.str();
     }
+
     std::unique_ptr<MessageInterface> clone() const override = 0;
   protected:
     // Helper for serializing common fields

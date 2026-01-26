@@ -25,19 +25,6 @@ class MessageDealer : public MessagerBase
     // Get dealer identity (if set)
     std::optional<std::string> getIdentity() const;
 
-    // Dealer can send messages normally (router will handle identity routing)
-    void sendMessage
-    (
-        const MessageInterface &message
-    ) override;
-
-    // Dealer receiving - standard message receiving (no identity parsing
-    // needed)
-    void startReceiving
-    (
-        std::function<void(std::unique_ptr<MessageInterface>)> handler
-    ) override;
-
     // Request-response pattern for dealers
     std::unique_ptr<MessageInterface> sendRequestAndWaitForResponse
     (
@@ -49,7 +36,11 @@ class MessageDealer : public MessagerBase
     bool isConnectedToRouter() const;
 
   protected:
-    void receiveLoop() override;
+    // Override to update connection status when messages are received
+    void onMessageReceived() override;
+
+    // Override to update connection status when messages are sent
+    void onMessageSent() override;
 
   private:
     // Set dealer identity (optional - ZMQ will auto-generate if not set)

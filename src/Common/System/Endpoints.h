@@ -26,18 +26,16 @@ class Endpoints
         return "ipc://agent_task_endpoint";
     }
 
-    static const std::string getCameraStreamEndpoint(const size_t &cameraIndex)
+    static const std::string getFrameCollectionEndpoint()
     {
-        switch(cameraIndex)
-        {
-            case 0:
-                return "tcp://0.0.0.0:5555";
-            case 1:
-                return "tcp://0.0.0.0:5556";
-            default:
-                return "tcp://0.0.0.0:5555"; // Default to camera 0 if index is
-                                             // out of range
-        }
+        // SystemManager binds PULL socket here for agent frames
+        return "ipc://frame_collection_endpoint";
+    }
+
+    static const std::string getFrameStreamEndpoint()
+    {
+        // SystemManager publishes aggregated frames here for Flask
+        return "tcp://0.0.0.0:6001";
     }
 
     static const std::string getTaskControlEndpoint()

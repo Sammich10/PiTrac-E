@@ -32,12 +32,9 @@ class FrameProcessor
     (
         std::shared_ptr<FrameBuffer> frame_buffer,
         const uint32_t camera_id
-    )  
-        : frame_buffer_(std::move(frame_buffer)),
-        camera_id_(camera_id),
+    )
+        : camera_id_(camera_id),
         frame_counter_(0),
-        should_stop_(false),
-        running_(false),
         type_(ProcessorType::INVALID)
     {
     }
@@ -49,39 +46,16 @@ class FrameProcessor
 
     virtual bool init() = 0;
 
-    bool start()
-    {
-        should_stop_ = false;
-        processing_thread_ = std::thread(&FrameProcessor::processingLoop, this);
-        return true;
-    }
-
-    bool stop()
-    {
-        should_stop_ = true; if (processing_thread_.joinable())
-        {
-            processing_thread_.join();
-        }
-        return true;
-    }
-
-    bool isRunning() const
-    {
-        return running_;
-    }
-
-    void streamFrames();
+    virtual EventID_Type processFrame
+    (
+        const cv::Mat &frame
+    ) = 0;
 
   protected:
 
-    virtual void processingLoop() = 0;
-    std::shared_ptr<FrameBuffer> frame_buffer_;
     uint32_t camera_id_;
     size_t frame_counter_;
     std::string name_;
-    std::thread processing_thread_;
-    std::atomic<bool> running_;
-    std::atomic<bool> should_stop_;
     ProcessorType type_;
 };
 } // namespace PiTrac

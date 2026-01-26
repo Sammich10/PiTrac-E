@@ -25,6 +25,11 @@ class SystemManager : public GSManagerBase
     std::unique_ptr<MessageRouter> task_control_router_;
     std::unique_ptr<MessagerBase> system_command_listener_;
 
+    // Frame forwarding system
+    std::unique_ptr<MessagerBase> frame_collector_;  // PULL socket for agent
+                                                     // frames
+    std::unique_ptr<MessagerBase> frame_publisher_;  // PUB socket to Flask
+
     bool setupProcess() override;
     void cleanupProcess() override;
     bool execute() override;
@@ -53,7 +58,7 @@ class SystemManager : public GSManagerBase
     // Map agent names to their ZeroMQ identities
     std::map<std::string, std::string> agent_name_to_identity_;
     std::mutex agents_mutex_;
-    std::mutex router_mutex_; 
+    std::mutex router_mutex_;
 
     // Message handlers
     void taskControlMessageHandler
@@ -85,7 +90,7 @@ class SystemManager : public GSManagerBase
 
     void sendAcknowledgementToHost
     (
-        const MessageInterface &original_message, 
+        const MessageInterface &original_message,
         const bool success = true
     );
 
@@ -95,7 +100,7 @@ class SystemManager : public GSManagerBase
         const std::string &identity,
         SystemMode_Type new_mode
     );
-    void broadcastModeChange
+    bool broadcastModeChange
     (
         SystemMode_Type new_mode
     );
@@ -110,8 +115,14 @@ class SystemManager : public GSManagerBase
         const SystemCommandMsg &cmd_msg
     );
 
+    // Frame forwarding system
+    void frameForwardingHandler
+    (
+        std::unique_ptr<MessageInterface> message
+    );
+
     // Current system mode
-    SystemMode_Type mode_ = SystemMode_Type::STARTING_UP;
+    SystemMode_Type mode_ = SystemMode_Type::STANDBY;
 };
 } // namespace PiTrac
 

@@ -2,7 +2,8 @@
 #define CAMERA_AGENT_H
 
 #include "Application/Agents/AgentBase/AgentBase.h"
-#include "Application/Agents/CameraAgent/FrameProcessor/FrameProcessorFactory.h"
+// #include
+// "Application/Agents/CameraAgent/FrameProcessor/FrameProcessorFactory.h"
 #include "Infrastructure/DataStructures/FrameBuffer.h"
 #include "Interfaces/Camera/GSCameraInterface.h"
 #include "Common/System/System.h"
@@ -70,6 +71,10 @@ class CameraAgent : public AgentBase
         PiTrac::SystemMode_Type new_mode
     ) override;
 
+    virtual bool configureViewfinder();
+
+    virtual void startViewfinder();
+
     /**
      * @brief Continuously captures frames from the camera in a loop and
      * publishes them to the messaging system.
@@ -81,7 +86,6 @@ class CameraAgent : public AgentBase
     uint32_t camera_index_;
     std::atomic<bool> running_;
     uint64_t frame_counter_;
-    std::unique_ptr<FrameProcessor> frame_processor_;
 };
 } // namespace PiTrac
 
