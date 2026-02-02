@@ -115,6 +115,11 @@ class SystemManager : public GSManagerBase
         const SystemCommandMsg &cmd_msg
     );
 
+    bool handleCalibrationCommand
+    (
+        const SystemCommandMsg &cmd_msg
+    );
+
     // Frame forwarding system
     void frameForwardingHandler
     (

@@ -2,15 +2,20 @@
 #define CAMERA_AGENT_H
 
 #include "Application/Agents/AgentBase/AgentBase.h"
-// #include
-// "Application/Agents/CameraAgent/FrameProcessor/FrameProcessorFactory.h"
 #include "Infrastructure/DataStructures/FrameBuffer.h"
 #include "Interfaces/Camera/GSCameraInterface.h"
+#include "Common/Utils/CodecUtils/CodecUtils.h"
+#include "Common/Utils/Calibration/CalibrationData.h"
+#include "Common/Utils/Calibration/CalibrateDistortion.h"
 #include "Common/System/System.h"
 #include <opencv2/opencv.hpp>
 #include <thread>
 #include <atomic>
 #include <memory>
+#include <semaphore>
+#include <queue>
+#include <mutex>
+#include "Infrastructure/Messaging/Messages/SystemCommandMsg.h"
 
 namespace PiTrac
 {
@@ -37,7 +42,8 @@ class CameraAgent : public AgentBase
      */
     CameraAgent
     (
-        const size_t camera_index
+        const size_t camera_index,
+        const std::string &process_name = "CameraAgent"
     );
 
     /**
@@ -64,28 +70,75 @@ class CameraAgent : public AgentBase
      */
     void cleanupProcess() override;
 
-  private:
+  protected:
 
-    void changeMode
+    bool changeMode
     (
         PiTrac::SystemMode_Type new_mode
     ) override;
 
-    virtual bool configureViewfinder();
-
-    virtual void startViewfinder();
+    bool handleSystemCommand
+    (
+        const SystemCommandMsg &command_msg
+    ) override;
 
     /**
-     * @brief Continuously captures frames from the camera in a loop and
-     * publishes them to the messaging system.
+     * @brief Configures the camera for viewfinder mode.
      */
-    void viewfinderLoop();
+    virtual bool configureViewfinder();
 
+    /**
+     * @brief Starts the viewfinder mode operation in a separate thread.
+     * 
+     * Viewfinder mode continuously captures frames from the camera and
+     * publishes them to the messaging system. 
+     */
+    virtual void viewfinderCallback(cv::Mat& frame);
+
+    /**
+     * @brief Configures the camera for calibration mode.
+     */
+    virtual bool configureCalibration();
+    
+    /**
+     * @brief Processes a calibration command received from SystemManager.
+     * 
+     * @param command The calibration command to process
+     */
+    virtual bool processCalibrationCommand
+    (
+      const std::map<std::string, std::string>& commandParams
+    );
+
+  private:
+
+    /**
+     * @brief Streams a frame to the messaging system.
+     * @param frame The frame to stream
+     */
+    inline void streamFrame
+    (
+      const cv::Mat& frame
+    );
+
+    /**
+     * @brief Cleans up resources used by the camera agent in 
+     * preparation for mode chang or shutdown.
+     */
+    inline void cleanUp();
+    
+    std::unique_ptr<MessagerBase> frame_publisher_;
+    std::unique_ptr<FrameCodec> frame_codec_;
     std::shared_ptr<FrameBuffer> frame_buffer_;
     std::unique_ptr<GSCameraInterface> camera_;
+    std::unique_ptr<CalibrateDistortion> distortion_calibrator_;
     uint32_t camera_index_;
     std::atomic<bool> running_;
     uint64_t frame_counter_;
+    CodecParams frame_codec_params_;
+    // Calibration command handling
+    std::queue<SystemCommandMsg> calibration_command_queue_;
+    std::mutex calibration_queue_mutex_;
 };
 } // namespace PiTrac
 

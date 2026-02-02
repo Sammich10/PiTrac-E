@@ -98,6 +98,16 @@ void MessagerBase::connect(const std::string &endpoint)
     }
 }
 
+void MessagerBase::disconnect(const std::string &endpoint)
+{
+    int rc = zmq_disconnect(socket_, endpoint.c_str());
+    if (rc != 0)
+    {
+        throw std::runtime_error("Failed to disconnect from " + endpoint + ": " +
+                                 zmq_strerror(errno));
+    }
+}
+
 void MessagerBase::subscribe(const std::string &topic)
 {
     int rc = zmq_setsockopt(socket_, ZMQ_SUBSCRIBE, topic.c_str(), topic.length());

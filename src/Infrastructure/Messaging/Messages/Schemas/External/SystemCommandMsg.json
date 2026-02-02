@@ -5,7 +5,7 @@
   "fields": {
     "command_id": {
       "type": "int32",
-      "description": "Command identifier (0=SetMode, 1=Calibrate)"
+      "description": "Command identifier (0=SetMode, 1=Calibrate, 2=Configure)"
     },
     "command_params": {
       "type": "map",
@@ -19,7 +19,8 @@
       "description": "Available system commands",
       "values": {
         "SetMode": 0,
-        "Calibrate": 1
+        "Calibrate": 1,
+        "Configure": 2
       }
     }
   },

@@ -10,12 +10,12 @@
                 "priority": -5
             }
         },
-        "CameraAgent_1": {
+        "TeeAgent": {
             "Enable": true,
-            "Executable": "CameraAgent",
+            "Executable": "TeeAgent",
             "Arguments": ["0"],
             "ProcessOptions": {
-                "processName": "CamAgent1",
+                "processName": "TeeAgent",
                 "cpuAffinity": [2],
                 "priority": -15,
                 "schedPolicy": "SCHED_FIFO",
@@ -23,12 +23,12 @@
                 "dumpable": true
             }
         },
-        "CameraAgent_2": {
+        "FlightAgent": {
             "Enable": true,
-            "Executable": "CameraAgent",
+            "Executable": "FlightAgent",
             "Arguments": ["1"],
             "ProcessOptions": {
-                "processName": "CamAgent2",
+                "processName": "FlightAgent",
                 "cpuAffinity": [3],
                 "priority": -10
             }

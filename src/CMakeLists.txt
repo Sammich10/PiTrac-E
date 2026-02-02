@@ -55,7 +55,7 @@ else()
 endif()
 
 # Find OpenCV
-find_package(OpenCV REQUIRED core imgproc highgui videoio)
+find_package(OpenCV REQUIRED core imgproc highgui videoio calib3d features2d objdetect video)
 if(NOT OpenCV_FOUND)
     # If OpenCV is not found, print an error message
     message(FATAL_ERROR "OpenCV not found. Please install OpenCV or set the OpenCV_DIR environment variable.")

@@ -222,6 +222,18 @@ class AgentBase : public TaskBase
                 }
                 break;
             }
+            case Message_Type::SystemCommand:
+            {
+                auto sys_cmd_msg = dynamic_cast<SystemCommandMsg *>(message.get());
+                if(sys_cmd_msg)
+                {
+                    logInfo("Received SystemCommandMsg: " + sys_cmd_msg->toString());
+                    handleSystemCommand(*sys_cmd_msg);
+                }
+                command_success = true; // Set based on actual command
+                                        // processing result
+                break;
+            }
             // TODO: Handle events
             // Case Message_Type::Event:
             //     handleEvent(dynamic_cast<GSEventMsg*>(message.get()));
@@ -235,11 +247,16 @@ class AgentBase : public TaskBase
         // sendCommandAcknowledgment(type, command_success);
     }
 
-    virtual void changeMode
+    virtual bool changeMode
     (
         PiTrac::SystemMode_Type new_mode
     ) = 0;
     // virtual void handleEvent(/*GSEventMsg* event_msg*/) = 0;
+
+    virtual bool handleSystemCommand
+    (
+        const SystemCommandMsg &command_msg
+    ) = 0;
 
     // ROUTER-DEALER pattern helper methods
     void sendHeartbeat()

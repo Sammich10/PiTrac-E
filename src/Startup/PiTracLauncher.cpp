@@ -2,6 +2,12 @@
 #include "Common/Utils/Json/jsonparser.h"
 #include "Common/Utils/FileUtils/FileUtils.h"
 
+/**
+ * @brief Starts all PiTrac application processes defined in the AppConfig.
+ *
+ * @param config The AppConfig containing executables to start.
+ * @return int Exit code (0 for success).
+ */
 int startPiTrac(const PiTrac::AppConfig &config)
 {
     std::cout << "Starting PiTrac application..." << std::endl;
@@ -32,6 +38,13 @@ int startPiTrac(const PiTrac::AppConfig &config)
     return 0;
 }
 
+/**
+ * @brief Stops all PiTrac application processes defined in the AppConfig. Sends
+ *SIGINT to each process to request graceful shutdown.
+ *
+ * @param config The AppConfig containing executables to stop.
+ * @return int Exit code (0 for success).
+ */
 int stopPiTrac(const PiTrac::AppConfig &config)
 {
     std::cout << "Stopping PiTrac application..." << std::endl;
@@ -55,6 +68,13 @@ int stopPiTrac(const PiTrac::AppConfig &config)
     return 0;
 }
 
+/**
+ * @brief Kills all PiTrac application processes defined in the AppConfig. Sends
+ *SIGKILL to each process.
+ *
+ * @param config The AppConfig containing executables to kill.
+ * @return int Exit code (0 for success).
+ */
 int killPiTrac(const PiTrac::AppConfig &config)
 {
     std::cout << "Killing PiTrac application..." << std::endl;
@@ -78,15 +98,42 @@ int killPiTrac(const PiTrac::AppConfig &config)
     return 0;
 }
 
+/**
+ * @brief Main entry point for PiTrac launcher. Parses command line arguments
+ *for the command and app config path.
+ *
+ * Usage: PiTrac <command> [app_config_path]
+ *       command: start | stop | kill
+ *       app_config_path: Path to the application configuration JSON file. If
+ *not provided, uses $PITRAC_APP_CONFIG environment variable.
+ */
 int main(int argc, char *argv[])
 {
-    if(argc < 3)
-    {
-        std::cerr << "Usage: PiTrac <command> <app_config_path>" << std::endl;
+    if(argc < 2)
+    { // Must provide command
+        std::cerr << "Usage: PiTrac <command> [app_config_path]" << std::endl;
         return EXIT_FAILURE;
     }
+    std::string app_config_path = "";
+    if(argc < 3)
+    { // Config path not explicitly provided, attempt to use default from
+      // environment variable
+        const char *env_path = std::getenv("PITRAC_APP_CONFIG");
+        if(env_path == nullptr)
+        {
+            std::cerr << "App config path not provided and Pitrac environment variable not set." << std::endl;
+            return EXIT_FAILURE;
+        }
+        else
+        {
+            app_config_path = std::string(env_path);
+        }
+    }
+    else
+    {
+        app_config_path = std::string(argv[2]);
+    }
     const std::string command = argv[1];
-    const std::string app_config_path = argv[2];
     if(!PiTrac::FileUtils::fileExists(app_config_path))
     {
         std::cerr << "App config file does not exist: " << app_config_path << std::endl;

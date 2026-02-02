@@ -13,12 +13,17 @@
 #include <queue>
 #include <atomic>
 #include <memory>
+#include <functional>
 
 namespace PiTrac
 {
+// Callback type for request completion, e.g., for handling captured frames
+using requestCompleteCallback = std::function<void (cv::Mat &frame)>;
+
 enum CAMERA_TYPE
 {
     CAMERA_TYPE_UNKNOWN = 0,
+    CAMERA_GENERIC_RASPBERRY_PI,
     CAMERA_PICAM_V3,
     CAMERA_INNOMAKER_IMX296GS,
     CAMERA_TYPE_MAX
@@ -61,10 +66,18 @@ class GSCameraInterface
  * are expected to utilize the libcamera library for camera management and frame
  * capture.
  *
+ * The camera interface supports camera life-cycle operations:
+ *  - openCamera() : Acquire the camera device
+ *  - configureStream() : Configure the camera stream for specific use cases,
+ *allocate buffers
+ *  - start() : Begin capturing frames
+ *  - stop() : Stop capturing frames
+ *  - closeCamera() : Release the camera device
+ *
  */
   public:
 
-// You can also provide a protected constructor with common parameters
+    // You can also provide a protected constructor with common parameters
     GSCameraInterface(const uint32_t &cameraIndex, std::shared_ptr<libcamera::CameraManager> const &cameraManager)
         : cameraIndex_(cameraIndex)
         , resolutionX_(0)
@@ -87,22 +100,35 @@ class GSCameraInterface
     (
         const libcamera::StreamRole &streamRole
     ) = 0;
+    virtual bool start() = 0;
+    virtual bool stop() = 0;
     virtual void closeCamera() = 0;
-    virtual cv::Mat captureFrame() = 0;
-    virtual cv::Mat getNextFrame() = 0;
+    virtual cv::Mat captureFrame
+    (
+        uint32_t timeout_ms = 2000
+    ) = 0;
     virtual CAMERA_TYPE getCameraType() const = 0;
     virtual bool setTriggerMode
     (
         TriggerMode mode
     ) = 0;
-    virtual bool startContinuousCapture() = 0;
+    virtual bool startContinuousCapture
+    (
+        requestCompleteCallback callback
+    ) = 0;
     virtual bool stopContinuousCapture() = 0;
     virtual std::string toString() const = 0;
 
     /** Accessor methods **/
+
     uint32_t getCameraIndex() const
     {
         return cameraIndex_;
+    }
+
+    uint32_t getNumBuffers() const
+    {
+        return numBuffers_;
     }
 
     int getResolutionX() const
@@ -113,6 +139,21 @@ class GSCameraInterface
     int getResolutionY() const
     {
         return resolutionY_;
+    }
+
+    libcamera::PixelFormat getPixelFormat() const
+    {
+        return pixelFormat_;
+    }
+
+    libcamera::Orientation getSensorOrientation() const
+    {
+        return sensorOrientation_;
+    }
+
+    unsigned int getStride() const
+    {
+        return stride_;
     }
 
     float getFocalLength() const
@@ -147,7 +188,12 @@ class GSCameraInterface
 
     float getAnalogGain() const
     {
-        return currentGain_;
+        return analogGain_;
+    }
+
+    float getDigitalGain() const
+    {
+        return digitalGain_;
     }
 
     float getFrameRate() const
@@ -191,12 +237,37 @@ class GSCameraInterface
     }
 
     /** Mutator methods **/
+
+    void setNumBuffers
+    (
+        uint32_t numBuffers
+    )
+    {
+        numBuffers_ = numBuffers;
+    }
+
     void setResolution
     (
         int resX, int resY
     )
     {
         resolutionX_ = resX; resolutionY_ = resY;
+    }
+
+    void setPixelFormat
+    (
+        libcamera::PixelFormat pixelFormat
+    )
+    {
+        pixelFormat_ = pixelFormat;
+    }
+
+    void setOrientation
+    (
+        libcamera::Orientation orientation
+    )
+    {
+        sensorOrientation_ = orientation;
     }
 
     void setFocalLength
@@ -236,7 +307,15 @@ class GSCameraInterface
         float gain
     )
     {
-        currentGain_ = gain; return true;
+        analogGain_ = gain; return true;
+    }
+
+    bool setDigitalGain
+    (
+        float gain
+    )
+    {
+        digitalGain_ = gain; return true;
     }
 
     bool setFrameRate
@@ -273,7 +352,8 @@ class GSCameraInterface
 
     void setResolutionOverride
     (
-        int resX, int resY
+        int resX,
+        int resY
     )
     {
         resolutionX_override_ = resX; resolutionY_override_ = resY;
@@ -292,14 +372,12 @@ class GSCameraInterface
     (
         libcamera::Stream *stream
     ) = 0;
+    
     virtual bool configureTriggerMode
     (
         const TriggerMode &mode
     ) = 0;
-    virtual cv::Mat convertBufferToMat
-    (
-        libcamera::FrameBuffer *buffer
-    ) = 0;
+    
     virtual void requestComplete
     (
         libcamera::Request *request
@@ -319,17 +397,21 @@ class GSCameraInterface
     std::vector<std::unique_ptr<libcamera::Request> > requests_;
 
     // Camera configuration state
-    bool isConfigured_;
+    bool isConfigured_ = false;
     bool cameraStarted_ = false;
     TriggerMode triggerMode_;
+    uint32_t numBuffers_ = 4;
 
     // Sensor specifications
     uint32_t currentExposureUs_ = 10000;
-    float currentGain_ = 1.0f;
+    float analogGain_ = 1.0f;
+    float digitalGain_ = 1.0f;
     float currentFps_ = 30.0f;
 
     int resolutionX_ = 0;
     int resolutionY_ = 0;
+    libcamera::PixelFormat pixelFormat_ = libcamera::formats::BGR888;
+    libcamera::Orientation sensorOrientation_ = libcamera::Orientation::Rotate0;
 
     float focalLength_mm_ = 0.0f; // Focal length in mm
     float sensorWidth_mm_ = 0.0f; // Sensor width in mm
@@ -337,6 +419,12 @@ class GSCameraInterface
 
     float horizontalFOV_deg_ = 0.0f; // Horizontal field of view in degrees
     float verticalFOV_deg_ = 0.0f; // Vertical field of view in degrees
+
+    // Stride in bytes, derived from pixel format and resolution once
+    // configured, immutable through
+    // camera interface, set during stream configuration
+    unsigned int stride_ = 0;
+    unsigned int frameSizeBytes_ = 0;
 
     cv::Mat calibrationMatrix_;
     cv::Mat distortionCoefficients_;
@@ -353,6 +441,8 @@ class GSCameraInterface
     std::condition_variable frameCondition_;
     cv::Mat latestFrame_;
     bool frameReady_ = false;
+    // Callback for request completion
+    requestCompleteCallback requestCallback_ = nullptr;
 
     static const std::string cameraModeToString(const TriggerMode &mode)
     {

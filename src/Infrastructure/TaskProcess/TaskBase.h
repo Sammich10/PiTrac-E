@@ -177,7 +177,7 @@ class TaskBase
     {
         if (logger_)
         {
-            logger_->info("[" + name_ + "] " + message);
+            logger_->info(message);
         }
     }
 
@@ -185,7 +185,7 @@ class TaskBase
     {
         if (logger_)
         {
-            logger_->warning("[" + name_ + "] " + message);
+            logger_->warning(message);
         }
     }
 
@@ -193,7 +193,7 @@ class TaskBase
     {
         if (logger_)
         {
-            logger_->error("[" + name_ + "] " + message);
+            logger_->error(message);
         }
     }
 

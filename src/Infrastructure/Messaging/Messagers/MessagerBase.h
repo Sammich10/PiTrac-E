@@ -78,6 +78,11 @@ class MessagerBase
         const std::string &endpoint
     );
 
+    void disconnect
+    (
+        const std::string &endpoint
+    );
+
     void subscribe
     (
         const std::string &topic = ""

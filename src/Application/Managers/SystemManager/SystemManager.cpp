@@ -83,6 +83,20 @@ void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> mes
                     sendAcknowledgementToHost(*message, modeChangeSuccess);
                     break;
                 }
+                case SystemCommandMsg::CommandID::Calibrate:
+                {
+                    logInfo("Handling Calibrate command");
+                    if(mode_ != SystemMode_Type::CALIBRATION)
+                    {
+                        logWarning("Received Calibrate command while not in CALIBRATION mode");
+                        sendAcknowledgementToHost(*message, false);
+                        break;
+                    }
+                    // Forward the calibration command to specified agent(s)
+                    const bool commandSuccess = handleCalibrationCommand(*cmd_msg);
+                    sendAcknowledgementToHost(*message, commandSuccess);
+                    break;
+                }
                 default:
                     logWarning("Received unknown command ID in SystemCommandMsg: " + std::to_string(static_cast<int>(cmd_msg->getCommand_id())));
                     sendAcknowledgementToHost(*message, false);
@@ -138,6 +152,67 @@ bool SystemManager::handleModeChangeCommand(const SystemCommandMsg &cmd_msg)
         else
         {
             logInfo("System already in requested mode: " + System::systemModeToString(new_mode));
+        }
+    }
+    return true;
+}
+
+bool SystemManager::handleCalibrationCommand(const SystemCommandMsg &cmd_msg)
+{
+    logInfo("Forwarding calibration command to registered agents in CALIBRATION mode");
+    std::map<std::string, std::string> params = cmd_msg.getCommand_params();
+
+    std::lock_guard<std::mutex> lock(agents_mutex_);
+    if(params.find("task_name") == params.end())
+    {
+        // Broadcast to all agents in CALIBRATION mode
+        for(const auto &pair : registered_agents_)
+        {
+            const RegisteredAgent &agent = pair.second;
+            if(agent.current_mode == SystemMode_Type::CALIBRATION)
+            {
+                logInfo("Sending calibration command to agent: " + agent.task_name);
+                try
+                {
+                    SystemCommandMsg calib_msg;
+                    calib_msg.setCommand_id(static_cast<int32_t>(SystemCommandMsg::CommandID::Calibrate));
+                    calib_msg.setCommand_params(params);
+                    task_control_router_->sendMessageToIdentity(calib_msg, agent.zmq_identity);
+                }
+                catch(const std::exception &e)
+                {
+                    logError("Failed to send calibration command to agent " + agent.task_name + ": " + std::string(e.what()));
+                }
+            }
+        }
+    }
+    else
+    {
+        // Send to specific agent
+        std::string target_agent_name = params["task_name"];
+        auto it = agent_name_to_identity_.find(target_agent_name);
+        if(it != agent_name_to_identity_.end())
+        {
+            std::string identity = it->second;
+            logInfo("Sending calibration command to specified agent: " + target_agent_name);
+            try
+            {
+                // Remove the task_name parameter before forwarding
+                params.erase("task_name");
+                SystemCommandMsg calib_msg;
+                calib_msg.setCommand_id(static_cast<int32_t>(SystemCommandMsg::CommandID::Calibrate));
+                calib_msg.setCommand_params(params);
+                task_control_router_->sendMessageToIdentity(calib_msg, identity);
+            }
+            catch(const std::exception &e)
+            {
+                logError("Failed to send calibration command to agent " + target_agent_name + ": " + std::string(e.what()));
+            }
+        }
+        else
+        {
+            logError("Specified agent for calibration command not found: " + target_agent_name);
+            return false;
         }
     }
     return true;

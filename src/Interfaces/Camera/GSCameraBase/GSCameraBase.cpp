@@ -1,4 +1,5 @@
 #include "Interfaces/Camera/GSCameraBase/GSCameraBase.h"
+#include "Common/Utils/CameraUtils/CameraUtils.h"
 #include <iostream>
 #include <fstream>
 #include <thread>
@@ -18,7 +19,8 @@ bool GSCameraBase::openCamera()
         return true;
     }
     logger_->info("Opening camera at index " + std::to_string(cameraIndex_));
-    try {
+    try
+    {
         // Get available cameras
         auto cameras = cameraManager_->cameras();
         if (cameras.empty())
@@ -26,32 +28,36 @@ bool GSCameraBase::openCamera()
             logger_->error("No cameras found");
             return false;
         }
-
-        // Find IMX296 camera (or use the specified index)
+        // Ensure the camera index is valid
         if (cameraIndex_ >= cameras.size())
         {
             logger_->error("Camera index " + std::to_string(cameraIndex_) + " out of range");
             return false;
         }
-
+        // Select the camera, log the camera ID for reference
         camera_ = cameras[cameraIndex_];
-
-        // Verify this is an IMX296 (optional check)
         std::string cameraId = camera_->id();
-        std::cout << "Using camera: " << cameraId << std::endl;
-
+        logger_->info("Using camera: " + cameraId);
         // Acquire the camera
-        int ret = camera_->acquire();
+        const int ret = camera_->acquire();
         if (ret)
         {
-            logger_->error("Failed to acquire camera");
+            logger_->error("Failed to acquire camera: " + cameraId);
             return false;
         }
-
+        // Create new allocator (will be used during stream configuration)
+        allocator_ = std::make_unique<libcamera::FrameBufferAllocator>(camera_);
+        if(!allocator_)
+        {
+            logger_->error("Failed to create FrameBufferAllocator");
+            return false;
+        }
+        destroyRequests();
         isCameraOpen_ = true;
-
         return isCameraOpen_;
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         logger_->error("Exception in openCamera: " + std::string(e.what()));
         return false;
     }
@@ -67,12 +73,9 @@ void GSCameraBase::closeCamera()
             camera_->stop();
             cameraStarted_ = false;
         }
-
         camera_->requestCompleted.disconnect(this, &GSCameraBase::requestComplete);
-
         // Clean up requests
-        requests_.clear();
-
+        destroyRequests();
         // Free all allocated buffers
         if (allocator_)
         {
@@ -87,78 +90,116 @@ void GSCameraBase::closeCamera()
                 }
             }
         }
+        if(hasFramesAvailable())
+        {
+            clearFrameBuffer();
+        }
         allocator_.reset();
-
         camera_->release();
         camera_.reset();
     }
-
     isCameraOpen_ = false;
     isConfigured_ = false;
-
     // Attempt to give IPA processes time to cleanup after libcamera shutdown
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 
-cv::Mat GSCameraBase::captureFrame()
+bool GSCameraBase::start()
 {
-    if (triggerMode_ == TriggerMode::EXTERNAL_TRIGGER)
+    // Check if already started
+    if(cameraStarted_)
     {
-        // In external trigger mode, just return the latest available frame
-        return getLatestFrame();
+        logger_->info("Camera already started");
+        return true;
     }
-    else
+    // Ensure the camera has been configured
+    if(!isConfigured_)
     {
-        // Original free-running implementation
-        if (!isCameraOpen_ || !isConfigured_)
-        {
-            logger_->error("Camera not open or configured");
-            return cv::Mat();
-        }
-
-        try {
-            if (!cameraStarted_)
-            {
-                int ret = camera_->start();
-                if (ret)
-                {
-                    logger_->error("Failed to start camera");
-                    return cv::Mat();
-                }
-                cameraStarted_ = true;
-
-                for (auto &request : requests_)
-                {
-                    camera_->queueRequest(request.get());
-                }
-            }
-
-            std::unique_lock<std::mutex> lock(frameMutex_);
-            frameCondition_.wait_for(lock, std::chrono::milliseconds(1000), [this] {
-                    return frameReady_;
-                });
-
-            if (frameReady_)
-            {
-                frameReady_ = false;
-                return latestFrame_.clone();
-            }
-            else
-            {
-                logger_->error("Timeout waiting for frame in captureFrame()");
-            }
-
-            return cv::Mat();
-        } catch (const std::exception &e) {
-            logger_->error("Exception in captureFrame: " + std::string(e.what()));
-            return cv::Mat();
-        }
+        logger_->error("Camera not configured, cannot start");
+        return false;
     }
+    // Create buffers for the stream
+    if(!allocateBuffers())
+    {
+        logger_->error("Failed to allocate buffers before starting camera");
+        return false;
+    }
+    // Start the camera
+    const int ret = camera_->start();
+    if (ret)
+    {
+        logger_->error("Failed to start camera: " + std::to_string(ret));
+        return false;
+    }
+    // At this point, the camera is running and requests can be created and
+    // queued, but we leave that to the caller
+    cameraStarted_ = true;
+    return true;
 }
 
-cv::Mat GSCameraBase::getNextFrame()
+bool GSCameraBase::stop()
 {
-    return captureFrame(); // For this implementation, same as captureFrame
+    // Step 1: Stop the camera if it is started
+    if (cameraStarted_)
+    {
+        int ret = camera_->stop();
+        if (ret)
+        {
+            logger_->error("Failed to stop camera: " + std::to_string(ret));
+            return false;
+        }
+        cameraStarted_ = false;
+        logger_->info("Camera stopped successfully");
+        // Ensure all pending requests are completed
+        for(size_t i = 0; i < requests_.size(); ++i)
+        {
+            libcamera::Request *request = requests_[i].get();
+            if (request->status() == libcamera::Request::RequestPending)
+            {
+                logger_->info("Waiting for request " + std::to_string(i) + " to complete...");
+                const int timeout_ms = 5000; // 5 seconds timeout
+                auto start_time = std::chrono::steady_clock::now();
+                // Simple wait loop (could be improved with condition variable)
+                while (request->status() == libcamera::Request::RequestPending)
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                    auto elapsed = std::chrono::steady_clock::now() - start_time;
+                    if (std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count() > timeout_ms)
+                    {   // Timeout reached
+                        logger_->error("Timeout waiting for request " + std::to_string(i) + " to complete");
+                        break;
+                    }
+                }
+            }
+        }
+        // Clear all requests after stopping the camera
+        destroyRequests();
+        // Free all allocated buffers after stopping the camera
+        if(!freeBuffers())
+        {
+            logger_->error("Failed to free buffers after stopping camera");
+            return false;
+        }
+        // The camera is now stopped and all resources have been cleaned up.
+        // It is safe to reconfigure or close the camera.
+    }
+    return true;
+}
+
+cv::Mat GSCameraBase::captureFrame(uint32_t timeout_ms)
+{
+    if (!isCameraOpen_ || !isConfigured_)
+    {   // Camera not ready for capture, log error and return empty frame
+        logger_->error("Camera not open or configured");
+        return cv::Mat();
+    }
+    else if(isCapturing_)
+    {   // Attempt to return the latest frame captured in continuous mode, if
+        // available.
+        // This will not work if continuous capture was started with a frame
+        // callback to handle frames.
+        return getLatestFrame();
+    }
 }
 
 bool GSCameraBase::setTriggerMode(TriggerMode mode)
@@ -179,58 +220,47 @@ bool GSCameraBase::setTriggerMode(TriggerMode mode)
     return false;
 }
 
-bool GSCameraBase::startContinuousCapture()
+bool GSCameraBase::startContinuousCapture(requestCompleteCallback callback)
 {
+    logger_->info("Starting continuous capture...");
     if (!isCameraOpen_ || !isConfigured_)
     {
         logger_->error("Camera not open or configured");
         return false;
     }
-
+    // Check if already capturing
     if (isCapturing_)
     {
-        return true; // Already capturing
+        logger_->info("Camera already capturing");
+        return true;
     }
-
+    // Create requests for the allocated buffers if none exist
+    if(requests_.empty())
+    {
+        if(!createRequests())
+        {
+            logger_->error("Failed to create requests before starting camera");
+            return false;
+        }
+        logger_->info("Created " + std::to_string(requests_.size()) + " requests for continuous capture");
+    }
+    // Start the camera and begin continuous capture
     try {
         // Start camera if not running
         if (!cameraStarted_)
         {
-            int ret = camera_->start();
-            if (ret)
-            {
-                logger_->error("Failed to start camera");
-                return false;
-            }
-            cameraStarted_ = true;
+            logger_->error("Failed to start continuous capture, camera not started");
+            return false;
         }
-
-        // Recreate requests if they're empty (invalidated by stop)
-        if (requests_.empty())
-        {
-            logger_->info("Recreating requests after camera restart...");
-            if (config_ && !config_->empty())
-            {
-                libcamera::Stream *stream = config_->at(0).stream();
-                if (!allocateBuffersForStream(stream))
-                {
-                    logger_->error("Failed to recreate requests");
-                    return false;
-                }
-            }
-            else
-            {
-                logger_->error("No valid configuration for request recreation");
-                return false;
-            }
-        }
-
+        requestCallback_ = callback;
+        // Connect the request completed signal to the handler
+        camera_->requestCompleted.connect(this, &GSCameraBase::requestComplete);
         // Queue initial requests
+        logger_->info("Queueing " + std::to_string(requests_.size()) + " initial requests for continuous capture...");
         for (auto &request : requests_)
         {
             camera_->queueRequest(request.get());
         }
-
         isCapturing_ = true;
         return true;
     } catch (const std::exception &e) {
@@ -245,126 +275,135 @@ bool GSCameraBase::stopContinuousCapture()
     {
         return true; // Already stopped
     }
-
+    // Setting isCapturing_ to false will signal the requestComplete handler to
+    // stop processing frames
+    // so all queued requests will be processed but no new requests will be
+    // queued.
     logger_->info("Stopping continuous capture...");
     isCapturing_ = false;
-
-    if (cameraStarted_)
-    {
-        try {
-            // Give pending requests time to complete before stopping camera
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-            camera_->stop();
-            cameraStarted_ = false;
-
-            logger_->info("Camera stopped successfully");
-        } catch (const std::exception &e) {
-            logger_->error("Exception stopping camera: " + std::string(e.what()));
-        }
-    }
-
     return true;
 }
 
 bool GSCameraBase::configureStream(const libcamera::StreamRole &streamRole)
 {
-    bool wasCapturing = isCapturing_;
-
-    // Step 1: Completely stop capture and camera
-    if (wasCapturing)
-    {
-        logger_->info("Stopping continuous capture...");
-        isCapturing_ = false;
-
-        // Wait for pending requests to complete
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    if(!stop())
+    {   // Ensure the camera is stopped. If the camera was not stopped
+        // successfully, log error and return false
+        // This prevents reconfiguration while the camera is active. If the
+        // camera was already stopped, this is a no-op.
+        logger_->error("Failed to stop camera for reconfiguration");
+        return false;
     }
 
-    if (cameraStarted_)
-    {
-        int ret = camera_->stop();
-        if (ret)
-        {
-            logger_->error("Failed to stop camera: " + std::to_string(ret));
-            return false;
-        }
-        cameraStarted_ = false;
-        logger_->info("Camera stopped for stream switch");
-    }
-
-    // Step 2: Disconnect callback and clear requests
-    camera_->requestCompleted.disconnect(this, &GSCameraBase::requestComplete);
-    requests_.clear();
-
-    // Step 3: Free ALL buffers
-    if (allocator_)
-    {
-        for (size_t i = 0; i < config_->size(); ++i)
-        {
-            libcamera::Stream *stream = config_->at(i).stream();
-            const std::vector<std::unique_ptr<libcamera::FrameBuffer> > &buffers =
-                allocator_->buffers(stream);
-            if (!buffers.empty())
-            {
-                allocator_->free(stream);
-                logger_->info("Freed buffers for stream " + std::to_string(i));
-            }
-        }
-        allocator_.reset();
-    }
-
-    // Step 4: Create new single-stream configuration for the active stream
+    // Create new single-stream configuration for the active stream
     if (!reconfigureForActiveStream(streamRole))
     {
         logger_->error("Failed to reconfigure for active stream");
         return false;
     }
-
     logger_->info("Successfully configured stream");
+    return true;
+}
 
-    // Step 5: Resume capture if it was running
-    if (wasCapturing)
+bool GSCameraBase::allocateBuffers()
+{
+    if (!allocator_)
     {
-        logger_->info("Restarting capture for new stream...");
-        return startContinuousCapture();
+        logger_->error("Cannot allocate buffers, no buffer allocator");
+        return false;
+    }
+    if(!isConfigured_)
+    {
+        logger_->error("Cannot allocate buffers, camera not configured");
+        return false;
+    }
+    if(isCapturing_)
+    {
+        logger_->error("Cannot allocate buffers while capturing");
+        return false;
+    }
+
+    // Allocate buffers for all streams in the current configuration (there
+    // should only be 1 active stream, but handle all for safety)
+    for (size_t i = 0; i < config_->size(); ++i)
+    {
+        if (!allocateBuffersForStream(config_->at(i).stream()))
+        {
+            logger_->error("Failed to allocate buffers for active stream");
+            return false;
+        }
     }
 
     return true;
 }
 
-cv::Mat GSCameraBase::getLatestFrame()
+bool GSCameraBase::freeBuffers()
 {
-    std::lock_guard<std::mutex> lock(frameBufferMutex_);
-
-    if (frameBuffer_.empty())
+    // Free all allocated buffers
+    if(!allocator_)
     {
-        return cv::Mat(); // No frames available
+        logger_->error("Allocator not initialized");
+        return false;
     }
-
-    // Get the most recent frame (discard older ones if multiple available)
-    cv::Mat latestFrame;
-    while (!frameBuffer_.empty())
+    for (size_t i = 0; i < config_->size(); ++i)
     {
-        latestFrame = frameBuffer_.front();
-        frameBuffer_.pop();
+        logger_->info("Freeing buffers for stream " + std::to_string(i));
+        libcamera::Stream *stream = config_->at(i).stream();
+        const std::vector<std::unique_ptr<libcamera::FrameBuffer> > &buffers =
+            allocator_->buffers(stream);
+        if (!buffers.empty())
+        {   // Free buffers for this stream
+            allocator_->free(stream);
+        }
     }
-
-    return latestFrame;
+    // Buffers freed successfully
+    return true;
 }
 
-std::vector<cv::Mat> GSCameraBase::getAllAvailableFrames()
+bool GSCameraBase::createRequests()
 {
-    std::lock_guard<std::mutex> lock(frameBufferMutex_);
-
-    std::vector<cv::Mat> frames;
-    while (!frameBuffer_.empty())
+    for(size_t i = 0; i < config_->size(); ++i)
     {
-        frames.push_back(frameBuffer_.front());
-        frameBuffer_.pop();
+        libcamera::Stream *stream = config_->at(i).stream();
+        const std::vector<std::unique_ptr<libcamera::FrameBuffer> > &buffers = allocator_->buffers(stream);
+        for (size_t j = 0; j < buffers.size(); ++j)
+        {
+            std::unique_ptr<libcamera::Request> request = camera_->createRequest();
+            if (!request)
+            {
+                logger_->error("Failed to create request " + std::to_string(j) + " for stream " + std::to_string(i));
+                return false;
+            }
+            // Set controls (exposure, frame duration, gain, etc.)
+            libcamera::ControlList &controls = request->controls();
+            // controls.set(libcamera::controls::ExposureTimeMode,
+            // libcamera::controls::ExposureTimeMode::Manual);
+            controls.set(libcamera::controls::ExposureTime, currentExposureUs_);
+            controls.set(libcamera::controls::FrameDurationLimits,
+                         {static_cast<int64_t>(1000000.0f / currentFps_),
+                          static_cast<int64_t>(1000000.0f / currentFps_)});
+            // controls.set(libcamera::controls::AnalogueGainMode,
+            // libcamera::controls::AnalogueGainMode::Manual);
+            controls.set(libcamera::controls::AnalogueGain, analogGain_);
+            // controls.set(libcamera::controls::DigitalGain, digitalGain_);
+            // Add buffer to request
+            const int ret = request->addBuffer(stream, buffers[j].get());
+            if (ret < 0)
+            {
+                logger_->error("Failed to add buffer to request");
+                return false;
+            }
+            requests_.push_back(std::move(request));
+        }
+        logger_->info("Created " + std::to_string(buffers.size()) + " requests for stream " + std::to_string(i));
     }
+    return true;
+}
 
-    return frames;
+bool GSCameraBase::destroyRequests()
+{
+    requests_.clear();
+    return true;
 }
 
 bool GSCameraBase::hasFramesAvailable() const
@@ -377,6 +416,23 @@ size_t GSCameraBase::getFrameQueueSize() const
 {
     std::lock_guard<std::mutex> lock(frameBufferMutex_);
     return frameBuffer_.size();
+}
+
+cv::Mat GSCameraBase::getLatestFrame()
+{
+    std::lock_guard<std::mutex> lock(frameBufferMutex_);
+    if (frameBuffer_.empty())
+    {
+        logger_->warning("No frames available in buffer");
+        return cv::Mat(); // Return empty Mat if no frames are available
+    }
+    cv::Mat latestFrame = frameBuffer_.back().clone(); // Get the latest frame
+    // Clear the buffer after retrieving the latest frame
+    while (!frameBuffer_.empty())
+    {
+        frameBuffer_.pop();
+    }
+    return latestFrame;
 }
 
 void GSCameraBase::clearFrameBuffer()
@@ -396,54 +452,28 @@ std::string GSCameraBase::toString() const
 
 bool GSCameraBase::allocateBuffersForStream(libcamera::Stream *stream)
 {
-    if (!allocator_)
-    {
-        logger_->error("Allocator not initialized");
-        return false;
-    }
-
     int ret = allocator_->allocate(stream);
     if (ret < 0)
     {
         logger_->error("Failed to allocate buffers for stream");
         return false;
     }
-
     size_t allocated = allocator_->buffers(stream).size();
-    logger_->info("Allocated " + std::to_string(allocated) + " buffers for stream");
-
-    // Clear any existing requests
-    requests_.clear();
-
-    const std::vector<std::unique_ptr<libcamera::FrameBuffer> > &buffers =
-        allocator_->buffers(stream);
-    for (unsigned int i = 0; i < buffers.size(); ++i)
+    if(allocated == 0)
     {
-        std::unique_ptr<libcamera::Request> request = camera_->createRequest();
-        if (!request)
-        {
-            logger_->error("Failed to create request");
-            return false;
-        }
-
-        ret = request->addBuffer(stream, buffers[i].get());
-        if (ret < 0)
-        {
-            logger_->error("Failed to add buffer to request");
-            return false;
-        }
-
-        // Set controls (exposure, frame duration, gain, etc.)
-        libcamera::ControlList &controls = request->controls();
-        controls.set(libcamera::controls::ExposureTime, currentExposureUs_);
-        controls.set(libcamera::controls::FrameDurationLimits,
-                     {static_cast<int64_t>(1000000.0f / currentFps_),
-                      static_cast<int64_t>(1000000.0f / currentFps_)});
-        controls.set(libcamera::controls::AnalogueGain, currentGain_);
-
-        requests_.push_back(std::move(request));
+        logger_->error("No buffers allocated for stream");
+        return false;
     }
-
+    else if(allocated < numBuffers_)
+    {
+        logger_->warning("Allocated fewer buffers (" + std::to_string(allocated) +
+                         ") than requested (" + std::to_string(numBuffers_) + ")");
+    }
+    else
+    {
+        logger_->info("Successfully allocated " + std::to_string(allocated) +
+                      " buffers for stream");
+    }
     return true;
 }
 
@@ -478,44 +508,6 @@ bool GSCameraBase::configureTriggerMode(const TriggerMode &mode)
     return true;
 }
 
-cv::Mat GSCameraBase::convertBufferToMat(libcamera::FrameBuffer *buffer)
-{
-    // Active stream is always at index 0 in single-stream configuration
-    const libcamera::StreamConfiguration &streamConfig = config_->at(0);
-
-    const libcamera::FrameBuffer::Plane &plane = buffer->planes()[0];
-    void *data = mmap(nullptr, plane.length, PROT_READ, MAP_SHARED, plane.fd.get(), 0);
-
-    if (data == MAP_FAILED)
-    {
-        logger_->error("Failed to map buffer");
-        return cv::Mat();
-    }
-
-    cv::Mat result;
-    int width = streamConfig.size.width;
-    int height = streamConfig.size.height;
-    size_t stride = streamConfig.stride;
-
-    if (streamConfig.pixelFormat == libcamera::formats::SRGGB10_CSI2P)
-    {
-        cv::Mat rawImg = unpack10BitBayer(data, width, height, stride);
-        cv::cvtColor(rawImg, result, cv::COLOR_BayerRG2BGR);
-    }
-    else if (streamConfig.pixelFormat == libcamera::formats::BGR888)
-    {
-        cv::Mat bgrImg(height, width, CV_8UC3, data, stride);
-        result = bgrImg.clone();
-    }
-    else
-    {
-        logger_->error("Unsupported pixel format: " + streamConfig.pixelFormat.toString());
-    }
-
-    munmap(data, plane.length);
-    return result;
-}
-
 void GSCameraBase::addFrameToBuffer(const cv::Mat &frame)
 {
     std::lock_guard<std::mutex> lock(frameBufferMutex_);
@@ -532,103 +524,70 @@ void GSCameraBase::addFrameToBuffer(const cv::Mat &frame)
 
 void GSCameraBase::requestComplete(libcamera::Request *request)
 {
-    if (request->status() == libcamera::Request::RequestComplete)
+    libcamera::Request::Status status = request->status();
+    switch(status)
     {
-        // Since we only have one stream active at a time, it's always at index
-        // 0
-        libcamera::FrameBuffer *buffer = request->findBuffer(config_->at(0).stream());
-        if (buffer)
+        case libcamera::Request::RequestComplete:
         {
-            // logger_->info("Received frame");
-
-            cv::Mat frame = convertBufferToMat(buffer);
-
-            if (triggerMode_ == TriggerMode::EXTERNAL_TRIGGER && isCapturing_)
-            {
-                addFrameToBuffer(frame);
+            // Since we only have one stream active at a time, it's always at
+            // index 0
+            libcamera::FrameBuffer *buffer = request->findBuffer(config_->at(0).stream());
+            if (buffer)
+            {   // Process the completed buffer
+                cv::Mat frame = CameraUtils::convertBufferToMat(buffer, config_->at(0));
+                if(frame.empty())
+                {
+                    logger_->error("Failed to convert buffer to cv::Mat in requestComplete");
+                    return;
+                }
+                if(requestCallback_)
+                {   // Invoke user-defined callback if set
+                    requestCallback_(frame);
+                }
+                else
+                {   // Default processing: convert buffer to cv::Mat and add to
+                    // software frame buffer
+                    addFrameToBuffer(frame);
+                }
             }
             else
             {
-                {
-                    std::lock_guard<std::mutex> lock(frameMutex_);
-                    latestFrame_ = frame;
-                    frameReady_ = true;
-                }
-                frameCondition_.notify_one();
+                logger_->error("Failed to find buffer for completed request");
             }
+            // If still capturing, reuse and re-queue the request
+            if (isCapturing_)
+            {
+                request->reuse(libcamera::Request::ReuseBuffers);
+                camera_->queueRequest(request);
+            }
+            break;
         }
-        else
+        case libcamera::Request::RequestCancelled:
         {
-            logger_->error("Failed to find buffer for completed request");
+            // During shutdown, we expect RequestCancelled errors (status 2)
+            if (!isCapturing_)
+            {
+                // This is expected during shutdown - don't log as error
+                logger_->warning("Request cancelled during shutdown (expected)");
+            }
+            else
+            {
+                logger_->error("Request cancelled unexpectedly");
+            }
+            break;
         }
-
-        if (isCapturing_)
+        case libcamera::Request::RequestPending:
         {
-            request->reuse(libcamera::Request::ReuseBuffers);
-            camera_->queueRequest(request);
+            // This should not happen in requestComplete
+            logger_->error("Request is still pending in requestComplete");
+            break;
+        }
+        default:
+        {
+            logger_->error("Unknown request status in requestComplete: " + std::to_string(status));
+            break;
         }
     }
-    else
-    {
-        // During shutdown, we expect RequestCancelled errors (status 2)
-        if (request->status() == 2 && !isCapturing_) // RequestCancelled during
-                                                     // shutdown
-        {
-            // This is expected during shutdown - don't log as error
-            logger_->info("Request cancelled during shutdown (expected)");
-        }
-        else
-        {
-            logger_->error("Request completed with error status: " + std::to_string(request->status()));
-        }
-    }
-}
-
-cv::Mat GSCameraBase::unpack10BitBayer(void *data, int width, int height, size_t stride)
-{
-    // SRGGB10_CSI2P packs 4 pixels (40 bits) into 5 bytes
-    cv::Mat result(height, width, CV_16UC1);  // Use 16-bit for 10-bit data
-
-    uint8_t *src = static_cast<uint8_t *>(data);
-    uint16_t *dst = reinterpret_cast<uint16_t *>(result.data);
-
-    for (int y = 0; y < height; y++)
-    {
-        uint8_t *row_src = src + y * stride;
-        uint16_t *row_dst = dst + y * width;
-
-        for (int x = 0; x < width; x += 4)
-        {
-            // Unpack 4 pixels from 5 bytes
-            int pixels_remaining = std::min(4, width - x);
-
-            if (pixels_remaining >= 1)
-            {
-                row_dst[x] = (row_src[0] << 2) | ((row_src[4] >> 0) & 0x03);
-            }
-            if (pixels_remaining >= 2)
-            {
-                row_dst[x + 1] = (row_src[1] << 2) | ((row_src[4] >> 2) & 0x03);
-            }
-            if (pixels_remaining >= 3)
-            {
-                row_dst[x + 2] = (row_src[2] << 2) | ((row_src[4] >> 4) & 0x03);
-            }
-            if (pixels_remaining >= 4)
-            {
-                row_dst[x + 3] = (row_src[3] << 2) | ((row_src[4] >> 6) & 0x03);
-            }
-
-            row_src += 5; // Move to next 5-byte group
-        }
-    }
-
-    // Convert to 8-bit for OpenCV compatibility (shift right by 2 bits)
-    cv::Mat result8bit;
-    // 10-bit range (0-1023) should map to 8-bit range (0-255)
-    result.convertTo(result8bit, CV_8UC1, 255.0 / 1023.0);
-
-    return result8bit;
 }
 
 bool GSCameraBase::reconfigureForActiveStream(const libcamera::StreamRole &streamRole)
@@ -640,56 +599,47 @@ bool GSCameraBase::reconfigureForActiveStream(const libcamera::StreamRole &strea
         logger_->error("Failed to generate configuration for stream");
         return false;
     }
-
-    // Configure the single stream
-    libcamera::StreamConfiguration &streamConfig = config_->at(0); // Only one
-
+    // Configure stream. We only have one active stream at a time in this
+    // implementation.
+    libcamera::StreamConfiguration &streamConfig = config_->at(0);
     streamConfig.size.width = resolutionX_;
     streamConfig.size.height = resolutionY_;
-    streamConfig.pixelFormat = libcamera::formats::BGR888;
-
+    streamConfig.pixelFormat = pixelFormat_;
+    streamConfig.bufferCount = numBuffers_;
+    config_->orientation = sensorOrientation_;
     // Validate configuration
     libcamera::CameraConfiguration::Status validation = config_->validate();
-    if (validation == libcamera::CameraConfiguration::Invalid)
+    switch(validation)
     {
-        logger_->error("Stream configuration invalid");
-        return false;
+        case libcamera::CameraConfiguration::Adjusted:
+            logger_->warning("Stream configuration adjusted by validation");
+            // Update configuration parameters. Some have changed after
+            // validation.
+            resolutionX_ = streamConfig.size.width;
+            resolutionY_ = streamConfig.size.height;
+            pixelFormat_ = streamConfig.pixelFormat;
+            numBuffers_ = streamConfig.bufferCount;
+        // FALLTHROUGH //
+        case libcamera::CameraConfiguration::Valid:
+            // Update derived parameters after validation
+            stride_ = streamConfig.stride;
+            frameSizeBytes_ = streamConfig.frameSize;
+            break;
+        case libcamera::CameraConfiguration::Invalid:
+            logger_->error("Stream configuration invalid after validation");
+            return false;
+        default:
+            break;
     }
-
     // Apply configuration
-    int ret = camera_->configure(config_.get());
+    const int ret = camera_->configure(config_.get());
     if (ret)
     {
         logger_->error("Failed to configure camera for stream");
         return false;
     }
-
-    logger_->info("Configured stream: "
-                  + std::to_string(streamConfig.size.width) + "x" +
-                  std::to_string(streamConfig.size.height)
-                  + "-" + streamConfig.pixelFormat.toString());
-
-    // Create new allocator
-    allocator_ = std::make_unique<libcamera::FrameBufferAllocator>(camera_);
-    if (!allocator_)
-    {
-        logger_->error("Failed to create frame buffer allocator");
-        return false;
-    }
-
-    // Allocate buffers for the active stream (index 0 since it's the only
-    // stream)
-    if (!allocateBuffersForStream(config_->at(0).stream()))
-    {
-        logger_->error("Failed to allocate buffers for active stream");
-        return false;
-    }
-
-    // Reconnect callback
-    camera_->requestCompleted.connect(this, &GSCameraBase::requestComplete);
-
+    logger_->info("Configured stream: " + streamConfig.toString());
     isConfigured_ = true;
-
     return true;
 }
 } // namespace PiTrac

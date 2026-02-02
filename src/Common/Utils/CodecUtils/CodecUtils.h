@@ -56,7 +56,6 @@ class FrameCodec
     (
         const cv::Mat &frame,
         const CodecParams &params = {}
-
     ) const = 0;
     virtual cv::Mat decode
     (

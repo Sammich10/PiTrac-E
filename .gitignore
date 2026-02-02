@@ -15,6 +15,12 @@ tmp
 src/Infrastructure/Messaging/Messages/
 !src/Infrastructure/Messaging/Messages/.gitkeep
 
+# Image files
+*.png
+*.jpg
+*.jpeg
+*.bmp
+
 # Python cache
 __pycache__/
 *.pyc

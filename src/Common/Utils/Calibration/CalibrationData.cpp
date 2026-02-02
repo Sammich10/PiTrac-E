@@ -7,6 +7,10 @@ namespace PiTrac
 {
 std::shared_ptr<CalibrationData> CalibrationData::instance_ = nullptr;
 
+// Define static member variables
+std::string CalibrationData::dbPath_ = "calibration_data.db";
+std::string CalibrationData::sqlSchemaPath_ = "schemas/CalibrationSchema.sql";
+
 std::shared_ptr<CalibrationData> CalibrationData::getInstance()
 {
     if (instance_ == nullptr)
@@ -115,6 +119,12 @@ bool CalibrationData::initializeConnection(void)
             return false;
         }
     }
+    return true;
+}
+
+bool CalibrationData::prepareStatements()
+{
+    // Prepare SQLite statements for calibration data queries here
     return true;
 }
 }; // End namespace PiTrac

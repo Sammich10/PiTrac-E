@@ -1,4 +1,4 @@
-#include "Application/Agents/CameraAgent/CameraAgent.h"
+#include "Application/Agents/TeeAgent/TeeAgent.h"
 #include "Common/Utils/Logging/GSLogger.h"
 #include <cstdlib>
 #include <thread>
@@ -13,7 +13,7 @@ constexpr size_t PI_CPU_MAX = 3;
 
 // Global flag for graceful shutdown
 std::atomic<bool> g_shutdown_requested(false);
-PiTrac::CameraAgent *g_camera_task = nullptr;
+PiTrac::TeeAgent *g_camera_task = nullptr;
 
 void signalHandler(int signal)
 {
@@ -51,10 +51,10 @@ int main(int argc, char *argv[])
     size_t camera_index = std::stoul(argv[1]);
     try {
         printf("Starting Camera Agent Task Launcher\n");
-        std::string procname = "CameraAgent_" + std::to_string(camera_index);
+        std::string procname = "TeeAgent_" + std::to_string(camera_index);
         prctl(PR_SET_NAME, procname.c_str(), 0, 0, 0);
         // Create and start the camera agent task
-        PiTrac::CameraAgent camera_agent(camera_index);
+        PiTrac::TeeAgent camera_agent(camera_index);
         g_camera_task = &camera_agent;
 
         if (!camera_agent.run())

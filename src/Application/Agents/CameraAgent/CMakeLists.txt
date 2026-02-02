@@ -1,18 +1,22 @@
+cmake_minimum_required(VERSION 3.28)
+
 project(CameraAgent)
 
+# Add the source files for the CameraAgent class
 file(GLOB CAMERA_AGENT_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
 )
 
-add_executable(CameraAgent ${CAMERA_AGENT_SOURCES})
+# Add the static library for CameraAgent
+add_library(CameraAgent STATIC ${CAMERA_AGENT_SOURCES})
 
-target_link_libraries(CameraAgent
-    PUBLIC
-    Messaging
-    GSCameraInterface
-    GSCameraBase
-    imx296
+# Link OpenCV libraries
+target_link_libraries(
+    ${PROJECT_NAME} 
     ${OpenCV_LIBS}
     ${LIBCAMERA_LIBS}
+    ${SQLite3_LIBRARIES}
+    Calibration
+    FileUtils
 )
