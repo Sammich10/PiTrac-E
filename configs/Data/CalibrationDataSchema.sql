@@ -8,6 +8,44 @@ CREATE TABLE IF NOT EXISTS Database_Info(
     DateCreated TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS Calibrations (
+    CalibrationID INTEGER PRIMARY KEY AUTOINCREMENT,
+    CameraID INTEGER NOT NULL,
+    CalibrationType TEXT NOT NULL,
+    CalibrationDate TEXT NOT NULL,
+    FOREIGN KEY (CameraID) REFERENCES Camera_Info(CameraID)
+)
+
+CREATE TABLE IF NOT EXISTS Camera_Info (
+    CameraID INTEGER PRIMARY KEY AUTOINCREMENT,
+    CameraName TEXT NOT NULL,
+    CameraType TEXT NOT NULL,
+    Manufacturer TEXT,
+    ModelNumber TEXT,
+    SerialNumber TEXT
+);
+
+CREATE TABLE IF NOT EXISTS Distortion_Coefficients (
+    CoefficientID INTEGER PRIMARY KEY AUTOINCREMENT,
+    CalibrationID INTEGER NOT NULL,
+    K1 REAL,
+    K2 REAL,
+    P1 REAL,
+    P2 REAL,
+    K3 REAL,
+    FOREIGN KEY (CalibrationID) REFERENCES Distortion_Calibration(CalibrationID)
+);
+
+CREATE TABLE IF NOT EXISTS Intrinsic_Calibration (
+    IntrinsicID INTEGER PRIMARY KEY AUTOINCREMENT,
+    CalibrationID INTEGER NOT NULL,
+    FX REAL NOT NULL,
+    FY REAL NOT NULL,
+    CX REAL NOT NULL,
+    CY REAL NOT NULL,
+    FOREIGN KEY (CalibrationID) REFERENCES Distortion_Calibration(CalibrationID)
+);
+
 -- Table to store intrinsic camera calibration parameters.
 -- This includes camera model, focal length, sensor dimensions, principal point coordinates,
 CREATE TABLE IF NOT EXISTS Distortion_Calibration (

@@ -107,6 +107,7 @@ bool CalibrationData::initializeConnection(void)
         char *errMsg = nullptr;
         if (sqlite3_exec(db_, schemaSQL.c_str(), nullptr, nullptr, &errMsg) != SQLITE_OK)
         {
+            logger_->error("Failed to execute SQL schema: " + std::string(errMsg));
             sqlite3_free(errMsg);
             return false;
         }
@@ -125,6 +126,40 @@ bool CalibrationData::initializeConnection(void)
 bool CalibrationData::prepareStatements()
 {
     // Prepare SQLite statements for calibration data queries here
+    int sql_status = SQLITE_OK;
+    
+    std::string statement = "INSERT INTO Distortion_Coefficients (CalibrationID , K1, K2, P1, P2, K3) VALUES (?1, ?2, ?3, ?4, ?5, ?6);";
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[PUT_CALIBRATION_INTRINSICS], nullptr);
+    if (sql_status != SQLITE_OK)
+    {
+        logger_->error("Failed to prepare PUT_CALIBRATION_INTRINSICS statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+
+    statement = "SELECT K1, K2, P1, P2, K3 FROM Distortion_Coefficients WHERE CalibrationID = ?1;";
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[GET_CALIBRATION_DISTORTION], nullptr);
+    if (sql_status != SQLITE_OK)
+    {
+        logger_->error("Failed to prepare GET_CALIBRATION_DISTORTION statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+
+    statement = "INSERT INTO Intrinsics (CalibrationID , FX, FY, CX, CY) VALUES (?1, ?2, ?3, ?4, ?5);";
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[PUT_CALIBRATION_INTRINSICS], nullptr);
+    if (sql_status != SQLITE_OK)
+    {
+        logger_->error("Failed to prepare PUT_CALIBRATION_INTRINSICS statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+
+    statement = "SELECT FX, FY, CX, CY FROM Intrinsics WHERE CalibrationID = ?1;";
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[GET_CALIBRATION_INTRINSICS], nullptr);
+    if (sql_status != SQLITE_OK)
+    {
+        logger_->error("Failed to prepare GET_CALIBRATION_INTRINSICS statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+
     return true;
 }
 }; // End namespace PiTrac
