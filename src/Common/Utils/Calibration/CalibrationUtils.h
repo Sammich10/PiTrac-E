@@ -11,9 +11,9 @@ class CalUtils
 {
     public:
 
-    static cv::Mat undistortFrame
+    static bool undistortFrame
     (
-        const cv::Mat frame,
+        cv::Mat &frame,
         cv::Mat &cameraMatrix,
         cv::Mat &distCoeffs
     );

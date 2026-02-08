@@ -44,8 +44,8 @@ CalibrationData::CalibrationData()
 CalibrationData::~CalibrationData()
 {
     if(db_)
-    {   // Ensure all data is flushed to disk and WAL file is cleared before closing the database connection
-        sqlite3_exec(db_, "PRAGMA wal_checkpoint(TRUNCATE);", nullptr, nullptr, nullptr);
+    {   // Use passive checkpoint to avoid blocking other processes
+        sqlite3_exec(db_, "PRAGMA wal_checkpoint(PASSIVE);", nullptr, nullptr, nullptr);
     }
     for (auto &stmt : preparedStatements_)
     {
@@ -219,7 +219,7 @@ bool CalibrationData::prepareStatements()
     "SELECT CE.CalibrationID, CE.CalibrationType, CE.created_at, CE.ReprojectionError, "
     "DC.K1, DC.K2, DC.P1, DC.P2, DC.K3, IC.FX, IC.FY, IC.CX, IC.CY "
     "FROM Calibration_Entries CE "
-    "INNER JOIN Camera_Info CI ON CE.CameraID = CI.CameraID "
+    "INNER JOIN Camera_Info CI ON CE.CameraID = CI.UUID "
     "INNER JOIN Distortion_Coefficients DC ON CE.CalibrationID = DC.CalibrationID "
     "INNER JOIN Intrinsic_Calibration IC ON CE.CalibrationID = IC.CalibrationID "
     "WHERE CI.UUID = ?1 ORDER BY CE.ReprojectionError ASC LIMIT 1;";
@@ -233,7 +233,7 @@ bool CalibrationData::prepareStatements()
     "SELECT CE.CalibrationID, CE.CalibrationType, CE.created_at, CE.ReprojectionError, "
     "DC.K1, DC.K2, DC.P1, DC.P2, DC.K3, IC.FX, IC.FY, IC.CX, IC.CY "
     "FROM Calibration_Entries CE "
-    "INNER JOIN Camera_Info CI ON CE.CameraID = CI.CameraID "
+    "INNER JOIN Camera_Info CI ON CE.CameraID = CI.UUID "
     "INNER JOIN Distortion_Coefficients DC ON CE.CalibrationID = DC.CalibrationID "
     "INNER JOIN Intrinsic_Calibration IC ON CE.CalibrationID = IC.CalibrationID "
     "WHERE CI.UUID = ?1 ORDER BY CE.created_at DESC LIMIT 1;";
@@ -249,7 +249,7 @@ bool CalibrationData::putCameraInfo(const CameraInfo_Type &cameraInfo)
 {
     sqlite3_stmt *stmt = preparedStatements_[PUT_CAMERA_INFO];
     sqlite3_reset(stmt);
-    sqlite3_bind_text(stmt, 1, cameraInfo.uuid.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(stmt, 1, cameraInfo.camera_name.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 2, cameraInfo.camera_type.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_text(stmt, 3, cameraInfo.uuid.c_str(), -1, SQLITE_TRANSIENT);
     
@@ -257,6 +257,7 @@ bool CalibrationData::putCameraInfo(const CameraInfo_Type &cameraInfo)
     if (!executeWithRetry(stmt, 5)) // Retry up to 5 times
     {
         logger_->error("Failed to execute PUT_CAMERA_INFO statement after retries: " + std::string(sqlite3_errmsg(db_)));
+        sqlite3_reset(stmt); // Reset statement after failure
         return false;
     }
     sqlite3_reset(stmt); // Reset statement after execution for next use
@@ -298,6 +299,22 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid, const 
     // We should also wrap this in a transaction to ensure atomicity
     char *errMsg = nullptr;
     
+    // Use BEGIN IMMEDIATE to get exclusive write access immediately and fail fast if another process has a lock
+    if (sqlite3_exec(db_, "BEGIN IMMEDIATE;", nullptr, nullptr, &errMsg) != SQLITE_OK)
+    {
+        logger_->error("Failed to begin immediate transaction for putCalibrationEntry: " + std::string(errMsg ? errMsg : "unknown error"));
+        if (errMsg) sqlite3_free(errMsg);
+        
+        // If immediate transaction fails, wait briefly and try a regular transaction as fallback
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg) != SQLITE_OK)
+        {
+            logger_->error("Failed to begin fallback transaction for putCalibrationEntry: " + std::string(errMsg ? errMsg : "unknown error"));
+            if (errMsg) sqlite3_free(errMsg);
+            return false;
+        }
+    }
+    
     // Step 1: Insert into Calibration_Entries
     sqlite3_stmt *stmt = preparedStatements_[PUT_CALIBRATION_ENTRY];
     sqlite3_reset(stmt);
@@ -305,9 +322,10 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid, const 
     sqlite3_bind_text(stmt, 2, entryInfo.calibration_type.c_str(), -1, SQLITE_TRANSIENT);
     sqlite3_bind_double(stmt, 3, entryInfo.reprojection_error);
     
-    if (!executeWithRetry(stmt, 5))
+    if (!executeWithRetry(stmt, 1))
     {
-        logger_->error("Failed to execute PUT_CALIBRATION_ENTRY statement after retries: " + std::string(sqlite3_errmsg(db_)));
+        logger_->error("Failed to execute PUT_CALIBRATION_ENTRY statement: " + std::string(sqlite3_errmsg(db_)));
+        sqlite3_reset(stmt); // Reset statement after failure
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr); // Rollback transaction on failure
         return false;
     }
@@ -324,9 +342,10 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid, const 
     sqlite3_bind_double(stmt, 4, distortionCoeffs.p1);
     sqlite3_bind_double(stmt, 5, distortionCoeffs.p2);
     sqlite3_bind_double(stmt, 6, distortionCoeffs.k3);
-    if (!executeWithRetry(stmt, 5))
+    if (!executeWithRetry(stmt, 1))
     {
-        logger_->error("Failed to execute PUT_CALIBRATION_DISTORTION statement after retries: " + std::string(sqlite3_errmsg(db_)));
+        logger_->error("Failed to execute PUT_CALIBRATION_DISTORTION statement: " + std::string(sqlite3_errmsg(db_)));
+        sqlite3_reset(stmt); // Reset statement after failure
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr); // Rollback transaction on failure
         return false;
     }
@@ -339,9 +358,10 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid, const 
     sqlite3_bind_double(stmt, 3, intrinsics.focal_length_y);
     sqlite3_bind_double(stmt, 4, intrinsics.principal_point_x);
     sqlite3_bind_double(stmt, 5, intrinsics.principal_point_y);
-    if (!executeWithRetry(stmt, 5))
+    if (!executeWithRetry(stmt, 1))
     {
-        logger_->error("Failed to execute PUT_CALIBRATION_INTRINSICS statement after retries: " + std::string(sqlite3_errmsg(db_)));
+        logger_->error("Failed to execute PUT_CALIBRATION_INTRINSICS statement: " + std::string(sqlite3_errmsg(db_)));
+        sqlite3_reset(stmt); // Reset statement after failure
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr); // Rollback transaction on failure
         return false;
     }
@@ -351,6 +371,7 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid, const 
     {
         logger_->error("Failed to commit transaction for putCalibrationEntry: " + std::string(errMsg ? errMsg : "unknown error"));
         sqlite3_free(errMsg);
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr); // Rollback on commit failure
         return false;
     }
 
@@ -400,24 +421,54 @@ bool CalibrationData::getLatestCalibrationEntry(const std::string &uuid, Calibra
 
 void CalibrationData::configureSQLiteForConcurrency()
 {
-    // Enable WAL mode for better concurrency
+    // Enable WAL mode for better concurrency with retry logic
     char *errMsg = nullptr;
-    if (sqlite3_exec(db_, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &errMsg) != SQLITE_OK)
-    {
-        logger_->warning("Failed to enable WAL mode: " + std::string(errMsg ? errMsg : "unknown error"));
-        sqlite3_free(errMsg);
+    int attempts = 0;
+    const int maxAttempts = 5;
+    bool walEnabled = false;
+    
+    while (attempts < maxAttempts) {
+        if (sqlite3_exec(db_, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &errMsg) == SQLITE_OK) {
+            walEnabled = true;
+            logger_->info("WAL mode enabled successfully");
+            break; // Success
+        } else if (errMsg && (strstr(errMsg, "database is locked") || strstr(errMsg, "busy"))) {
+            // Database locked, retry with backoff
+            attempts++;
+            if (errMsg) {
+                sqlite3_free(errMsg);
+                errMsg = nullptr;
+            }
+            
+            if (attempts < maxAttempts) {
+                logger_->warning("Database locked while configuring WAL mode, attempt " + 
+                               std::to_string(attempts) + "/" + std::to_string(maxAttempts) + ", retrying...");
+                int sleepMs = (1 << (attempts - 1)) * 50; // 50ms, 100ms, 200ms, 400ms
+                std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
+            }
+        } else {
+            // Other error, don't retry
+            logger_->error("Failed to enable WAL mode: " + std::string(errMsg ? errMsg : "unknown error"));
+            if (errMsg) sqlite3_free(errMsg);
+            break;
+        }
     }
     
-    // Set busy timeout to handle locks
-    if (sqlite3_busy_timeout(db_, 30000) != SQLITE_OK) // 30 second timeout
+    if (!walEnabled) {
+        logger_->error("Failed to enable WAL mode after " + std::to_string(maxAttempts) + " attempts - database will use default journal mode with reduced concurrency");
+    }
+    
+    // Set busy timeout to handle locks (this rarely fails, but add basic error handling)
+    if (sqlite3_busy_timeout(db_, 10000) != SQLITE_OK) // Reduced to 10 second timeout for faster failure
     {
         logger_->warning("Failed to set busy timeout");
     }
     
-    // Additional concurrency settings
+    // Additional concurrency settings (these are less likely to fail, but they're fast operations)
     sqlite3_exec(db_, "PRAGMA synchronous=NORMAL;", nullptr, nullptr, nullptr); // Faster than FULL, still safe with WAL
     sqlite3_exec(db_, "PRAGMA cache_size=10000;", nullptr, nullptr, nullptr);   // Larger cache
     sqlite3_exec(db_, "PRAGMA temp_store=memory;", nullptr, nullptr, nullptr);  // Store temp tables in memory
+    sqlite3_exec(db_, "PRAGMA busy_timeout=10000;", nullptr, nullptr, nullptr); // Also set via PRAGMA for redundancy
 }
 
 bool CalibrationData::executeWithRetry(sqlite3_stmt *stmt, int maxRetries)

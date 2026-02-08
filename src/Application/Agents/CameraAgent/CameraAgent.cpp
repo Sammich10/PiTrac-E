@@ -340,7 +340,7 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
                 // Store in frame buffer for processing
                 frame_buffer_->addFrame(calibration_frame);
                 frame_counter_ = frame_buffer_->size();
-                streamFrame(calibration_frame); // Stream captured calibration
+                streamFrame(calibration_frame, false); // Stream captured calibration
                                                 // image
                 logInfo(name_ + ": Calibration image captured successfully");
                 return true;
@@ -375,9 +375,9 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
             }
             std::vector<cv::Mat> debug_images = distortion_calibrator_->getDebugImages();
             // Stream debug images if available
-            for(const auto &dbg_img : debug_images)
+            for(auto &dbg_img : debug_images)
             {
-                streamFrame(dbg_img);
+                streamFrame(dbg_img, false); // Don't apply calibration to debug images
             }
             // Store calibration results in the database
             CalibrationEntry_Type entryInfo;
@@ -424,7 +424,7 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
     return true;
 }
 
-void CameraAgent::streamFrame(const cv::Mat &frame)
+void CameraAgent::streamFrame(cv::Mat &frame, const bool apply_calibration)
 {
     // Validate frame before encoding
     if(frame.empty())
@@ -432,30 +432,23 @@ void CameraAgent::streamFrame(const cv::Mat &frame)
         logWarning("Attempted to stream empty frame for camera " + std::to_string(camera_index_));
         return;
     }
-    
     // Check if frame has valid channels for encoding (OpenCV imencode requirement)
     if (frame.channels() != 1 && frame.channels() != 3 && frame.channels() != 4) {
         logWarning("Attempted to stream frame with invalid channels (" + std::to_string(frame.channels()) + ") for camera " + std::to_string(camera_index_));
         return;
     }
-    
     // Check if codec is available
     if (!frame_codec_) {
         logWarning("Frame codec not available for camera " + std::to_string(camera_index_));
         return;
     }
-
-    cv::Mat processing_frame;
-    if(valid_calibration_data_)
-    {
-        processing_frame = CalUtils::undistortFrame(frame, camera_matrix_, dist_coeffs_mat_);
-    }
-    else
-    {
-        processing_frame = frame; // Use original frame if no calibration
+    // Apply distortion correction if valid calibration data is available
+    if(valid_calibration_data_ && apply_calibration)
+    {   
+        const bool success = CalUtils::undistortFrame(frame, camera_matrix_, dist_coeffs_mat_);
     }
     
-    std::vector<uint8_t> encoded_data = frame_codec_->encode(processing_frame, frame_codec_params_);
+    std::vector<uint8_t> encoded_data = frame_codec_->encode(frame, frame_codec_params_);
 
     // Check if encoding was successful
     if (encoded_data.empty())
@@ -516,7 +509,7 @@ void CameraAgent::cleanUp()
         try {
             // Create a proper black frame with 3 channels (BGR) for JPEG encoding
             cv::Mat black_frame = cv::Mat::zeros(camera_->getResolutionY(), camera_->getResolutionX(), CV_8UC3);
-            streamFrame(black_frame);
+            streamFrame(black_frame, false); // Don't apply calibration to the black frame
         } catch (const std::exception &e) {
             logWarning("Exception streaming black frame: " + std::string(e.what()));
         }

@@ -44,50 +44,8 @@ class CalibrateDistortion
 
   void setImages
   (
-    std::vector<cv::Mat> &calibration_images
-  )
-  {
-    calibrationImages_.clear();
-    
-    auto logger = GSLogger::getInstance();
-    logger->info("setImages called with " + std::to_string(calibration_images.size()) + " input images");
-    
-    // Convert images to grayscale if necessary and validate
-    for (size_t i = 0; i < calibration_images.size(); ++i)
-    {
-      const auto &img = calibration_images[i];
-      
-      // Skip empty images
-      if (img.empty()) {
-        logger->warning("Input image " + std::to_string(i) + " is empty, skipping");
-        continue;
-      }
-      
-      logger->info("Input image " + std::to_string(i) + ": " + 
-                   std::to_string(img.cols) + "x" + std::to_string(img.rows) + 
-                   ", " + std::to_string(img.channels()) + " channels");
-      
-      if (img.channels() == 3)
-      {
-        cv::Mat gray;
-        cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
-        calibrationImages_.push_back(gray);
-        logger->info("Converted color image to grayscale");
-      }
-      else if (img.channels() == 1)
-      {
-        calibrationImages_.push_back(img.clone()); // Use clone() to ensure independent copy
-        logger->info("Added grayscale image");
-      }
-      else {
-        logger->warning("Image " + std::to_string(i) + " has unsupported channel count: " + 
-                       std::to_string(img.channels()) + ", skipping");
-      }
-    }
-    
-    numCalibrationImages_ = calibrationImages_.size();
-    logger->info("Final calibration image count: " + std::to_string(numCalibrationImages_));
-  }
+    const std::vector<cv::Mat> &calibration_images
+  );
   
   void clearImages()
   {

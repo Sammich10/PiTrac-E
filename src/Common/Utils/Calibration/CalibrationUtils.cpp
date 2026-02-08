@@ -3,20 +3,22 @@
 namespace PiTrac
 {
 
-cv::Mat CalUtils::undistortFrame
+bool CalUtils::undistortFrame
 (
-    const cv::Mat frame,
+    cv::Mat &frame,
     cv::Mat &cameraMatrix,
     cv::Mat &distCoeffs
 )
 {
     if (frame.empty())
     {
-        return cv::Mat();
+        return false;
     }
+    
     cv::Mat undistorted;
     cv::undistort(frame, undistorted, cameraMatrix, distCoeffs);
-    return undistorted;
+    frame = undistorted;  // Copy result back to original frame
+    return true;
 }
 
 } // namespace PiTrac

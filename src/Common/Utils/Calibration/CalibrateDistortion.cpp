@@ -11,6 +11,43 @@ CalibrateDistortion::~CalibrateDistortion()
 {
 }
 
+void CalibrateDistortion::setImages(const std::vector<cv::Mat> &calibration_images)
+{
+    calibrationImages_.clear();
+    logger_->info("Configuring calibration with " + std::to_string(calibration_images.size()) + " input images");
+    
+    // Convert images to grayscale if necessary and validate
+    for (size_t i = 0; i < calibration_images.size(); ++i)
+    {
+      const cv::Mat &img = calibration_images[i];
+      
+      // Skip empty images
+      if (img.empty()) 
+      {
+        logger_->warning("Input image " + std::to_string(i) + " is empty, skipping");
+        continue;
+      }
+      
+      if (img.channels() == 3)
+      {
+        cv::Mat gray;
+        cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
+        calibrationImages_.push_back(gray);
+      }
+      else if (img.channels() == 1)
+      {
+        calibrationImages_.push_back(img.clone()); // Use clone() to ensure independent copy
+      }
+      else {
+        logger_->warning("Image " + std::to_string(i) + " has unsupported channel count: " + 
+                       std::to_string(img.channels()) + ", skipping");
+      }
+    }
+    
+    numCalibrationImages_ = calibrationImages_.size();
+    logger_->info("Final calibration image count: " + std::to_string(numCalibrationImages_));
+}
+
 std::string CalibrateDistortion::getCalibrationQuality() const
 {
     if (cameraMatrix_.empty()) {
@@ -27,10 +64,11 @@ std::string CalibrateDistortion::getCalibrationQuality() const
     std::stringstream ss;
     ss << "=== Calibration Quality Report ===\n";
     ss << "RMS Error: " << rms << " pixels ";
-    if (rms < 0.5) ss << "(Excellent)";
-    else if (rms < 1.0) ss << "(Good)";
-    else if (rms < 2.0) ss << "(Fair)";
-    else ss << "(Poor)";
+    if (rms < REPROJECTION_EXCELLENT) ss << "(Excellent)";
+    else if (rms < REPROJECTION_GOOD) ss << "(Good)";
+    else if (rms < REPROJECTION_FAIR) ss << "(Fair)";
+    else if (rms < REPROJECTION_POOR) ss << "(Poor)";
+    else ss << "(Unacceptable)";
     ss << "\n";
     
     ss << "Aspect Ratio: " << aspectRatio << " ";
@@ -277,6 +315,7 @@ bool CheckerboardCalibration::doDistortionCalibration()
     logger_->info("  p1: " + std::to_string(distortionCoefficients_[2]));
     logger_->info("  p2: " + std::to_string(distortionCoefficients_[3]));
     logger_->info("  k3: " + std::to_string(distortionCoefficients_[4]));
+    logger_->info("Used " + std::to_string(successCount) + " of " + std::to_string(numCalibrationImages_) + " valid images for calibration");
     
     return rms < 1.0; // Consider calibration successful if RMS error < 1 pixel
 }

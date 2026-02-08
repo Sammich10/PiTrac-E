@@ -120,7 +120,8 @@ class CameraAgent : public AgentBase
      */
     inline void streamFrame
     (
-      const cv::Mat& frame
+      cv::Mat& frame,
+      const bool apply_calibration = true
     );
 
     /**
