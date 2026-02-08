@@ -40,7 +40,7 @@ int startPiTrac(const PiTrac::AppConfig &config)
 
 /**
  * @brief Stops all PiTrac application processes defined in the AppConfig. Sends
- *SIGINT to each process to request graceful shutdown.
+ * SIGINT to each process to request graceful shutdown.
  *
  * @param config The AppConfig containing executables to stop.
  * @return int Exit code (0 for success).
@@ -70,7 +70,7 @@ int stopPiTrac(const PiTrac::AppConfig &config)
 
 /**
  * @brief Kills all PiTrac application processes defined in the AppConfig. Sends
- *SIGKILL to each process.
+ * SIGKILL to each process.
  *
  * @param config The AppConfig containing executables to kill.
  * @return int Exit code (0 for success).
@@ -100,12 +100,12 @@ int killPiTrac(const PiTrac::AppConfig &config)
 
 /**
  * @brief Main entry point for PiTrac launcher. Parses command line arguments
- *for the command and app config path.
+ * for the command and app config path.
  *
  * Usage: PiTrac <command> [app_config_path]
  *       command: start | stop | kill
  *       app_config_path: Path to the application configuration JSON file. If
- *not provided, uses $PITRAC_APP_CONFIG environment variable.
+ * not provided, uses $PITRAC_APP_CONFIG environment variable.
  */
 int main(int argc, char *argv[])
 {

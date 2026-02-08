@@ -20,7 +20,8 @@
       "values": {
         "SetMode": 0,
         "Calibrate": 1,
-        "Configure": 2
+        "Configure": 2,
+        "GetData": 3
       }
     }
   },

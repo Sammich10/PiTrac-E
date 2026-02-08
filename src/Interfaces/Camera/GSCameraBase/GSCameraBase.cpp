@@ -7,8 +7,8 @@
 
 namespace PiTrac
 {
-
-// Common I2C address for camera EEPROMs (this may need to be adjusted based on actual hardware)
+// Common I2C address for camera EEPROMs (this may need to be adjusted based on
+// actual hardware)
 static constexpr size_t EEPROM_I2C_ADDRESS = 0x50;
 
 GSCameraBase::~GSCameraBase()
@@ -53,13 +53,15 @@ bool GSCameraBase::initialize()
         camInfo_ = getCameraInfo();
         i2cInfo_ = getCameraI2CInfo(camInfo_.id);
         logger_->info("Camera Info - Model: " + camInfo_.model + ", ID: " + camInfo_.id);
-        logger_->info("Camera I2C Info - Bus: " + std::to_string(i2cInfo_.busNumber) + 
-                        ", Address: " + std::to_string(i2cInfo_.deviceAddress) + 
-                        ", Device Path: " + i2cInfo_.devicePath);
+        logger_->info("Camera I2C Info - Bus: " + std::to_string(i2cInfo_.busNumber) +
+                      ", Address: " + std::to_string(i2cInfo_.deviceAddress) +
+                      ", Device Path: " + i2cInfo_.devicePath);
         uuidInfo_.uuid = I2CUtils::readStoredCameraUID(i2cInfo_.busNumber, EEPROM_I2C_ADDRESS);
         uuidInfo_.uuid_length = uuidInfo_.uuid.length();
-        // Attempt to read stored UUID from EEPROM. If not found, generate and store a new one.
-        // This should only be done once per camera, typically during the first initialization.
+        // Attempt to read stored UUID from EEPROM. If not found, generate and
+        // store a new one.
+        // This should only be done once per camera, typically during the first
+        // initialization.
         if (uuidInfo_.isValid())
         {
             logger_->info("Read stored camera UUID from EEPROM: " + uuidInfo_.uuid);
@@ -73,7 +75,8 @@ bool GSCameraBase::initialize()
             {
                 logger_->info("Generated and stored new camera UUID: " + uuidInfo_.uuid);
             }
-            else            {
+            else
+            {
                 logger_->error("Failed to generate/store camera UUID");
             }
         }
@@ -513,16 +516,18 @@ GSCameraInterface::CameraInfo GSCameraBase::getCameraInfo() const
     CameraInfo info;
     if (camera_)
     {
-        const::libcamera::ControlList &properties = camera_->properties();
+        const ::libcamera::ControlList &properties = camera_->properties();
         // Get model
         auto model = properties.get(libcamera::properties::Model);
-        if (model.has_value()) {
+        if (model.has_value())
+        {
             info.model = model.value();
         }
         // Get ID (use camera ID from libcamera)
         info.id = camera_->id();
         CameraI2CInfo i2cInfo = getCameraI2CInfo(info.id);
-        logger_->info("Camera I2C Info - Bus: " + std::to_string(i2cInfo.busNumber) + ", Address: " + std::to_string(i2cInfo.deviceAddress) + ", Device Path: " + i2cInfo.devicePath + ", Device Tree Path: " + i2cInfo.deviceTreePath);
+        logger_->info("Camera I2C Info - Bus: " + std::to_string(i2cInfo.busNumber) + ", Address: " + std::to_string(
+                          i2cInfo.deviceAddress) + ", Device Path: " + i2cInfo.devicePath + ", Device Tree Path: " + i2cInfo.deviceTreePath);
     }
     else
     {
@@ -734,8 +739,7 @@ GSCameraBase::CameraI2CInfo GSCameraBase::getCameraI2CInfo(const std::string &de
     {
         i2cInfo.devicePath = I2CUtils::getI2CDevicePath(i2cInfo.busNumber);
     }
-    
+
     return i2cInfo;
 }
-
 } // namespace PiTrac

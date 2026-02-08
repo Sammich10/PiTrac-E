@@ -17,6 +17,8 @@ CameraAgent::CameraAgent(const size_t camera_index, const std::string &process_n
     , camera_index_(camera_index)
     , running_(false)
     , frame_counter_(0)
+    , apply_calibrations_to_viewfinder_(false)
+    , use_best_calibration_(true)
 {
     logInfo("CameraAgent created: " + name_);
 }
@@ -141,6 +143,11 @@ bool CameraAgent::handleSystemCommand(const SystemCommandMsg &command_msg)
             logInfo("Processing calibration command for: " + name_);
             return processCalibrationCommand(command_msg.getCommand_params());
         }
+        case SystemCommandMsg::CommandID::Configure:
+        {
+            logInfo("Processing configure command for: " + name_);
+            return processConfigurationCommand(command_msg.getCommand_params());
+        }
         default:
             logWarning("Unknown or unimplemented SystemCommandMsg command ID: " + std::to_string(static_cast<int>(cmd)) + " for: " + name_);
             return false;
@@ -159,7 +166,8 @@ bool CameraAgent::configureStandby()
         logError("Failed to get CalibrationData instance for: " + name_);
         return false;
     }
-    // Check if camera info exists in the calibration database, if so retrieve the stored basic info, otherwise create a new entry
+    // Check if camera info exists in the calibration database, if so retrieve
+    // the stored basic info, otherwise create a new entry
     if(!calibration_data_->getCameraInfo(camera_uuid_info_.uuid, camera_info_))
     {
         logWarning("No existing camera info found in database for UUID: " + camera_uuid_info_.uuid + " for: " + name_ + ". Creating new entry.");
@@ -225,8 +233,9 @@ bool CameraAgent::configureViewfinder()
         logError("Failed to start camera for: " + name_);
         return false;
     }
-    // Attempt to load existing calibration data for this camera to apply to the viewfinder stream
-    if(calibration_data_->getLatestCalibrationEntry(camera_uuid_info_.uuid, cal_entry_, dist_coeffs_, intrinsics_))
+    // Attempt to load existing calibration data for this camera to apply to the
+    // viewfinder stream
+    if(calibration_data_->getBestCalibrationEntry(camera_uuid_info_.uuid, cal_entry_, dist_coeffs_, intrinsics_))
     {
         valid_calibration_data_ = true;
         camera_matrix_ = (cv::Mat1d(3, 3) << intrinsics_.focal_length_x, 0, intrinsics_.principal_point_x, 0, intrinsics_.focal_length_y, intrinsics_.principal_point_y, 0, 0, 1);
@@ -250,7 +259,7 @@ void CameraAgent::viewfinderCallback(cv::Mat &frame)
 {
     // Stream the captured frame. No other functionality needed here for
     // viewfinder.
-    streamFrame(frame);
+    streamFrame(frame, apply_calibrations_to_viewfinder_);
     frame_counter_++;
 }
 
@@ -309,7 +318,8 @@ bool CameraAgent::configureCalibration()
         logError("Failed to start continuous capture for: " + name_);
         return false;
     }
-    // Instantiate distortion calibrator TODO: make this dynamic later, maybe instantiate on demand
+    // Instantiate distortion calibrator TODO: make this dynamic later, maybe
+    // instantiate on demand
     distortion_calibrator_ = std::make_unique<CheckerboardCalibration>();
     if(distortion_calibrator_ == nullptr)
     {
@@ -340,8 +350,9 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
                 // Store in frame buffer for processing
                 frame_buffer_->addFrame(calibration_frame);
                 frame_counter_ = frame_buffer_->size();
-                streamFrame(calibration_frame, false); // Stream captured calibration
-                                                // image
+                streamFrame(calibration_frame, false); // Stream captured
+                                                       // calibration
+                // image
                 logInfo(name_ + ": Calibration image captured successfully");
                 return true;
             }
@@ -377,7 +388,8 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
             // Stream debug images if available
             for(auto &dbg_img : debug_images)
             {
-                streamFrame(dbg_img, false); // Don't apply calibration to debug images
+                streamFrame(dbg_img, false); // Don't apply calibration to debug
+                                             // images
             }
             // Store calibration results in the database
             CalibrationEntry_Type entryInfo;
@@ -397,6 +409,13 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
             frame_buffer_->clear();
             distortion_calibrator_->clearImages();
             logInfo(name_ + ": Distortion calibration completed with " + std::to_string(calibration_frames.size()) + " frames");
+            return true;
+        }
+        else if(action == "clear_buffer")
+        {
+            logInfo(name_ + ": Clearing calibration frame buffer");
+            frame_buffer_->clear();
+            distortion_calibrator_->clearImages();
             return true;
         }
         // else if (action == "start_preview")
@@ -424,6 +443,39 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
     return true;
 }
 
+bool CameraAgent::processConfigurationCommand(const std::map<std::string, std::string> &commandParams)
+{
+    if(commandParams.find("apply_calibrations") != commandParams.end())
+    {   // This will allow the user to toggle whether to apply calibrations to
+        // the viewfinder stream on the fly,
+        // which can be useful for testing calibration results or for users who
+        // want the option to disable it
+        // for performance reasons
+        std::string apply_calibrations_str = commandParams.at("apply_calibrations");
+        // Accept "true"/"1" as true, anything else as false
+        apply_calibrations_to_viewfinder_ = (apply_calibrations_str == "true" || apply_calibrations_str == "1");
+        logInfo(name_ + ": Setting apply_calibrations to " + std::to_string(apply_calibrations_to_viewfinder_));
+        return true;
+    }
+    if(commandParams.find("use_best_calibration") != commandParams.end())
+    {   // This will allow the user to toggle what heuristic to use for loading
+        // calibration data from the database.
+        // If true, it will attempt to load the best available calibration for
+        // this camera and apply it to the viewfinder stream.
+        // If false, it default to the latest calibration data
+        std::string use_best_calibration_str = commandParams.at("use_best_calibration");
+        // Accept "true"/"1" as true, anything else as false
+        use_best_calibration_ = (use_best_calibration_str == "true" || use_best_calibration_str == "1");
+        // To avoid issues with loading calibrations while in viewfinder mode,
+        // the new setting will be applied
+        // on the next mode change to viewfinder, rather than immediately
+        return true;
+    }
+    // Unknown or unhandled configuration command
+    logWarning(name_ + ": Unknown configuration command action");
+    return false;
+}
+
 void CameraAgent::streamFrame(cv::Mat &frame, const bool apply_calibration)
 {
     // Validate frame before encoding
@@ -432,22 +484,25 @@ void CameraAgent::streamFrame(cv::Mat &frame, const bool apply_calibration)
         logWarning("Attempted to stream empty frame for camera " + std::to_string(camera_index_));
         return;
     }
-    // Check if frame has valid channels for encoding (OpenCV imencode requirement)
-    if (frame.channels() != 1 && frame.channels() != 3 && frame.channels() != 4) {
+    // Check if frame has valid channels for encoding (OpenCV imencode
+    // requirement)
+    if (frame.channels() != 1 && frame.channels() != 3 && frame.channels() != 4)
+    {
         logWarning("Attempted to stream frame with invalid channels (" + std::to_string(frame.channels()) + ") for camera " + std::to_string(camera_index_));
         return;
     }
     // Check if codec is available
-    if (!frame_codec_) {
+    if (!frame_codec_)
+    {
         logWarning("Frame codec not available for camera " + std::to_string(camera_index_));
         return;
     }
     // Apply distortion correction if valid calibration data is available
     if(valid_calibration_data_ && apply_calibration)
-    {   
+    {
         const bool success = CalUtils::undistortFrame(frame, camera_matrix_, dist_coeffs_mat_);
     }
-    
+
     std::vector<uint8_t> encoded_data = frame_codec_->encode(frame, frame_codec_params_);
 
     // Check if encoding was successful
@@ -503,17 +558,23 @@ void CameraAgent::cleanUp()
 
     // Reset frame counter
     frame_counter_ = 0;
-    
-    // Stream a black frame to indicate mode change or shutdown, but only if camera and codec are available
-    if (camera_ && frame_codec_ && camera_->isInitialized()) {
+
+    // Stream a black frame to indicate mode change or shutdown, but only if
+    // camera and codec are available
+    if (camera_ && frame_codec_ && camera_->isInitialized())
+    {
         try {
-            // Create a proper black frame with 3 channels (BGR) for JPEG encoding
+            // Create a proper black frame with 3 channels (BGR) for JPEG
+            // encoding
             cv::Mat black_frame = cv::Mat::zeros(camera_->getResolutionY(), camera_->getResolutionX(), CV_8UC3);
-            streamFrame(black_frame, false); // Don't apply calibration to the black frame
+            streamFrame(black_frame, false); // Don't apply calibration to the
+                                             // black frame
         } catch (const std::exception &e) {
             logWarning("Exception streaming black frame: " + std::string(e.what()));
         }
-    } else {
+    }
+    else
+    {
         logInfo("Skipping black frame stream - camera or codec not available");
     }
 
@@ -530,5 +591,4 @@ void CameraAgent::cleanupProcess()
         frame_publisher_->disconnect(Endpoints::getFrameCollectionEndpoint());
     }
 }
-
 } // namespace PiTrac

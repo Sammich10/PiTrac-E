@@ -19,7 +19,7 @@ enum class TaskNames
  */
 class TaskNameUtils
 {
-public:
+  public:
     // Convert enum to string
     static std::string toString(TaskNames task)
     {
@@ -31,26 +31,26 @@ public:
             default: return "Unknown";
         }
     }
-    
+
     // Convert string to enum
-    static TaskNames fromString(const std::string& task_name)
+    static TaskNames fromString(const std::string &task_name)
     {
         static const std::unordered_map<std::string, TaskNames> name_map = {
             {"SystemManager", TaskNames::SystemManager},
             {"FlightAgent", TaskNames::FlightAgent},
             {"TeeAgent", TaskNames::TeeAgent}
         };
-        
+
         auto it = name_map.find(task_name);
         return (it != name_map.end()) ? it->second : TaskNames::MAX_TASK_NAME;
     }
-    
+
     // Validate task name
-    static bool isValidTaskName(const std::string& task_name)
+    static bool isValidTaskName(const std::string &task_name)
     {
         return fromString(task_name) != TaskNames::MAX_TASK_NAME;
     }
-    
+
     // Get all valid task names as strings
     static std::vector<std::string> getAllTaskNames()
     {
@@ -61,7 +61,6 @@ public:
         };
     }
 };
-
 }
 
 #endif // __PITRAC_TASKNAMES_H__

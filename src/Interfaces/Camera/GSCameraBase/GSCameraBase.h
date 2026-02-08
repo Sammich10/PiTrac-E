@@ -20,7 +20,7 @@ class GSCameraBase : public GSCameraInterface
      *
      * @param[in] cameraIndex Index of the camera to be used.
      * @param[in] cameraManager Shared pointer to the libcamera::CameraManager
-     *instance.
+     * instance.
      *
      */
     GSCameraBase(const uint32_t &cameraIndex, std::shared_ptr<libcamera::CameraManager> const &cameraManager)
@@ -38,10 +38,12 @@ class GSCameraBase : public GSCameraInterface
     ~GSCameraBase();
 
     /**
-     * @brief Initializes the camera by acquiring it and retrieving camera information.
-     * 
-     * This method must be called before attempting to open the camera or capture frames.
-     * 
+     * @brief Initializes the camera by acquiring it and retrieving camera
+     *information.
+     *
+     * This method must be called before attempting to open the camera or
+     *capture frames.
+     *
      * @return true if initialization was successful, false otherwise.
      */
     bool initialize() override;
@@ -64,7 +66,7 @@ class GSCameraBase : public GSCameraInterface
 
     /**
      * @brief Allocates memory buffers required for the specified camera stream,
-     *and starts the camera.
+     * and starts the camera.
      *
      * If successful, the camera will be ready to process capture requests.
      */
@@ -83,7 +85,7 @@ class GSCameraBase : public GSCameraInterface
      * @brief Captures a single frame from the camera.
      *
      * When running in continuous capture mode, this function returns the latest
-     *frame captured.
+     * frame captured.
      *
      * @return The captured frame as a cv::Mat, or an empty Mat on failure.
      */
@@ -122,11 +124,11 @@ class GSCameraBase : public GSCameraInterface
      * trigger signal.
      *
      * @param[in] callback Optional callback function to handle each captured
-     *frame,
+     * frame,
      * used to process frames as they are captured in an event-driven manner. If
-     *the
+     * the
      * callback is nullptr, frames will be stored in an internal buffer for
-     *later retrieval.
+     * later retrieval.
      *
      * @return True if continuous capture started successfully, false otherwise.
      */
@@ -278,7 +280,7 @@ class GSCameraBase : public GSCameraInterface
     size_t getFrameQueueSize() const;
 
     /**
-     * @brief Retrieves the latest frame from the buffer 
+     * @brief Retrieves the latest frame from the buffer
      *
      * @return The latest captured frame as a cv::Mat. If no frames are
      * available, returns an empty Mat.
@@ -315,19 +317,23 @@ class GSCameraBase : public GSCameraInterface
     }
 
     /**
-     * @brief Retrieves camera information such as model, location, ID, and sensor
+     * @brief Retrieves camera information such as model, location, ID, and
+     *sensor
      * details.
      */
-    CameraI2CInfo getCameraI2CInfo(const std::string &deviceTreePath) const;
+    CameraI2CInfo getCameraI2CInfo
+    (
+        const std::string &deviceTreePath
+    ) const;
 
     /**
-     * @brief Retrieves camera information such as model, location, ID, and sensor
+     * @brief Retrieves camera information such as model, location, ID, and
+     *sensor
      * details.
      */
     CameraInfo getCameraInfo() const;
 
     std::shared_ptr<GSLogger> logger_;
-
 }; // class GSCameraBase
 } // namespace PiTrac
 

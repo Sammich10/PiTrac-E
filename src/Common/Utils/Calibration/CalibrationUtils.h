@@ -6,10 +6,9 @@
 
 namespace PiTrac
 {
-
 class CalUtils
 {
-    public:
+  public:
 
     static bool undistortFrame
     (
@@ -18,7 +17,6 @@ class CalUtils
         cv::Mat &distCoeffs
     );
 };
-
 } // namespace PiTrac
 
 

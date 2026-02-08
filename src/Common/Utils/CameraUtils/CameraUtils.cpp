@@ -2,8 +2,6 @@
 
 namespace PiTrac
 {
-
-
 cv::Mat CameraUtils::unpack10BitBayer(void *data, int width, int height, size_t stride)
 {
     // SRGGB10_CSI2P packs 4 pixels (40 bits) into 5 bytes
@@ -79,13 +77,11 @@ cv::Mat CameraUtils::convertBufferToMat(libcamera::FrameBuffer *buffer, const li
     }
     else
     {
-        // logger_->error("Unsupported pixel format: " + streamConfig.pixelFormat.toString());
+        // logger_->error("Unsupported pixel format: " +
+        // streamConfig.pixelFormat.toString());
     }
 
     munmap(data, plane.length);
     return result;
 }
-
-
-
 } // namespace PiTrac

@@ -2,7 +2,6 @@
 
 namespace PiTrac
 {
-
 bool CalUtils::undistortFrame
 (
     cv::Mat &frame,
@@ -14,11 +13,10 @@ bool CalUtils::undistortFrame
     {
         return false;
     }
-    
+
     cv::Mat undistorted;
     cv::undistort(frame, undistorted, cameraMatrix, distCoeffs);
     frame = undistorted;  // Copy result back to original frame
     return true;
 }
-
 } // namespace PiTrac

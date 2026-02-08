@@ -33,10 +33,13 @@ class CalibrationData
     ~CalibrationData();
 
     /**
-     * @brief Creates the calibration database if it does not exist, and initializes
-     * the schema. This should be called before any other operations to ensure the database is set up properly.
+     * @brief Creates the calibration database if it does not exist, and
+     *initializes
+     * the schema. This should be called before any other operations to ensure
+     *the database is set up properly.
      * @param error Output parameter to hold error message if creation fails
-     * @return True if the database was created or already exists, false if there was an error during creation
+     * @return True if the database was created or already exists, false if
+     *there was an error during creation
      */
     static bool createDatabaseIfNotExists
     (
@@ -139,7 +142,8 @@ class CalibrationData
     );
 
 /**
- * @brief Execute a prepared statement with retry logic for handling database locks
+ * @brief Execute a prepared statement with retry logic for handling database
+ *locks
  * @param stmt The prepared SQLite statement to execute
  * @param maxRetries Maximum number of retry attempts (default: 5)
  * @return True if successful, false if failed after all retries

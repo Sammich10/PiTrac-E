@@ -2,7 +2,6 @@
 
 namespace PiTrac
 {
-
 TeeAgent::TeeAgent(const size_t camera_index)
     : PiTrac::CameraAgent(camera_index, "TeeAgent")
 {
@@ -11,5 +10,4 @@ TeeAgent::TeeAgent(const size_t camera_index)
 TeeAgent::~TeeAgent()
 {
 }
-
 } // namespace PiTrac

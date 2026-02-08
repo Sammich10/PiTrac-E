@@ -37,8 +37,10 @@ bool SystemManager::setupProcess()
         );
     frame_publisher_->bind(Endpoints::getFrameStreamEndpoint());
 
-    // For now, we can create the calibration database here to ensure the database is set up before any agents try to access it
-    // This should only need to happen once on first run, and the database file will persist across runs, so it won't cause overhead on subsequent runs
+    // For now, we can create the calibration database here to ensure the
+    // database is set up before any agents try to access it
+    // This should only need to happen once on first run, and the database file
+    // will persist across runs, so it won't cause overhead on subsequent runs
     std::string err;
     if(!CalibrationData::createDatabaseIfNotExists(err))
     {
@@ -54,7 +56,8 @@ bool SystemManager::execute()
     changeStatus(TaskStatus::Running);
     logInfo("SystemManager is running");
     while(!should_stop_)
-    {   // TODO: Publish system status updates here as well, including active agents and their modes
+    {   // TODO: Publish system status updates here as well, including active
+        // agents and their modes
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return true;
@@ -105,6 +108,25 @@ void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> mes
                     // Forward the calibration command to specified agent(s)
                     const bool commandSuccess = handleCalibrationCommand(*cmd_msg);
                     sendAcknowledgementToHost(*message, commandSuccess);
+                    break;
+                }
+                case SystemCommandMsg::CommandID::Configure:
+                {
+                    logInfo("Handling Configure command");
+                    // This command can be handled by the SystemManager itself
+                    // or forwarded to agents based on parameters
+                    const bool commandSuccess = handleConfigurationCommand(*cmd_msg);
+                    sendAcknowledgementToHost(*message, commandSuccess);
+                    break;
+                }
+                case SystemCommandMsg::CommandID::GetData:
+                {
+                    logInfo("Handling GetData command");
+                    // This command can be handled by the SystemManager itself
+                    // or forwarded to agents based on parameters
+                    // const bool commandSuccess =
+                    // handleGetDataCommand(*cmd_msg);
+                    sendAcknowledgementToHost(*message, false);
                     break;
                 }
                 default:
@@ -224,6 +246,62 @@ bool SystemManager::handleCalibrationCommand(const SystemCommandMsg &cmd_msg)
             logError("Specified agent for calibration command not found: " + target_agent_name);
             return false;
         }
+    }
+    return true;
+}
+
+bool SystemManager::handleConfigurationCommand(const SystemCommandMsg &cmd_msg)
+{
+    std::map<std::string, std::string> params = cmd_msg.getCommand_params();
+
+    std::lock_guard<std::mutex> lock(agents_mutex_);
+    if(params.find("task_name") == params.end())
+    {   // For now assume a configuration command must have a target agent,
+        // but in the future we could allow for some system-level configuration
+        // commands that don't require a target
+        logError("Configure command missing 'task_name' parameter");
+        return false;
+    }
+    std::string target_agent_name = params["task_name"];
+    if(target_agent_name.empty())
+    {
+        logError("Configure command has empty 'task_name' parameter");
+        return false;
+    }
+    if(target_agent_name == "system")
+    {
+        logInfo("Received configuration command targeting the system itself");
+        // Handle any system-level configuration commands here based on other
+        // parameters
+        // For now, we don't have any specific system-level configurations, so
+        // just log and return success
+        logInfo("No specific system-level configuration handling implemented yet");
+        return true;
+    }
+    auto it = agent_name_to_identity_.find(target_agent_name);
+    if(it != agent_name_to_identity_.end())
+    {
+        std::string identity = it->second;
+        logInfo("Sending configuration command to specified agent: " + target_agent_name);
+        try
+        {
+            // Remove the task_name parameter before forwarding
+            params.erase("task_name");
+            SystemCommandMsg config_msg;
+            config_msg.setCommand_id(static_cast<int32_t>(SystemCommandMsg::CommandID::Configure));
+            config_msg.setCommand_params(params);
+            task_control_router_->sendMessageToIdentity(config_msg, identity);
+        }
+        catch(const std::exception &e)
+        {
+            logError("Failed to send configuration command to agent " + target_agent_name + ": " + std::string(e.what()));
+            return false;
+        }
+    }
+    else
+    {
+        logError("Specified agent for configuration command not found: " + target_agent_name);
+        return false;
     }
     return true;
 }

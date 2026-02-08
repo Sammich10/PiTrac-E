@@ -69,7 +69,7 @@ class GSCameraInterface
  * The camera interface supports camera life-cycle operations:
  *  - openCamera() : Acquire the camera device
  *  - configureStream() : Configure the camera stream for specific use cases,
- *allocate buffers
+ * allocate buffers
  *  - start() : Begin capturing frames
  *  - stop() : Stop capturing frames
  *  - closeCamera() : Release the camera device
@@ -80,13 +80,16 @@ class GSCameraInterface
     {
         std::string model;
         std::string id;
-    };  
+    };
 
     struct CameraUUIDInfo
     {
         std::string uuid;
         uint32_t uuid_length;
-        bool isValid() const { return !uuid.empty() && uuid_length > 0; }
+        bool isValid() const
+        {
+            return !uuid.empty() && uuid_length > 0;
+        }
     };
 
     // You can also provide a protected constructor with common parameters
@@ -396,24 +399,28 @@ class GSCameraInterface
 
   protected:
 
-    struct CameraI2CInfo {
+    struct CameraI2CInfo
+    {
         int busNumber;
         uint8_t deviceAddress;
         std::string devicePath;
         std::string deviceTreePath;
-        bool isValid() const { return busNumber != -1 && deviceAddress != 0; }
+        bool isValid() const
+        {
+            return busNumber != -1 && deviceAddress != 0;
+        }
     };
 
     virtual bool allocateBuffersForStream
     (
         libcamera::Stream *stream
     ) = 0;
-    
+
     virtual bool configureTriggerMode
     (
         const TriggerMode &mode
     ) = 0;
-    
+
     virtual void requestComplete
     (
         libcamera::Request *request

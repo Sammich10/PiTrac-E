@@ -91,25 +91,33 @@ class CameraAgent : public AgentBase
 
     /**
      * @brief Starts the viewfinder mode operation in a separate thread.
-     * 
+     *
      * Viewfinder mode continuously captures frames from the camera and
-     * publishes them to the messaging system. 
+     * publishes them to the messaging system.
      */
-    virtual void viewfinderCallback(cv::Mat& frame);
+    virtual void viewfinderCallback
+    (
+        cv::Mat &frame
+    );
 
     /**
      * @brief Configures the camera for calibration mode.
      */
     virtual bool configureCalibration();
-    
+
     /**
      * @brief Processes a calibration command received from SystemManager.
-     * 
+     *
      * @param command The calibration command to process
      */
     virtual bool processCalibrationCommand
     (
-      const std::map<std::string, std::string>& commandParams
+        const std::map<std::string, std::string> &commandParams
+    );
+
+    virtual bool processConfigurationCommand
+    (
+        const std::map<std::string, std::string> &commandParams
     );
 
   private:
@@ -120,16 +128,16 @@ class CameraAgent : public AgentBase
      */
     inline void streamFrame
     (
-      cv::Mat& frame,
-      const bool apply_calibration = true
+        cv::Mat &frame,
+        const bool apply_calibration = true
     );
 
     /**
-     * @brief Cleans up resources used by the camera agent in 
+     * @brief Cleans up resources used by the camera agent in
      * preparation for mode chang or shutdown.
      */
     inline void cleanUp();
-    
+
     std::unique_ptr<MessagerBase> frame_publisher_;
     std::unique_ptr<FrameCodec> frame_codec_;
     std::shared_ptr<FrameBuffer> frame_buffer_;
@@ -138,7 +146,9 @@ class CameraAgent : public AgentBase
     std::shared_ptr<CalibrationData> calibration_data_;
     uint32_t camera_index_;
     std::atomic<bool> running_;
-    bool valid_calibration_data_;
+    std::atomic<bool> valid_calibration_data_;
+    std::atomic<bool> apply_calibrations_to_viewfinder_;
+    std::atomic<bool> use_best_calibration_;
     uint64_t frame_counter_;
     CodecParams frame_codec_params_;
     // Calibration command handling

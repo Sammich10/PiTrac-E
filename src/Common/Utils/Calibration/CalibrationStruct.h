@@ -5,7 +5,6 @@
 
 namespace PiTrac
 {
-
 typedef struct CameraInfo
 {
     uint32_t camera_id;
@@ -19,7 +18,8 @@ typedef struct CalibrationEntry
     uint32_t calibration_id;
     std::string calibration_type; // e.g. "intrinsics", "distortion"
     std::string calibration_date; // ISO 8601 format
-    double reprojection_error; // Average re-projection error for this calibration
+    double reprojection_error; // Average re-projection error for this
+                               // calibration
 } CalibrationEntry_Type;
 
 typedef struct CameraIntrinsics
@@ -31,6 +31,7 @@ typedef struct CameraIntrinsics
         principal_point_x = intrinsics[2];
         principal_point_y = intrinsics[3];
     }
+
     double focal_length_x; // fx
     double focal_length_y; // fy
     double principal_point_x; // cx
@@ -52,18 +53,20 @@ typedef struct DistortionCoefficients
         p2 = coeffs[3];
         k3 = coeffs[4];
     }
+
     double k1; // Radial distortion coefficient k1
     double k2; // Radial distortion coefficient k2
     double p1; // Tangential distortion coefficient p1
     double p2; // Tangential distortion coefficient p2
-    double k3; // Radial distortion coefficient k3 (optional, may be 0 if not used)
+    double k3; // Radial distortion coefficient k3 (optional, may be 0 if not
+               // used)
     bool valid() const
     {
-        // A simple validity check could be that at least one coefficient is non-zero
+        // A simple validity check could be that at least one coefficient is
+        // non-zero
         return (k1 != 0.0 || k2 != 0.0 || p1 != 0.0 || p2 != 0.0 || k3 != 0.0);
     }
 } DistortionCoefficients_Type;
-
 } // namespace PiTrac
 
 #endif // __CALIBRATION_STRUCTS_H__
