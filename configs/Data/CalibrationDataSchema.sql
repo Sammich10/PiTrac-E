@@ -8,21 +8,21 @@ CREATE TABLE IF NOT EXISTS Database_Info(
     DateCreated TEXT NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS Calibrations (
+CREATE TABLE IF NOT EXISTS Camera_Info (
+    UUID TEXT PRIMARY KEY,
+    CameraName TEXT NOT NULL,
+    CameraType TEXT NOT NULL,
+    unique(UUID)
+);
+
+CREATE TABLE IF NOT EXISTS Calibration_Entries (
     CalibrationID INTEGER PRIMARY KEY AUTOINCREMENT,
     CameraID INTEGER NOT NULL,
     CalibrationType TEXT NOT NULL,
-    CalibrationDate TEXT NOT NULL,
-    FOREIGN KEY (CameraID) REFERENCES Camera_Info(CameraID)
-)
-
-CREATE TABLE IF NOT EXISTS Camera_Info (
-    CameraID INTEGER PRIMARY KEY AUTOINCREMENT,
-    CameraName TEXT NOT NULL,
-    CameraType TEXT NOT NULL,
-    Manufacturer TEXT,
-    ModelNumber TEXT,
-    SerialNumber TEXT
+    ReprojectionError REAL NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (CameraID) REFERENCES Camera_Info(UUID)
 );
 
 CREATE TABLE IF NOT EXISTS Distortion_Coefficients (
@@ -43,26 +43,5 @@ CREATE TABLE IF NOT EXISTS Intrinsic_Calibration (
     FY REAL NOT NULL,
     CX REAL NOT NULL,
     CY REAL NOT NULL,
-    FOREIGN KEY (CalibrationID) REFERENCES Distortion_Calibration(CalibrationID)
-);
-
--- Table to store intrinsic camera calibration parameters.
--- This includes camera model, focal length, sensor dimensions, principal point coordinates,
-CREATE TABLE IF NOT EXISTS Distortion_Calibration (
-    CalibrationID INTEGER PRIMARY KEY AUTOINCREMENT,
-    CameraModel TEXT NOT NULL,
-    FocalLength REAL NOT NULL,
-    SensorWidth REAL NOT NULL,
-    SensorHeight REAL NOT NULL,
-    CalibrationDate TEXT NOT NULL
-);
-
--- Table to store extrinsic camera calibration parameters.
--- This includes rotation and translation vectors that define the camera's position and orientation
--- relative to a known reference frame.
-CREATE TABLE IF NOT EXISTS Extrinsic_Calibration (
-    CalibrationID INTEGER PRIMARY KEY,
-    RotationVector TEXT NOT NULL,
-    TranslationVector TEXT NOT NULL,
     FOREIGN KEY (CalibrationID) REFERENCES Distortion_Calibration(CalibrationID)
 );

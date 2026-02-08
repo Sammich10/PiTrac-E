@@ -76,6 +76,18 @@ class GSCameraInterface
  *
  */
   public:
+    struct CameraInfo
+    {
+        std::string model;
+        std::string id;
+    };  
+
+    struct CameraUUIDInfo
+    {
+        std::string uuid;
+        uint32_t uuid_length;
+        bool isValid() const { return !uuid.empty() && uuid_length > 0; }
+    };
 
     // You can also provide a protected constructor with common parameters
     GSCameraInterface(const uint32_t &cameraIndex, std::shared_ptr<libcamera::CameraManager> const &cameraManager)
@@ -95,6 +107,7 @@ class GSCameraInterface
     virtual ~GSCameraInterface() = default;
 
     /** Pure virtual methods to be implemented by derived classes **/
+    virtual bool initialize() = 0;
     virtual bool openCamera() = 0;
     virtual bool configureStream
     (
@@ -120,6 +133,11 @@ class GSCameraInterface
     virtual std::string toString() const = 0;
 
     /** Accessor methods **/
+
+    bool isInitialized() const
+    {
+        return isInitialized_;
+    }
 
     uint32_t getCameraIndex() const
     {
@@ -234,6 +252,16 @@ class GSCameraInterface
     bool isUsingCalibrationMatrix() const
     {
         return useCalibrationMatrix_;
+    }
+
+    CameraInfo getInfo() const
+    {
+        return camInfo_;
+    }
+
+    CameraUUIDInfo getUUIDInfo() const
+    {
+        return uuidInfo_;
     }
 
     /** Mutator methods **/
@@ -368,6 +396,14 @@ class GSCameraInterface
 
   protected:
 
+    struct CameraI2CInfo {
+        int busNumber;
+        uint8_t deviceAddress;
+        std::string devicePath;
+        std::string deviceTreePath;
+        bool isValid() const { return busNumber != -1 && deviceAddress != 0; }
+    };
+
     virtual bool allocateBuffersForStream
     (
         libcamera::Stream *stream
@@ -435,6 +471,7 @@ class GSCameraInterface
     bool useCalibrationMatrix_ = false;
     bool isCameraOpen_ = false;
     bool isCapturing_ = false;
+    bool isInitialized_ = false;
 
     // Frame capture synchronization
     std::mutex frameMutex_;
@@ -443,6 +480,10 @@ class GSCameraInterface
     bool frameReady_ = false;
     // Callback for request completion
     requestCompleteCallback requestCallback_ = nullptr;
+
+    CameraI2CInfo i2cInfo_;
+    CameraInfo camInfo_;
+    CameraUUIDInfo uuidInfo_;
 
     static const std::string cameraModeToString(const TriggerMode &mode)
     {

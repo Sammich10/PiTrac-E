@@ -1,4 +1,5 @@
 #include "Application/Managers/SystemManager/SystemManager.h"
+#include "Common/Utils/Calibration/CalibrationData.h"
 
 namespace PiTrac
 {
@@ -36,6 +37,15 @@ bool SystemManager::setupProcess()
         );
     frame_publisher_->bind(Endpoints::getFrameStreamEndpoint());
 
+    // For now, we can create the calibration database here to ensure the database is set up before any agents try to access it
+    // This should only need to happen once on first run, and the database file will persist across runs, so it won't cause overhead on subsequent runs
+    std::string err;
+    if(!CalibrationData::createDatabaseIfNotExists(err))
+    {
+        logError("Failed to initialize calibration database: " + err);
+        return false;
+    }
+
     return true;
 }
 
@@ -44,7 +54,7 @@ bool SystemManager::execute()
     changeStatus(TaskStatus::Running);
     logInfo("SystemManager is running");
     while(!should_stop_)
-    {
+    {   // TODO: Publish system status updates here as well, including active agents and their modes
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     return true;

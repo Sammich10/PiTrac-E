@@ -38,6 +38,15 @@ class GSCameraBase : public GSCameraInterface
     ~GSCameraBase();
 
     /**
+     * @brief Initializes the camera by acquiring it and retrieving camera information.
+     * 
+     * This method must be called before attempting to open the camera or capture frames.
+     * 
+     * @return true if initialization was successful, false otherwise.
+     */
+    bool initialize() override;
+
+    /**
      * @brief Opens the camera for capturing.
      *
      * Attempts to acquire and open the camera at the specified index.
@@ -305,7 +314,20 @@ class GSCameraBase : public GSCameraInterface
         return maxFrameBuffer_;
     }
 
+    /**
+     * @brief Retrieves camera information such as model, location, ID, and sensor
+     * details.
+     */
+    CameraI2CInfo getCameraI2CInfo(const std::string &deviceTreePath) const;
+
+    /**
+     * @brief Retrieves camera information such as model, location, ID, and sensor
+     * details.
+     */
+    CameraInfo getCameraInfo() const;
+
     std::shared_ptr<GSLogger> logger_;
+
 }; // class GSCameraBase
 } // namespace PiTrac
 

@@ -1,24 +1,28 @@
 #include "Interfaces/Camera/GSCameraBase/GSCameraBase.h"
 #include "Common/Utils/CameraUtils/CameraUtils.h"
+#include "Common/Utils/I2CUtils/I2CUtils.h"
 #include <iostream>
 #include <fstream>
 #include <thread>
 
 namespace PiTrac
 {
+
+// Common I2C address for camera EEPROMs (this may need to be adjusted based on actual hardware)
+static constexpr size_t EEPROM_I2C_ADDRESS = 0x50;
+
 GSCameraBase::~GSCameraBase()
 {
     closeCamera();
+    if(camera_)
+    {
+        camera_->release();
+        camera_.reset();
+    }
 }
 
-bool GSCameraBase::openCamera()
+bool GSCameraBase::initialize()
 {
-    if(isCameraOpen_)
-    {
-        logger_->error("Camera already open");
-        return true;
-    }
-    logger_->info("Opening camera at index " + std::to_string(cameraIndex_));
     try
     {
         // Get available cameras
@@ -44,6 +48,62 @@ bool GSCameraBase::openCamera()
         {
             logger_->error("Failed to acquire camera: " + cameraId);
             return false;
+        }
+        // Retrieve and log camera information
+        camInfo_ = getCameraInfo();
+        i2cInfo_ = getCameraI2CInfo(camInfo_.id);
+        logger_->info("Camera Info - Model: " + camInfo_.model + ", ID: " + camInfo_.id);
+        logger_->info("Camera I2C Info - Bus: " + std::to_string(i2cInfo_.busNumber) + 
+                        ", Address: " + std::to_string(i2cInfo_.deviceAddress) + 
+                        ", Device Path: " + i2cInfo_.devicePath);
+        uuidInfo_.uuid = I2CUtils::readStoredCameraUID(i2cInfo_.busNumber, EEPROM_I2C_ADDRESS);
+        uuidInfo_.uuid_length = uuidInfo_.uuid.length();
+        // Attempt to read stored UUID from EEPROM. If not found, generate and store a new one.
+        // This should only be done once per camera, typically during the first initialization.
+        if (uuidInfo_.isValid())
+        {
+            logger_->info("Read stored camera UUID from EEPROM: " + uuidInfo_.uuid);
+        }
+        else
+        {
+            logger_->info("No valid UUID found in EEPROM, generating new UUID");
+            uuidInfo_.uuid = I2CUtils::generateAndStoreCameraUID(i2cInfo_.busNumber, EEPROM_I2C_ADDRESS, camInfo_.id);
+            uuidInfo_.uuid_length = uuidInfo_.uuid.length();
+            if (uuidInfo_.isValid())
+            {
+                logger_->info("Generated and stored new camera UUID: " + uuidInfo_.uuid);
+            }
+            else            {
+                logger_->error("Failed to generate/store camera UUID");
+            }
+        }
+        isInitialized_ = true;
+    }
+    catch (const std::exception &e)
+    {
+        logger_->error("Exception in initialize: " + std::string(e.what()));
+        return false;
+    }
+    return true;
+}
+
+bool GSCameraBase::openCamera()
+{
+    if(isCameraOpen_)
+    {
+        logger_->error("Camera already open");
+        return true;
+    }
+    logger_->info("Opening camera at index " + std::to_string(cameraIndex_));
+    try
+    {
+        if(!isInitialized_)
+        {
+            if(!initialize())
+            {
+                logger_->error("Failed to initialize camera during openCamera");
+                return false;
+            }
         }
         // Create new allocator (will be used during stream configuration)
         allocator_ = std::make_unique<libcamera::FrameBufferAllocator>(camera_);
@@ -95,8 +155,6 @@ void GSCameraBase::closeCamera()
             clearFrameBuffer();
         }
         allocator_.reset();
-        camera_->release();
-        camera_.reset();
     }
     isCameraOpen_ = false;
     isConfigured_ = false;
@@ -200,6 +258,7 @@ cv::Mat GSCameraBase::captureFrame(uint32_t timeout_ms)
         // callback to handle frames.
         return getLatestFrame();
     }
+    return cv::Mat();
 }
 
 bool GSCameraBase::setTriggerMode(TriggerMode mode)
@@ -279,7 +338,6 @@ bool GSCameraBase::stopContinuousCapture()
     // stop processing frames
     // so all queued requests will be processed but no new requests will be
     // queued.
-    logger_->info("Stopping continuous capture...");
     isCapturing_ = false;
     return true;
 }
@@ -448,6 +506,29 @@ std::string GSCameraBase::toString() const
 {
     return "GSCameraBase [" + std::to_string(resolutionX_) + "x" + std::to_string(resolutionY_) +
            ", FL:" + std::to_string(focalLength_mm_) + "mm]";
+}
+
+GSCameraInterface::CameraInfo GSCameraBase::getCameraInfo() const
+{
+    CameraInfo info;
+    if (camera_)
+    {
+        const::libcamera::ControlList &properties = camera_->properties();
+        // Get model
+        auto model = properties.get(libcamera::properties::Model);
+        if (model.has_value()) {
+            info.model = model.value();
+        }
+        // Get ID (use camera ID from libcamera)
+        info.id = camera_->id();
+        CameraI2CInfo i2cInfo = getCameraI2CInfo(info.id);
+        logger_->info("Camera I2C Info - Bus: " + std::to_string(i2cInfo.busNumber) + ", Address: " + std::to_string(i2cInfo.deviceAddress) + ", Device Path: " + i2cInfo.devicePath + ", Device Tree Path: " + i2cInfo.deviceTreePath);
+    }
+    else
+    {
+        logger_->warning("Camera not initialized, returning default CameraInfo");
+    }
+    return info;
 }
 
 bool GSCameraBase::allocateBuffersForStream(libcamera::Stream *stream)
@@ -642,4 +723,19 @@ bool GSCameraBase::reconfigureForActiveStream(const libcamera::StreamRole &strea
     isConfigured_ = true;
     return true;
 }
+
+GSCameraBase::CameraI2CInfo GSCameraBase::getCameraI2CInfo(const std::string &deviceTreePath) const
+{
+    CameraI2CInfo i2cInfo;
+    i2cInfo.deviceTreePath = deviceTreePath;
+    i2cInfo.busNumber = I2CUtils::mapDeviceTreePathToI2CBus(deviceTreePath);
+    i2cInfo.deviceAddress = I2CUtils::extractI2CAddressFromPath(deviceTreePath);
+    if(i2cInfo.busNumber != -1 || i2cInfo.deviceAddress != 0)
+    {
+        i2cInfo.devicePath = I2CUtils::getI2CDevicePath(i2cInfo.busNumber);
+    }
+    
+    return i2cInfo;
+}
+
 } // namespace PiTrac

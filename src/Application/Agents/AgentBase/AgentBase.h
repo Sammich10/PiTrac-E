@@ -94,17 +94,14 @@ class AgentBase : public TaskBase
                                                         // retries
         while(registration_timeout > 0)
         {
-            logInfo("Registering agent with SystemManager via DEALER socket: " + name_);
+            logInfo(name_ + ": Registering agent with SystemManager");
             try
             {
-                logInfo("Calling sendRequestAndWaitForResponse...");
                 std::unique_ptr<MessageInterface> response = agent_control_->sendRequestAndWaitForResponse(reg_msg, registration_message_interval); // 1
                                                                                                                                                     // second
                                                                                                                                                     // timeout
-                logInfo("sendRequestAndWaitForResponse returned, checking response...");
                 if (response)
                 {
-                    logInfo("Received response to registration: " + response->toString());
                     if(response->getMessageType() != Message_Type::AckMessage)
                     {
                         logError("Unexpected response type during registration: " + response->toString());

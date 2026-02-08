@@ -1,5 +1,6 @@
 #include "Application/Agents/CameraAgent/CameraAgent.h"
 #include "Interfaces/Camera/GSCameraBase/GSCameraBase.h"
+#include "Common/Utils/Calibration/CalibrationUtils.h"
 #include <libcamera/camera_manager.h>
 #include <thread>
 #include <semaphore>
@@ -28,7 +29,7 @@ CameraAgent::~CameraAgent()
 bool CameraAgent::setupProcess()
 {
     logInfo("Setting up " + name_);
-
+    // Instantiate the camera manager and start it
     std::shared_ptr<libcamera::CameraManager> camera_manager = std::make_shared<libcamera::CameraManager>();
     const int ret = camera_manager->start();
     if (ret)
@@ -43,6 +44,20 @@ bool CameraAgent::setupProcess()
         logError("Failed to create camera interface for: " + name_);
         return false;
     }
+    // Initialize the camera
+    if(!camera_->initialize())
+    {
+        logError("Failed to initialize camera interface for: " + name_);
+        return false;
+    }
+    // Retrieve & validate camera UUID and basic info
+    camera_uuid_info_ = camera_->getUUIDInfo();
+    if(!camera_uuid_info_.isValid())
+    {
+        logError("Invalid camera UUID info for: " + name_);
+        return false;
+    }
+    camera_basic_info_ = camera_->getInfo();
     // Instantiate the frame publisher
     frame_publisher_ = std::make_unique<MessagerBase>(MessagerBase::SocketType::Push);
     if(frame_publisher_ == nullptr)
@@ -78,6 +93,7 @@ bool CameraAgent::changeMode(PiTrac::SystemMode_Type new_mode)
     {
         case SystemMode_Type::STANDBY:
             logInfo("Entering standby mode for: " + name_);
+            configureStandby();
             // Nothing to do, just ensure camera is closed and idle, and we are
             // ready to switch modes
             break;
@@ -88,11 +104,6 @@ bool CameraAgent::changeMode(PiTrac::SystemMode_Type new_mode)
             {
                 logError("Failed to configure viewfinder for: " + name_);
                 cleanUp();
-                return false;
-            }
-            if(!camera_->startContinuousCapture(std::bind(&CameraAgent::viewfinderCallback, this, std::placeholders::_1)))
-            {
-                logError("Failed to start continuous capture for: " + name_);
                 return false;
             }
             return true;
@@ -136,6 +147,44 @@ bool CameraAgent::handleSystemCommand(const SystemCommandMsg &command_msg)
     }
 }
 
+bool CameraAgent::configureStandby()
+{
+    logInfo("Configuring standby mode for: " + name_);
+    if(!calibration_data_)
+    {
+        calibration_data_ = CalibrationData::getInstance();
+    }
+    if(calibration_data_ == nullptr)
+    {
+        logError("Failed to get CalibrationData instance for: " + name_);
+        return false;
+    }
+    // Check if camera info exists in the calibration database, if so retrieve the stored basic info, otherwise create a new entry
+    if(!calibration_data_->getCameraInfo(camera_uuid_info_.uuid, camera_info_))
+    {
+        logWarning("No existing camera info found in database for UUID: " + camera_uuid_info_.uuid + " for: " + name_ + ". Creating new entry.");
+        // Populate camera_info_ with basic info
+        camera_info_.camera_id = static_cast<uint32_t>(camera_index_);
+        camera_info_.camera_name = name_ + "_Cam";
+        camera_info_.camera_type = camera_basic_info_.model;
+        camera_info_.uuid = camera_uuid_info_.uuid;
+        if(!calibration_data_->putCameraInfo(camera_info_))
+        {
+            logError("Failed to insert new camera info into database for UUID: " + camera_uuid_info_.uuid + " for: " + name_);
+            return false;
+        }
+    }
+    // Ensure camera is closed and idle
+    if(camera_->isCameraOpen())
+    {
+        logInfo("Closing camera for standby mode: " + name_);
+        camera_->closeCamera();
+    }
+    // Clear frame buffer
+    frame_buffer_->clear();
+    return true;
+}
+
 bool CameraAgent::configureViewfinder()
 {
     logInfo("Configuring viewfinder mode for: " + name_);
@@ -174,6 +223,23 @@ bool CameraAgent::configureViewfinder()
     if(!camera_->start())
     {
         logError("Failed to start camera for: " + name_);
+        return false;
+    }
+    // Attempt to load existing calibration data for this camera to apply to the viewfinder stream
+    if(calibration_data_->getLatestCalibrationEntry(camera_uuid_info_.uuid, cal_entry_, dist_coeffs_, intrinsics_))
+    {
+        valid_calibration_data_ = true;
+        camera_matrix_ = (cv::Mat1d(3, 3) << intrinsics_.focal_length_x, 0, intrinsics_.principal_point_x, 0, intrinsics_.focal_length_y, intrinsics_.principal_point_y, 0, 0, 1);
+        dist_coeffs_mat_ = (cv::Mat1d(1, 5) << dist_coeffs_.k1, dist_coeffs_.k2, dist_coeffs_.p1, dist_coeffs_.p2, dist_coeffs_.k3);
+        logInfo("Applying latest distortion calibration to viewfinder stream for: " + name_);
+    }
+    else
+    {
+        logInfo("No existing distortion calibration found for viewfinder stream for: " + name_);
+    }
+    if(!camera_->startContinuousCapture(std::bind(&CameraAgent::viewfinderCallback, this, std::placeholders::_1)))
+    {
+        logError("Failed to start continuous capture for: " + name_);
         return false;
     }
     frame_counter_ = 0; // Reset frame counter
@@ -266,21 +332,9 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
 
         if (action == "capture_image")
         {
-            // if(!camera_->start())
-            // {
-            //     logError("Failed to start camera for: " + name_);
-            //     return false;
-            // }
             logInfo(name_ + ": Capturing calibration image");
             cv::Mat calibration_frame = camera_->captureFrame(5000); // 5 second
                                                                      // timeout
-            // if(!camera_->stop())
-            // {
-            //     logError("Failed to stop camera after capture for: " +
-            // name_);
-            //     return false;
-            // }
-
             if (!calibration_frame.empty())
             {
                 // Store in frame buffer for processing
@@ -325,11 +379,23 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
             {
                 streamFrame(dbg_img);
             }
+            // Store calibration results in the database
+            CalibrationEntry_Type entryInfo;
+            entryInfo.calibration_type = "Checkerboard_Distortion";
+            entryInfo.reprojection_error = distortion_calibrator_->getReprojectionError();
+            std::array<double, 5> distortion_coeffs = distortion_calibrator_->getDistortionCoefficients();
+            DistortionCoefficients_Type distortionCoeffs(distortion_coeffs);
+            std::array<double, 4> intrinsics_coeffs = distortion_calibrator_->getCameraIntrinsics();
+            CameraIntrinsics_Type intrinsics(intrinsics_coeffs);
+            if(!calibration_data_->putCalibrationEntry(camera_uuid_info_.uuid, entryInfo, distortionCoeffs, intrinsics))
+            {
+                logError(name_ + ": Failed to store calibration results in database");
+                return false;
+            }
+            logInfo(name_ + ": Calibration results stored in database successfully");
             // Clear the frame buffer after calibration
             frame_buffer_->clear();
             distortion_calibrator_->clearImages();
-            // Perform distortion calibration using the collected frames
-            // This is a placeholder - actual calibration logic would go here
             logInfo(name_ + ": Distortion calibration completed with " + std::to_string(calibration_frames.size()) + " frames");
             return true;
         }
@@ -360,8 +426,36 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
 
 void CameraAgent::streamFrame(const cv::Mat &frame)
 {
-    // Encode the frame using the configured codec
-    std::vector<uint8_t> encoded_data = frame_codec_->encode(frame, frame_codec_params_);
+    // Validate frame before encoding
+    if(frame.empty())
+    {
+        logWarning("Attempted to stream empty frame for camera " + std::to_string(camera_index_));
+        return;
+    }
+    
+    // Check if frame has valid channels for encoding (OpenCV imencode requirement)
+    if (frame.channels() != 1 && frame.channels() != 3 && frame.channels() != 4) {
+        logWarning("Attempted to stream frame with invalid channels (" + std::to_string(frame.channels()) + ") for camera " + std::to_string(camera_index_));
+        return;
+    }
+    
+    // Check if codec is available
+    if (!frame_codec_) {
+        logWarning("Frame codec not available for camera " + std::to_string(camera_index_));
+        return;
+    }
+
+    cv::Mat processing_frame;
+    if(valid_calibration_data_)
+    {
+        processing_frame = CalUtils::undistortFrame(frame, camera_matrix_, dist_coeffs_mat_);
+    }
+    else
+    {
+        processing_frame = frame; // Use original frame if no calibration
+    }
+    
+    std::vector<uint8_t> encoded_data = frame_codec_->encode(processing_frame, frame_codec_params_);
 
     // Check if encoding was successful
     if (encoded_data.empty())
@@ -416,9 +510,19 @@ void CameraAgent::cleanUp()
 
     // Reset frame counter
     frame_counter_ = 0;
-    // Stream a blank/black frame to indicate mode change / stop
-    cv::Mat black_frame = cv::Mat::zeros(camera_->getResolutionY(), camera_->getResolutionX(), camera_->getPixelFormat());
-    streamFrame(black_frame);
+    
+    // Stream a black frame to indicate mode change or shutdown, but only if camera and codec are available
+    if (camera_ && frame_codec_ && camera_->isInitialized()) {
+        try {
+            // Create a proper black frame with 3 channels (BGR) for JPEG encoding
+            cv::Mat black_frame = cv::Mat::zeros(camera_->getResolutionY(), camera_->getResolutionX(), CV_8UC3);
+            streamFrame(black_frame);
+        } catch (const std::exception &e) {
+            logWarning("Exception streaming black frame: " + std::string(e.what()));
+        }
+    } else {
+        logInfo("Skipping black frame stream - camera or codec not available");
+    }
 
     logInfo("Cleanup completed: " + name_);
 }

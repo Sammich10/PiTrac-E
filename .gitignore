@@ -1,3 +1,4 @@
+# Ignore Visual Studio Code settings and local history
 .git
 .vscode
 .bash_history
@@ -6,24 +7,24 @@
 *.uncrustify
 *.log
 .lesshst
-
+# Build and temporary files
 build
 sdk
 tmp
-
 # Generated message files
 src/Infrastructure/Messaging/Messages/
 !src/Infrastructure/Messaging/Messages/.gitkeep
-
 # Image files
 *.png
 *.jpg
 *.jpeg
 *.bmp
-
 # Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
+# database files
+*.db*
+*.sqlite

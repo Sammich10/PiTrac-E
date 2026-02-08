@@ -5,10 +5,12 @@
 SOURCE_BIN_DIR=./build/bin
 SOURCE_LIB_DIR=./build/lib
 SOURCE_CFG_DIR=./configs/App
+SOURCE_DAT_DIR=./configs/Data
 
 DEST_BIN_DIR=/usr/bin
 DEST_LIB_DIR=/usr/lib
 DEST_CFG_DIR=/etc/pitrac/configs
+DEST_DAT_DIR=/var/lib/pitrac/data
 
 PITRAC_IP=192.168.100.212
 PITRAC_HOSTNAME=pitrac-pi
@@ -35,6 +37,10 @@ while :; do
             SOURCE_CFG_DIR="$2"
             shift 2
             ;;
+        --src-dat-dir)
+            SOURCE_DAT_DIR="$2"
+            shift 2
+            ;;
         --dest-bin-dir)
             DEST_BIN_DIR="$2"
             shift 2
@@ -45,6 +51,10 @@ while :; do
             ;;
         --dest-cfg-dir)
             DEST_CFG_DIR="$2"
+            shift 2
+            ;;
+        --dest-dat-dir)
+            DEST_DAT_DIR="$2"
             shift 2
             ;;
         --pitrac-ip)
@@ -64,6 +74,7 @@ done
 echo "Transferring binaries from ${SOURCE_BIN_DIR} to ${DEST_BIN_DIR}"
 echo "Transferring libraries from ${SOURCE_LIB_DIR} to ${DEST_LIB_DIR}"
 echo "Transferring configuration files from ${SOURCE_CFG_DIR} to ${DEST_CFG_DIR}"
+echo "Transferring data files from ${SOURCE_DAT_DIR} to ${DEST_DAT_DIR}"
 
 # Ping the target device to ensure it's reachable
 ping -c 1 ${PITRAC_HOSTNAME} > /dev/null 2>&1
@@ -97,6 +108,12 @@ fi
 scp -r ${SOURCE_CFG_DIR}/* ${PITRAC_TARGET}:${DEST_CFG_DIR}/
 if [ $? -ne 0 ]; then
     echo "Error: Failed to transfer configuration files."
+    exit 1
+fi
+
+scp -r ${SOURCE_DAT_DIR}/* ${PITRAC_TARGET}:${DEST_DAT_DIR}/
+if [ $? -ne 0 ]; then
+    echo "Error: Failed to transfer data files."
     exit 1
 fi
 
