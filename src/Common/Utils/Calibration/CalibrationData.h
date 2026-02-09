@@ -65,19 +65,37 @@ class CalibrationData
         const CameraIntrinsics_Type &intrinsics
     );
 
+    bool putCalibrationEntry
+    (
+        const std::string &camera_uuid,
+        const CalibrationEntry_Type &entryInfo,
+        const FisheyeDistortionCoefficients_Type &distortionCoeffs,
+        const CameraIntrinsics_Type &intrinsics
+    );
+
     bool getLatestCalibrationEntry
     (
         const std::string &uuid,
-        CalibrationEntry_Type &entryInfo,
-        DistortionCoefficients_Type &distortionCoeffs,
-        CameraIntrinsics_Type &intrinsics
+        CalibrationEntry_Type &entryInfo
     );
 
     bool getBestCalibrationEntry
     (
         const std::string &uuid,
+        CalibrationEntry_Type &entryInfo
+    );
+
+    bool getCalibrationEntryData
+    (
         CalibrationEntry_Type &entryInfo,
         DistortionCoefficients_Type &distortionCoeffs,
+        CameraIntrinsics_Type &intrinsics
+    );
+
+    bool getCalibrationEntryData
+    (
+        CalibrationEntry_Type &entryInfo,
+        FisheyeDistortionCoefficients_Type &distortionCoeffs,
         CameraIntrinsics_Type &intrinsics
     );
 
@@ -88,8 +106,10 @@ class CalibrationData
         PUT_CALIBRATION_ENTRY,
         GET_CALIBRATION_ENTRY_BY_DATE,
         GET_CALIBRATION_ENTRY_BY_SCORE,
-        PUT_CALIBRATION_DISTORTION,
-        GET_CALIBRATION_DISTORTION,
+        PUT_CALIBRATION_DISTORTION_STANDARD,
+        GET_CALIBRATION_DISTORTION_STANDARD,
+        PUT_CALIBRATION_DISTORTION_FISHEYE,
+        GET_CALIBRATION_DISTORTION_FISHEYE,
         PUT_CALIBRATION_INTRINSICS,
         GET_CALIBRATION_INTRINSICS,
         PUT_CAMERA_INFO,

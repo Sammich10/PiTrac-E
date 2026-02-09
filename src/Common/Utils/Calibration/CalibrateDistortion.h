@@ -2,14 +2,18 @@
 #define __CALIBRATE_DISTORTION_H__
 
 #include <opencv2/opencv.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/calib3d.hpp>
 #include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
+#include "Common/Utils/Calibration/CalibrationStruct.h"
 #include "Common/Utils/Logging/GSLogger.h"
 
 namespace PiTrac
 {
+
 /**
  * @brief Virtual class containing interface methods for camera distortion
  *calibration
@@ -43,20 +47,50 @@ class CalibrateDistortion
         checkerboardDimensions_[1] = cols;
     }
 
+    /**
+     * @brief Set the calibration images to use for distortion calibration
+     * @param calibration_images Vector of images containing checkerboard patterns
+     */
     void setImages
     (
         const std::vector<cv::Mat> &calibration_images
     );
 
+    /**
+     * @brief Clear all calibration images and reset count
+     */
     void clearImages()
     {
         calibrationImages_.clear();
         numCalibrationImages_ = 0;
     }
 
+    /**
+     * @brief Set the calibration model to use
+     * @param model Standard or Fisheye model
+     */
+    void setCalibrationModel(CalibrationModel model)
+    {
+        calibrationModel_ = model;
+    }
+
+    /**
+     * @brief Get the current calibration model
+     * @return Current calibration model
+     */
+    CalibrationModel getCalibrationModel() const
+    {
+        return calibrationModel_;
+    }
+
     std::array<double, 5> getDistortionCoefficients() const
     {
         return distortionCoefficients_;
+    }
+
+    std::array<double, 4> getFisheyeDistortionCoefficients() const
+    {
+        return fisheyeDistortionCoefficients_;
     }
 
     std::array<double, 4> getCameraIntrinsics() const
@@ -83,12 +117,6 @@ class CalibrateDistortion
     }
 
     /**
-     * @brief Get quality metrics for the calibration
-     * @return String with detailed quality information
-     */
-    std::string getCalibrationQuality() const;
-
-    /**
      * @brief Check if calibration results are reasonable
      * @return True if calibration appears valid
      */
@@ -98,25 +126,30 @@ class CalibrateDistortion
      * @brief Perform distortion calibration
      * @return True if calibration was successful
      */
-    virtual bool doDistortionCalibration() = 0;
+    virtual bool doDistortionCalibration();
 
     /**
      * @brief Calculate reprojection error for validation
      * @return RMS reprojection error in pixels (-1 if invalid)
      */
-    virtual double getReprojectionError() const = 0;
+    virtual double getReprojectionError() const;
 
   protected:
+    virtual bool findObjectAndImagePoints() = 0; // Pure virtual method to be implemented by derived classes  
     /**
      * @brief Checkerboard dimensions (number of inner corners per chessboard
      *row
      * and column)
      */
+    size_t success_count_;
+    size_t fail_count_;
     std::vector<cv::Mat> calibrationImages_;
     std::array<uint32_t, 2> checkerboardDimensions_;
     std::array<double, 5> distortionCoefficients_; ///< Distortion coefficients
                                                    // (k1, k2, p1, p2, k3)
+    std::array<double, 4> fisheyeDistortionCoefficients_; ///< Fisheye distortion coefficients (k1, k2, k3, k4)
     std::array<double, 4> cameraIntrinsics_;  ///< fx, fy, cx, cy
+    CalibrationModel calibrationModel_ = CalibrationModel::STANDARD; ///< Current calibration model
     cv::Mat cameraMatrix_;                        ///< Camera matrix
     cv::Mat distCoeffs_;                         ///< Distortion coefficients
                                                  // matrix
@@ -138,32 +171,20 @@ class CheckerboardCalibration : public CalibrateDistortion
 
     CheckerboardCalibration();
     ~CheckerboardCalibration();
-
-    /**
-     * @brief Perform distortion calibration using checkerboard images
-     * @return True if calibration was successful
-     */
-    bool doDistortionCalibration() override;
-
-    /**
-     * @brief Calculate reprojection error for validation
-     * @return RMS reprojection error in pixels (-1 if invalid)
-     */
-    double getReprojectionError() const override;
-
-    /**
-     * @brief Undistort an image using calibration results
-     * @param distortedImage Input distorted image
-     * @return Undistorted image
-     */
-    cv::Mat undistortImage
-    (
-        const cv::Mat &distortedImage
-    ) const;
-
-
   private:
+    bool findObjectAndImagePoints() override; // Implement corner detection and point extraction
 }; // End class CheckerboardCalibration
+
+// class CharucoCalibration : public CalibrateDistortion
+// {
+//   public:
+
+//     CharucoCalibration();
+//     ~CharucoCalibration();
+
+//   private:
+// }; // End class CharucoCalibration
+
 } // End namespace PiTrac
 
 #endif // __CALIBRATE_DISTORTION_H__

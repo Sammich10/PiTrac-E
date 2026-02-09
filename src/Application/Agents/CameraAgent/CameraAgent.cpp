@@ -19,6 +19,7 @@ CameraAgent::CameraAgent(const size_t camera_index, const std::string &process_n
     , frame_counter_(0)
     , apply_calibrations_to_viewfinder_(false)
     , use_best_calibration_(true)
+    , current_calibration_model_(CalibrationModel::STANDARD) // Default to standard model, can be changed via config/command
 {
     logInfo("CameraAgent created: " + name_);
 }
@@ -235,12 +236,73 @@ bool CameraAgent::configureViewfinder()
     }
     // Attempt to load existing calibration data for this camera to apply to the
     // viewfinder stream
-    if(calibration_data_->getBestCalibrationEntry(camera_uuid_info_.uuid, cal_entry_, dist_coeffs_, intrinsics_))
+    if(calibration_data_->getBestCalibrationEntry(camera_uuid_info_.uuid, cal_entry_))
     {
         valid_calibration_data_ = true;
-        camera_matrix_ = (cv::Mat1d(3, 3) << intrinsics_.focal_length_x, 0, intrinsics_.principal_point_x, 0, intrinsics_.focal_length_y, intrinsics_.principal_point_y, 0, 0, 1);
-        dist_coeffs_mat_ = (cv::Mat1d(1, 5) << dist_coeffs_.k1, dist_coeffs_.k2, dist_coeffs_.p1, dist_coeffs_.p2, dist_coeffs_.k3);
-        logInfo("Applying latest distortion calibration to viewfinder stream for: " + name_);
+        switch(cal_entry_.calibration_type)
+        {
+            case CalibrationModel::STANDARD:
+                if(!calibration_data_->getCalibrationEntryData(cal_entry_, dist_coeffs_, intrinsics_))
+                {
+                    logError("Failed to retrieve standard calibration distortion and intrinsics for: " + name_);
+                    valid_calibration_data_ = false;
+                }
+                else
+                {
+                    dist_coeffs_mat_ = (cv::Mat_<double>(5, 1) << dist_coeffs_.k1, dist_coeffs_.k2, dist_coeffs_.p1, dist_coeffs_.p2, dist_coeffs_.k3);
+                }
+                break;
+            case CalibrationModel::FISHEYE:
+                if(!calibration_data_->getCalibrationEntryData(cal_entry_, fisheye_dist_coeffs_, intrinsics_))
+                {
+                    logError("Failed to retrieve fisheye calibration distortion and intrinsics for: " + name_);
+                    valid_calibration_data_ = false;
+                }
+                else
+                {
+                    dist_coeffs_mat_ = (cv::Mat_<double>(4, 1) << fisheye_dist_coeffs_.k1, fisheye_dist_coeffs_.k2, fisheye_dist_coeffs_.k3, fisheye_dist_coeffs_.k4);
+                }
+                break;
+            default:
+                logWarning("Unknown calibration model type in retrieved calibration entry for: " + name_);
+                valid_calibration_data_ = false;
+        }
+        
+        if(valid_calibration_data_)
+        {
+            // For now, hardcode the scaling since we know streaming is 544x728 and calibration was at full res
+            // You can make this dynamic later by storing the calibration resolution in the database
+            cv::Size streamingSize(728, 544);  // width x height of streaming frames
+            cv::Size calibrationSize(1456, 1088); // width x height of calibration frames (estimated from cx value)
+            
+            // Calculate scale factors
+            double scale_x = static_cast<double>(streamingSize.width) / static_cast<double>(calibrationSize.width);
+            double scale_y = static_cast<double>(streamingSize.height) / static_cast<double>(calibrationSize.height);
+            
+            // Scale the camera matrix parameters
+            double scaled_fx = intrinsics_.focal_length_x * scale_x;
+            double scaled_fy = intrinsics_.focal_length_y * scale_y;
+            double scaled_cx = intrinsics_.principal_point_x * scale_x;
+            double scaled_cy = intrinsics_.principal_point_y * scale_y;
+            
+            camera_matrix_ = (cv::Mat_<double>(3, 3) << scaled_fx, 0, scaled_cx, 0, scaled_fy, scaled_cy, 0, 0, 1);
+            
+            logInfo("Applying best distortion calibration to viewfinder stream for: " + name_);
+            logInfo("Calibration entry ID: " + std::to_string(cal_entry_.calibration_id) + ", Type: " + std::to_string(static_cast<int>(cal_entry_.calibration_type)) + ", Reprojection Error: " + std::to_string(cal_entry_.reprojection_error) + " pixels, Date: " + cal_entry_.calibration_date);
+            logInfo("Original camera intrinsics (at " + std::to_string(calibrationSize.width) + "x" + std::to_string(calibrationSize.height) + ") - fx: " + std::to_string(intrinsics_.focal_length_x) + ", fy: " + std::to_string(intrinsics_.focal_length_y) + ", cx: " + std::to_string(intrinsics_.principal_point_x) + ", cy: " + std::to_string(intrinsics_.principal_point_y));        
+            logInfo("Scaled camera intrinsics (for " + std::to_string(streamingSize.width) + "x" + std::to_string(streamingSize.height) + ") - fx: " + std::to_string(scaled_fx) + ", fy: " + std::to_string(scaled_fy) + ", cx: " + std::to_string(scaled_cx) + ", cy: " + std::to_string(scaled_cy));
+            logInfo("Scale factors - x: " + std::to_string(scale_x) + ", y: " + std::to_string(scale_y));
+            
+            // Log the appropriate distortion coefficients based on calibration model
+            if(cal_entry_.calibration_type == CalibrationModel::FISHEYE)
+            {
+                logInfo("Fisheye distortion coefficients (unchanged) - k1: " + std::to_string(fisheye_dist_coeffs_.k1) + ", k2: " + std::to_string(fisheye_dist_coeffs_.k2) + ", k3: " + std::to_string(fisheye_dist_coeffs_.k3) + ", k4: " + std::to_string(fisheye_dist_coeffs_.k4));
+            }
+            else
+            {
+                logInfo("Standard distortion coefficients (unchanged) - k1: " + std::to_string(dist_coeffs_.k1) + ", k2: " + std::to_string(dist_coeffs_.k2) + ", p1: " + std::to_string(dist_coeffs_.p1) + ", p2: " + std::to_string(dist_coeffs_.p2) + ", k3: " + std::to_string(dist_coeffs_.k3));
+            }
+        }
     }
     else
     {
@@ -379,31 +441,58 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
             }
             distortion_calibrator_->setDimensions(6, 7);
             distortion_calibrator_->setImages(calibration_frames);
+            distortion_calibrator_->setCalibrationModel(current_calibration_model_);
             if(!distortion_calibrator_->doDistortionCalibration())
             {
                 logError(name_ + ": Distortion calibration failed");
                 return false;
             }
-            std::vector<cv::Mat> debug_images = distortion_calibrator_->getDebugImages();
-            // Stream debug images if available
-            for(auto &dbg_img : debug_images)
+            if(!distortion_calibrator_->isCalibrationValid())
             {
-                streamFrame(dbg_img, false); // Don't apply calibration to debug
-                                             // images
+                logWarning(name_ + ": Distortion calibration completed but results may be invalid");
             }
+            // std::vector<cv::Mat> debug_images = distortion_calibrator_->getDebugImages();
+            // Stream debug images if available
+            // for(auto &dbg_img : debug_images)
+            // {
+            //     streamFrame(dbg_img, false); // Don't apply calibration to debug
+            //                                  // images
+            // }
             // Store calibration results in the database
             CalibrationEntry_Type entryInfo;
-            entryInfo.calibration_type = "Checkerboard_Distortion";
+            entryInfo.calibration_type = current_calibration_model_;
             entryInfo.reprojection_error = distortion_calibrator_->getReprojectionError();
-            std::array<double, 5> distortion_coeffs = distortion_calibrator_->getDistortionCoefficients();
-            DistortionCoefficients_Type distortionCoeffs(distortion_coeffs);
             std::array<double, 4> intrinsics_coeffs = distortion_calibrator_->getCameraIntrinsics();
             CameraIntrinsics_Type intrinsics(intrinsics_coeffs);
-            if(!calibration_data_->putCalibrationEntry(camera_uuid_info_.uuid, entryInfo, distortionCoeffs, intrinsics))
+            switch(current_calibration_model_)
             {
-                logError(name_ + ": Failed to store calibration results in database");
-                return false;
+
+                case CalibrationModel::FISHEYE:
+                {
+                    logInfo(name_ + ": Fisheye calibration completed with reprojection error: " + std::to_string(entryInfo.reprojection_error) + " pixels");
+                    std::array<double, 4> distortion_coeffs = distortion_calibrator_->getFisheyeDistortionCoefficients();
+                    FisheyeDistortionCoefficients_Type distortionCoeffs(distortion_coeffs);
+                    if(!calibration_data_->putCalibrationEntry(camera_uuid_info_.uuid, entryInfo, distortionCoeffs, intrinsics))
+                    {
+                        logError(name_ + ": Failed to store calibration results in database");
+                        return false;
+                    }
+                    break;
+                }
+                case CalibrationModel::STANDARD:
+                {
+                    logInfo(name_ + ": Standard calibration completed with reprojection error: " + std::to_string(entryInfo.reprojection_error) + " pixels");
+                    std::array<double, 5> distortion_coeffs = distortion_calibrator_->getDistortionCoefficients();
+                    DistortionCoefficients_Type distortionCoeffs(distortion_coeffs);
+                    if(!calibration_data_->putCalibrationEntry(camera_uuid_info_.uuid, entryInfo, distortionCoeffs, intrinsics))
+                    {
+                        logError(name_ + ": Failed to store calibration results in database");
+                        return false;
+                    }
+                    break;
+                }
             }
+            
             logInfo(name_ + ": Calibration results stored in database successfully");
             // Clear the frame buffer after calibration
             frame_buffer_->clear();
@@ -499,12 +588,28 @@ void CameraAgent::streamFrame(cv::Mat &frame, const bool apply_calibration)
     }
     // Apply distortion correction if valid calibration data is available
     if(valid_calibration_data_ && apply_calibration)
-    {
-        const bool success = CalUtils::undistortFrame(frame, camera_matrix_, dist_coeffs_mat_);
+    {   // Only apply calibration if the flag is set, which allows us to stream
+        // uncalibrated frames for testing or if the user prefers that way
+        switch(cal_entry_.calibration_type)
+        { // Apply the appropriate distortion correction based on the calibration model type
+            case CalibrationModel::STANDARD:
+                if (!CalUtils::undistortFrame(frame, camera_matrix_, dist_coeffs_mat_)) {
+                    logWarning("Standard undistortion failed for " + name_);
+                }
+                break;
+            case CalibrationModel::FISHEYE:
+                if (!CalUtils::undistortFrameFisheye(frame, camera_matrix_, dist_coeffs_mat_)) {
+                    logWarning("Fisheye undistortion failed for " + name_);
+                }
+                break;
+            default:
+                break;
+                // Maybe handle this case, but it shouldn't ever happen, and we dont want to spam warnings
+                // logWarning("Unknown calibration model type for camera " + std::to_string(camera_index_) + " - skipping distortion correction");
+        }
     }
-
+    // Encode the frame using the specified codec and parameters
     std::vector<uint8_t> encoded_data = frame_codec_->encode(frame, frame_codec_params_);
-
     // Check if encoding was successful
     if (encoded_data.empty())
     {

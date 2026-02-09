@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS Camera_Info (
 CREATE TABLE IF NOT EXISTS Calibration_Entries (
     CalibrationID INTEGER PRIMARY KEY AUTOINCREMENT,
     CameraID INTEGER NOT NULL,
-    CalibrationType TEXT NOT NULL,
+    CalibrationType INTEGER NOT NULL,
     ReprojectionError REAL NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -33,6 +33,16 @@ CREATE TABLE IF NOT EXISTS Distortion_Coefficients (
     P1 REAL,
     P2 REAL,
     K3 REAL,
+    FOREIGN KEY (CalibrationID) REFERENCES Distortion_Calibration(CalibrationID)
+);
+
+CREATE TABLE IF NOT EXISTS Fisheye_Distortion_Coefficients (
+    CoefficientID INTEGER PRIMARY KEY AUTOINCREMENT,
+    CalibrationID INTEGER NOT NULL,
+    K1 REAL,
+    K2 REAL,
+    K3 REAL,
+    K4 REAL,
     FOREIGN KEY (CalibrationID) REFERENCES Distortion_Calibration(CalibrationID)
 );
 

@@ -152,15 +152,16 @@ class CameraAgent : public AgentBase
     uint64_t frame_counter_;
     CodecParams frame_codec_params_;
     // Calibration command handling
-    std::queue<SystemCommandMsg> calibration_command_queue_;
     std::mutex calibration_queue_mutex_;
     CameraInfo_Type camera_info_;
     GSCameraInterface::CameraUUIDInfo camera_uuid_info_;
     GSCameraInterface::CameraInfo camera_basic_info_;
+    CalibrationModel current_calibration_model_;
     cv::Mat camera_matrix_;
     cv::Mat dist_coeffs_mat_;
     CalibrationEntry_Type cal_entry_;
     DistortionCoefficients_Type dist_coeffs_;
+    FisheyeDistortionCoefficients_Type fisheye_dist_coeffs_;
     CameraIntrinsics_Type intrinsics_;
 };
 } // namespace PiTrac

@@ -5,6 +5,14 @@
 
 namespace PiTrac
 {
+/**
+ * @brief Enumeration for different camera distortion models
+ */
+enum class CalibrationModel {
+    STANDARD,  ///< Standard radial-tangential model (k1,k2,p1,p2,k3)
+    FISHEYE    ///< Fisheye model (k1,k2,k3,k4) - better for wide FOV cameras
+};
+
 typedef struct CameraInfo
 {
     uint32_t camera_id;
@@ -16,7 +24,7 @@ typedef struct CameraInfo
 typedef struct CalibrationEntry
 {
     uint32_t calibration_id;
-    std::string calibration_type; // e.g. "intrinsics", "distortion"
+    CalibrationModel calibration_type;
     std::string calibration_date; // ISO 8601 format
     double reprojection_error; // Average re-projection error for this
                                // calibration
@@ -67,6 +75,29 @@ typedef struct DistortionCoefficients
         return (k1 != 0.0 || k2 != 0.0 || p1 != 0.0 || p2 != 0.0 || k3 != 0.0);
     }
 } DistortionCoefficients_Type;
+
+typedef struct FisheyeDistortionCoefficients
+{   // OpenCV fisheye model uses 4 coefficients: k1, k2, k3, k4
+    FisheyeDistortionCoefficients(std::array<double, 4> coeffs = {0.0, 0.0, 0.0, 0.0})
+    {
+        k1 = coeffs[0];
+        k2 = coeffs[1];
+        k3 = coeffs[2];
+        k4 = coeffs[3];
+    }
+
+    double k1; // Fisheye distortion coefficient k1
+    double k2; // Fisheye distortion coefficient k2
+    double k3; // Fisheye distortion coefficient k3
+    double k4; // Fisheye distortion coefficient k4
+    bool valid() const
+    {
+        // A simple validity check could be that at least one coefficient is
+        // non-zero
+        return (k1 != 0.0 || k2 != 0.0 || k3 != 0.0 || k4 != 0.0);
+    }
+} FisheyeDistortionCoefficients_Type;
+
 } // namespace PiTrac
 
 #endif // __CALIBRATION_STRUCTS_H__

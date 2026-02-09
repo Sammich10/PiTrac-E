@@ -141,18 +141,18 @@ bool CalibrationData::prepareStatements()
     int sql_status = SQLITE_OK;
     // Query to insert distortion coefficients for a calibration entry
     std::string statement = "INSERT INTO Distortion_Coefficients (CalibrationID , K1, K2, P1, P2, K3) VALUES (?1, ?2, ?3, ?4, ?5, ?6);";
-    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[PUT_CALIBRATION_DISTORTION], nullptr);
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[PUT_CALIBRATION_DISTORTION_STANDARD], nullptr);
     if (sql_status != SQLITE_OK)
     {
-        logger_->error("Failed to prepare PUT_CALIBRATION_DISTORTION statement: " + std::string(sqlite3_errmsg(db_)));
+        logger_->error("Failed to prepare PUT_CALIBRATION_DISTORTION_STANDARD statement: " + std::string(sqlite3_errmsg(db_)));
         return false;
     }
     // Query to retrieve distortion coefficients for a calibration entry
     statement = "SELECT K1, K2, P1, P2, K3 FROM Distortion_Coefficients WHERE CalibrationID = ?1;";
-    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[GET_CALIBRATION_DISTORTION], nullptr);
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[GET_CALIBRATION_DISTORTION_STANDARD], nullptr);
     if (sql_status != SQLITE_OK)
     {
-        logger_->error("Failed to prepare GET_CALIBRATION_DISTORTION statement: " + std::string(sqlite3_errmsg(db_)));
+        logger_->error("Failed to prepare GET_CALIBRATION_DISTORTION_STANDARD statement: " + std::string(sqlite3_errmsg(db_)));
         return false;
     }
     // Query to insert intrinsic parameters for a calibration entry
@@ -161,6 +161,28 @@ bool CalibrationData::prepareStatements()
     if (sql_status != SQLITE_OK)
     {
         logger_->error("Failed to prepare PUT_CALIBRATION_INTRINSICS statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+    // Query to retrieve intrinsic parameters for a calibration entry
+    statement = "SELECT FX, FY, CX, CY FROM Intrinsic_Calibration WHERE CalibrationID = ?1;";
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[GET_CALIBRATION_INTRINSICS], nullptr);
+    if (sql_status != SQLITE_OK)
+    {
+        logger_->error("Failed to prepare GET_CALIBRATION_INTRINSICS statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+    // Query to insert fisheye distortion coefficients for a calibration entry
+    statement = "INSERT INTO Fisheye_Distortion_Coefficients (CalibrationID , K1, K2, K3, K4) VALUES (?1, ?2, ?3, ?4, ?5);";
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[PUT_CALIBRATION_DISTORTION_FISHEYE], nullptr);
+    if (sql_status != SQLITE_OK)    {
+        logger_->error("Failed to prepare PUT_CALIBRATION_DISTORTION_FISHEYE statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+    // Query to retrieve fisheye distortion coefficients for a calibration entry
+    statement = "SELECT K1, K2, K3, K4 FROM Fisheye_Distortion_Coefficients WHERE CalibrationID = ?1;";
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[GET_CALIBRATION_DISTORTION_FISHEYE], nullptr);
+    if (sql_status != SQLITE_OK)    {
+        logger_->error("Failed to prepare GET_CALIBRATION_DISTORTION_FISHEYE statement: " + std::string(sqlite3_errmsg(db_)));
         return false;
     }
     // Query to retrieve intrinsic parameters for a calibration entry
@@ -195,46 +217,13 @@ bool CalibrationData::prepareStatements()
         logger_->error("Failed to prepare PUT_CALIBRATION_ENTRY statement: " + std::string(sqlite3_errmsg(db_)));
         return false;
     }
-    // // Query calibration entries for a camera ID, sort by date
-    // statement = "SELECT CalibrationID, CalibrationType, created_at,
-    // ReprojectionError FROM Calibration_Entries WHERE CameraID = ?1 ORDER BY
-    // created_at DESC;";
-    // sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1,
-    // &preparedStatements_[GET_CALIBRATION_ENTRY], nullptr);
-    // if (sql_status != SQLITE_OK)
-    // {
-    //     logger_->error("Failed to prepare GET_CALIBRATION_ENTRY statement: "
-    // + std::string(sqlite3_errmsg(db_)));
-    //     return false;
-    // }
-    // // Query calibration entries for a camera ID, sort by reprojection error
-    // statement = "SELECT CalibrationID, CalibrationType, created_at,
-    // ReprojectionError FROM Calibration_Entries WHERE CameraID = ?1 ORDER BY
-    // ReprojectionError ASC;";
-    // sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1,
-    // &preparedStatements_[GET_CALIBRATION_ENTRY], nullptr);
-    // if (sql_status != SQLITE_OK)
-    // {
-    //     logger_->error("Failed to prepare GET_CALIBRATION_ENTRY statement: "
-    // + std::string(sqlite3_errmsg(db_)));
-    //     return false;
-    // }
-
     // Get best calibration entry data for a camera UUID (lowest reprojection
     // error).
-    // This is a monster query that joins the calibration entries with the
-    // camera info,
-    // distortion coefficients, and intrinsic parameters to return all relevant
-    // data
-    // for the best calibration entry for a given camera UUID
     statement =
-        // Select all relevant data from all tables
-        "SELECT CE.CalibrationID, CE.CalibrationType, CE.created_at, CE.ReprojectionError, "
-        "DC.K1, DC.K2, DC.P1, DC.P2, DC.K3, IC.FX, IC.FY, IC.CX, IC.CY "
+        // Select
+        "SELECT CE.CalibrationID, CE.CalibrationType, CE.created_at, CE.ReprojectionError "
         "FROM Calibration_Entries CE "
         "INNER JOIN Camera_Info CI ON CE.CameraID = CI.UUID "
-        "INNER JOIN Distortion_Coefficients DC ON CE.CalibrationID = DC.CalibrationID "
-        "INNER JOIN Intrinsic_Calibration IC ON CE.CalibrationID = IC.CalibrationID "
         "WHERE CI.UUID = ?1 ORDER BY CE.ReprojectionError ASC LIMIT 1;";
     sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[GET_BEST_CALIBRATION_ENTRY_BY_UUID], nullptr);
     if (sql_status != SQLITE_OK)
@@ -245,12 +234,9 @@ bool CalibrationData::prepareStatements()
     // Get latest calibration entry data for a camera UUID (most recent by
     // created_at)
     statement =
-        "SELECT CE.CalibrationID, CE.CalibrationType, CE.created_at, CE.ReprojectionError, "
-        "DC.K1, DC.K2, DC.P1, DC.P2, DC.K3, IC.FX, IC.FY, IC.CX, IC.CY "
+        "SELECT CE.CalibrationID, CE.CalibrationType, CE.created_at, CE.ReprojectionError "
         "FROM Calibration_Entries CE "
         "INNER JOIN Camera_Info CI ON CE.CameraID = CI.UUID "
-        "INNER JOIN Distortion_Coefficients DC ON CE.CalibrationID = DC.CalibrationID "
-        "INNER JOIN Intrinsic_Calibration IC ON CE.CalibrationID = IC.CalibrationID "
         "WHERE CI.UUID = ?1 ORDER BY CE.created_at DESC LIMIT 1;";
     sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[GET_LATEST_CALIBRATION_ENTRY_BY_UUID], nullptr);
     if (sql_status != SQLITE_OK)
@@ -348,7 +334,7 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid,
     sqlite3_stmt *stmt = preparedStatements_[PUT_CALIBRATION_ENTRY];
     sqlite3_reset(stmt);
     sqlite3_bind_text(stmt, 1, camera_uuid.c_str(), -1, SQLITE_TRANSIENT);
-    sqlite3_bind_text(stmt, 2, entryInfo.calibration_type.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 2, (int)entryInfo.calibration_type);
     sqlite3_bind_double(stmt, 3, entryInfo.reprojection_error);
 
     if (!executeWithRetry(stmt, 1))
@@ -365,7 +351,7 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid,
     int64_t calibrationID = sqlite3_last_insert_rowid(db_);
 
     // Step 2: Insert into Distortion_Coefficients
-    stmt = preparedStatements_[PUT_CALIBRATION_DISTORTION];
+    stmt = preparedStatements_[PUT_CALIBRATION_DISTORTION_STANDARD];
     sqlite3_reset(stmt);
     sqlite3_bind_int64(stmt, 1, calibrationID);
     sqlite3_bind_double(stmt, 2, distortionCoeffs.k1);
@@ -375,7 +361,7 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid,
     sqlite3_bind_double(stmt, 6, distortionCoeffs.k3);
     if (!executeWithRetry(stmt, 1))
     {
-        logger_->error("Failed to execute PUT_CALIBRATION_DISTORTION statement: " + std::string(sqlite3_errmsg(db_)));
+        logger_->error("Failed to execute PUT_CALIBRATION_DISTORTION_STANDARD statement: " + std::string(sqlite3_errmsg(db_)));
         sqlite3_reset(stmt); // Reset statement after failure
         sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr); // Rollback
                                                                    // transaction
@@ -415,7 +401,113 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid,
     return true;
 }
 
-bool CalibrationData::getLatestCalibrationEntry(const std::string &uuid, CalibrationEntry_Type &entryInfo, DistortionCoefficients_Type &distortionCoeffs, CameraIntrinsics_Type &intrinsics)
+bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid, const CalibrationEntry_Type &entryInfo, const FisheyeDistortionCoefficients_Type &distortionCoeffs, const CameraIntrinsics_Type &intrinsics)
+{
+    // This function will need to execute multiple statements in a transaction:
+    // 1) Insert into Calibration_Entries to create a new calibration entry and
+    // get the generated CalibrationID
+    // 2) Insert into Distortion_Coefficients using the generated CalibrationID
+    // 3) Insert into Intrinsic_Calibration using the generated CalibrationID
+    // We will need to use sqlite3_last_insert_rowid to get the generated
+    // CalibrationID after inserting into Calibration_Entries
+    // We should also wrap this in a transaction to ensure atomicity
+    char *errMsg = nullptr;
+
+    // Use BEGIN IMMEDIATE to get exclusive write access immediately and fail
+    // fast if another process has a lock
+    if (sqlite3_exec(db_, "BEGIN IMMEDIATE;", nullptr, nullptr, &errMsg) != SQLITE_OK)
+    {
+        logger_->error("Failed to begin immediate transaction for putCalibrationEntry: " + std::string(errMsg ? errMsg : "unknown error"));
+        if (errMsg)
+        {
+            sqlite3_free(errMsg);
+        }
+
+        // If immediate transaction fails, wait briefly and try a regular
+        // transaction as fallback
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        if (sqlite3_exec(db_, "BEGIN TRANSACTION;", nullptr, nullptr, &errMsg) != SQLITE_OK)
+        {
+            logger_->error("Failed to begin fallback transaction for putCalibrationEntry: " + std::string(errMsg ? errMsg : "unknown error"));
+            if (errMsg)
+            {
+                sqlite3_free(errMsg);
+            }
+            return false;
+        }
+    }
+
+    // Step 1: Insert into Calibration_Entries
+    sqlite3_stmt *stmt = preparedStatements_[PUT_CALIBRATION_ENTRY];
+    sqlite3_reset(stmt);
+    sqlite3_bind_text(stmt, 1, camera_uuid.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 2, (int)entryInfo.calibration_type);
+    sqlite3_bind_double(stmt, 3, entryInfo.reprojection_error);
+
+    if (!executeWithRetry(stmt, 1))
+    {
+        logger_->error("Failed to execute PUT_CALIBRATION_ENTRY statement: " + std::string(sqlite3_errmsg(db_)));
+        sqlite3_reset(stmt); // Reset statement after failure
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr); // Rollback
+                                                                   // transaction
+                                                                   // on failure
+        return false;
+    }
+
+    // Get the generated CalibrationID for the new entry
+    int64_t calibrationID = sqlite3_last_insert_rowid(db_);
+
+    // Step 2: Insert into Distortion_Coefficients
+    stmt = preparedStatements_[PUT_CALIBRATION_DISTORTION_FISHEYE];
+    sqlite3_reset(stmt);
+    sqlite3_bind_int64(stmt, 1, calibrationID);
+    sqlite3_bind_double(stmt, 2, distortionCoeffs.k1);
+    sqlite3_bind_double(stmt, 3, distortionCoeffs.k2);
+    sqlite3_bind_double(stmt, 4, distortionCoeffs.k3);
+    sqlite3_bind_double(stmt, 5, distortionCoeffs.k4);
+    if (!executeWithRetry(stmt, 1))
+    {
+        logger_->error("Failed to execute PUT_CALIBRATION_DISTORTION_FISHEYE statement: " + std::string(sqlite3_errmsg(db_)));
+        sqlite3_reset(stmt); // Reset statement after failure
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr); // Rollback
+                                                                   // transaction
+                                                                   // on failure
+        return false;
+    }
+
+    // Step 3: Insert into Intrinsic_Calibration
+    stmt = preparedStatements_[PUT_CALIBRATION_INTRINSICS];
+    sqlite3_reset(stmt);
+    sqlite3_bind_int64(stmt, 1, calibrationID);
+    sqlite3_bind_double(stmt, 2, intrinsics.focal_length_x);
+    sqlite3_bind_double(stmt, 3, intrinsics.focal_length_y);
+    sqlite3_bind_double(stmt, 4, intrinsics.principal_point_x);
+    sqlite3_bind_double(stmt, 5, intrinsics.principal_point_y);
+    if (!executeWithRetry(stmt, 1))
+    {
+        logger_->error("Failed to execute PUT_CALIBRATION_INTRINSICS statement: " + std::string(sqlite3_errmsg(db_)));
+        sqlite3_reset(stmt); // Reset statement after failure
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr); // Rollback
+                                                                   // transaction
+                                                                   // on failure
+        return false;
+    }
+
+    // Commit transaction
+    if (sqlite3_exec(db_, "COMMIT;", nullptr, nullptr, &errMsg) != SQLITE_OK)
+    {
+        logger_->error("Failed to commit transaction for putCalibrationEntry: " + std::string(errMsg ? errMsg : "unknown error"));
+        sqlite3_free(errMsg);
+        sqlite3_exec(db_, "ROLLBACK;", nullptr, nullptr, nullptr); // Rollback
+                                                                   // on commit
+                                                                   // failure
+        return false;
+    }
+
+    return true;
+}
+
+bool CalibrationData::getLatestCalibrationEntry(const std::string &uuid, CalibrationEntry_Type &entryInfo)
 {
     // This function will execute the GET_LATEST_CALIBRATION_ENTRY_BY_UUID
     // statement which joins all relevant tables to get the latest calibration
@@ -428,21 +520,9 @@ bool CalibrationData::getLatestCalibrationEntry(const std::string &uuid, Calibra
     {
         // Extract data from the row and populate the output parameters
         entryInfo.calibration_id = sqlite3_column_int64(stmt, 0);
-        entryInfo.calibration_type = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+        entryInfo.calibration_type = static_cast<CalibrationModel>(sqlite3_column_int(stmt, 1));
         entryInfo.calibration_date = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
         entryInfo.reprojection_error = sqlite3_column_double(stmt, 3);
-        // Distortion coefficients
-        distortionCoeffs.k1 = sqlite3_column_double(stmt, 4);
-        distortionCoeffs.k2 = sqlite3_column_double(stmt, 5);
-        distortionCoeffs.p1 = sqlite3_column_double(stmt, 6);
-        distortionCoeffs.p2 = sqlite3_column_double(stmt, 7);
-        distortionCoeffs.k3 = sqlite3_column_double(stmt, 8);
-        // Intrinsic parameters
-        intrinsics.focal_length_x = sqlite3_column_double(stmt, 9);
-        intrinsics.focal_length_y = sqlite3_column_double(stmt, 10);
-        intrinsics.principal_point_x = sqlite3_column_double(stmt, 11);
-        intrinsics.principal_point_y = sqlite3_column_double(stmt, 12);
-
         return true;
     }
     else if (rc == SQLITE_DONE)
@@ -458,7 +538,7 @@ bool CalibrationData::getLatestCalibrationEntry(const std::string &uuid, Calibra
     return (rc == SQLITE_ROW);
 }
 
-bool CalibrationData::getBestCalibrationEntry(const std::string &uuid, CalibrationEntry_Type &entryInfo, DistortionCoefficients_Type &distortionCoeffs, CameraIntrinsics_Type &intrinsics)
+bool CalibrationData::getBestCalibrationEntry(const std::string &uuid, CalibrationEntry_Type &entryInfo)
 {
     // This function will execute the GET_BEST_CALIBRATION_ENTRY_BY_UUID
     // statement which joins all relevant tables to get the best calibration
@@ -471,21 +551,9 @@ bool CalibrationData::getBestCalibrationEntry(const std::string &uuid, Calibrati
     {
         // Extract data from the row and populate the output parameters
         entryInfo.calibration_id = sqlite3_column_int64(stmt, 0);
-        entryInfo.calibration_type = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 1));
+        entryInfo.calibration_type = static_cast<CalibrationModel>(sqlite3_column_int(stmt, 1));
         entryInfo.calibration_date = reinterpret_cast<const char *>(sqlite3_column_text(stmt, 2));
         entryInfo.reprojection_error = sqlite3_column_double(stmt, 3);
-        // Distortion coefficients
-        distortionCoeffs.k1 = sqlite3_column_double(stmt, 4);
-        distortionCoeffs.k2 = sqlite3_column_double(stmt, 5);
-        distortionCoeffs.p1 = sqlite3_column_double(stmt, 6);
-        distortionCoeffs.p2 = sqlite3_column_double(stmt, 7);
-        distortionCoeffs.k3 = sqlite3_column_double(stmt, 8);
-        // Intrinsic parameters
-        intrinsics.focal_length_x = sqlite3_column_double(stmt, 9);
-        intrinsics.focal_length_y = sqlite3_column_double(stmt, 10);
-        intrinsics.principal_point_x = sqlite3_column_double(stmt, 11);
-        intrinsics.principal_point_y = sqlite3_column_double(stmt, 12);
-
         return true;
     }
     else if (rc == SQLITE_DONE)
@@ -498,6 +566,77 @@ bool CalibrationData::getBestCalibrationEntry(const std::string &uuid, Calibrati
         logger_->error("Failed to execute GET_BEST_CALIBRATION_ENTRY_BY_UUID statement: " + std::string(sqlite3_errmsg(db_)));
         return false;
     }
+}
+
+bool CalibrationData::getCalibrationEntryData(CalibrationEntry_Type &entryInfo, DistortionCoefficients_Type &distortionCoeffs, CameraIntrinsics_Type &intrinsics)
+{
+    // This function will execute separate queries to get the distortion
+    // coefficients and intrinsic parameters for a given CalibrationID
+    sqlite3_stmt *stmt = preparedStatements_[GET_CALIBRATION_DISTORTION_STANDARD];
+    sqlite3_reset(stmt);
+    sqlite3_bind_int64(stmt, 1, entryInfo.calibration_id);
+    int rc = sqlite3_step(stmt);
+    if(rc != SQLITE_ROW)
+    {
+        logger_->error("Failed to execute GET_CALIBRATION_DISTORTION_STANDARD statement for CalibrationID " + std::to_string(entryInfo.calibration_id) + ": " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+    // Extract distortion coefficients from the row and populate the output parameter
+    distortionCoeffs.k1 = sqlite3_column_double(stmt, 0);
+    distortionCoeffs.k2 = sqlite3_column_double(stmt, 1);
+    distortionCoeffs.p1 = sqlite3_column_double(stmt, 2);
+    distortionCoeffs.p2 = sqlite3_column_double(stmt, 3);
+    distortionCoeffs.k3 = sqlite3_column_double(stmt, 4);
+    sqlite3_reset(stmt);
+    stmt = preparedStatements_[GET_CALIBRATION_INTRINSICS];
+    sqlite3_reset(stmt);
+    sqlite3_bind_int64(stmt, 1, entryInfo.calibration_id);
+    rc = sqlite3_step(stmt);
+    if(rc != SQLITE_ROW)    {
+        logger_->error("Failed to execute GET_CALIBRATION_INTRINSICS statement for CalibrationID " + std::to_string(entryInfo.calibration_id) + ": " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+    // Extract intrinsic parameters from the row and populate the output parameter
+    intrinsics.focal_length_x = sqlite3_column_double(stmt, 0);
+    intrinsics.focal_length_y = sqlite3_column_double(stmt, 1);
+    intrinsics.principal_point_x = sqlite3_column_double(stmt, 2);
+    intrinsics.principal_point_y = sqlite3_column_double(stmt, 3);
+    return true; // Placeholder - implement actual queries and data extraction
+}
+
+bool CalibrationData::getCalibrationEntryData(CalibrationEntry_Type &entryInfo, FisheyeDistortionCoefficients_Type &distortionCoeffs, CameraIntrinsics_Type &intrinsics)
+{
+    // This function will execute separate queries to get the fisheye distortion
+    // coefficients and intrinsic parameters for a given CalibrationID
+    sqlite3_stmt *stmt = preparedStatements_[GET_CALIBRATION_DISTORTION_FISHEYE];
+    sqlite3_reset(stmt);
+    sqlite3_bind_int64(stmt, 1, entryInfo.calibration_id);
+    int rc = sqlite3_step(stmt);
+    if(rc != SQLITE_ROW)
+    {
+        logger_->error("Failed to execute GET_CALIBRATION_DISTORTION_FISHEYE statement for CalibrationID " + std::to_string(entryInfo.calibration_id) + ": " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+    // Extract distortion coefficients from the row and populate the output parameter
+    distortionCoeffs.k1 = sqlite3_column_double(stmt, 0);
+    distortionCoeffs.k2 = sqlite3_column_double(stmt, 1);
+    distortionCoeffs.k3 = sqlite3_column_double(stmt, 2);
+    distortionCoeffs.k4 = sqlite3_column_double(stmt, 3);
+    sqlite3_reset(stmt);
+    stmt = preparedStatements_[GET_CALIBRATION_INTRINSICS];
+    sqlite3_reset(stmt);
+    sqlite3_bind_int64(stmt, 1, entryInfo.calibration_id);
+    rc = sqlite3_step(stmt);
+    if(rc != SQLITE_ROW)    {
+        logger_->error("Failed to execute GET_CALIBRATION_INTRINSICS statement for CalibrationID " + std::to_string(entryInfo.calibration_id) + ": " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+    // Extract intrinsic parameters from the row and populate the output parameter
+    intrinsics.focal_length_x = sqlite3_column_double(stmt, 0);
+    intrinsics.focal_length_y = sqlite3_column_double(stmt, 1);
+    intrinsics.principal_point_x = sqlite3_column_double(stmt, 2);
+    intrinsics.principal_point_y = sqlite3_column_double(stmt, 3);
+    return true; // Placeholder - implement actual queries and data extraction
 }
 
 void CalibrationData::configureSQLiteForConcurrency()
