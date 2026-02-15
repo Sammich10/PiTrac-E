@@ -152,6 +152,32 @@ class GSCameraBase : public GSCameraInterface
      */
     std::string toString() const override;
 
+    /**
+     * @brief Update the camera's internal state and settings based on the current stream configuration.
+     * 
+     * Apply the updated settings to the current camera request if the camera is currently capturing.
+     *
+     * @param[in] exposureUs The desired exposure time in microseconds.
+     * @return True if the exposure time was set successfully, false otherwise.
+     */
+    bool setExposureTime
+    (
+         uint32_t exposureUs
+    ) override;
+
+    /**
+     * @brief Update the camera's internal state and settings based on the current stream configuration.
+     * 
+     * Apply the updated settings to the current camera request if the camera is currently capturing.
+     * 
+     * @param[in] gain The desired analog gain value.
+     * @return True if the analog gain was set successfully, false otherwise.
+     */
+    bool setAnalogGain
+    (
+        float gain
+    ) override;
+
   private:
 
     // @brief Frame buffer for external trigger mode

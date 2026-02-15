@@ -13,6 +13,13 @@ enum class CalibrationModel {
     FISHEYE    ///< Fisheye model (k1,k2,k3,k4) - better for wide FOV cameras
 };
 
+typedef struct CameraControlSettings
+{
+    uint32_t exposure_time_us;
+    float analog_gain;
+    float fov_scale; // Optional parameter to adjust field of view when applying calibration (e.g. 0.8 to preserve more FOV, 1.0 for no change)
+} CameraControlSettings_Type;
+
 typedef struct CameraInfo
 {
     uint32_t camera_id;

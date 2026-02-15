@@ -55,3 +55,15 @@ CREATE TABLE IF NOT EXISTS Intrinsic_Calibration (
     CY REAL NOT NULL,
     FOREIGN KEY (CalibrationID) REFERENCES Distortion_Calibration(CalibrationID)
 );
+
+CREATE TABLE IF NOT EXISTS Camera_Controls (
+    ControlID INTEGER PRIMARY KEY AUTOINCREMENT,
+    CameraID INTEGER NOT NULL,
+    ExposureTimeUs INTEGER,
+    AnalogGain REAL,
+    FOVScale REAL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (CameraID) REFERENCES Camera_Info(UUID),
+    UNIQUE(CameraID)
+);

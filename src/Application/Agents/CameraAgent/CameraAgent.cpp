@@ -10,16 +10,16 @@ namespace PiTrac
 {
 CameraAgent::CameraAgent(const size_t camera_index, const std::string &process_name)
     : AgentBase(process_name)
-    , frame_buffer_(std::make_shared<FrameBuffer>(64)) // Default buffer size of
-                                                       // 64 frames
+    , frame_buffer_(std::make_shared<FrameBuffer>(4)) // Default buffer size of
+                                                       // 4 frames
     , camera_(nullptr)
     , distortion_calibrator_(nullptr)
     , camera_index_(camera_index)
-    , running_(false)
+    , pause_stream_(false)
     , frame_counter_(0)
     , apply_calibrations_to_viewfinder_(false)
     , use_best_calibration_(true)
-    , current_calibration_model_(CalibrationModel::STANDARD) // Default to standard model, can be changed via config/command
+    , current_calibration_model_(CalibrationModel::FISHEYE) // Default to standard model, can be changed via config/command
 {
     logInfo("CameraAgent created: " + name_);
 }
@@ -53,6 +53,15 @@ bool CameraAgent::setupProcess()
         logError("Failed to initialize camera interface for: " + name_);
         return false;
     }
+    // Load camera settings that will not change or are not configurable at runtime (like resolution) and apply.
+    // Again these are currently hard-coded but should be loaded from config file in the future
+    camera_->setResolution(1456, 1088); // Full resolution
+    camera_->setSensorSize(3.674f, 2.760f); // IMX219 sensor size in mm
+    camera_->setFocalLength(2.8f); // Focal length in mm (estimated for IMX219)
+    camera_->setFrameRate(10.0f); // 10 FPS max for to reduce CPU load, can be increased if needed
+    camera_->setTriggerMode(TriggerMode::FREE_RUNNING);
+    // Load dynamic camera settings from the calibration database (like exposure time, gain, etc) and apply
+    loadCameraSettings();
     // Retrieve & validate camera UUID and basic info
     camera_uuid_info_ = camera_->getUUIDInfo();
     if(!camera_uuid_info_.isValid())
@@ -100,9 +109,9 @@ bool CameraAgent::changeMode(PiTrac::SystemMode_Type new_mode)
             // Nothing to do, just ensure camera is closed and idle, and we are
             // ready to switch modes
             break;
-
         case SystemMode_Type::VIEWFINDER:
-            logInfo("Starting viewfinder mode for: " + name_);
+        case SystemMode_Type::CALIBRATION:
+            logInfo("Starting viewfinder/calibration mode for: " + name_);
             if(!configureViewfinder())
             {
                 logError("Failed to configure viewfinder for: " + name_);
@@ -110,15 +119,6 @@ bool CameraAgent::changeMode(PiTrac::SystemMode_Type new_mode)
                 return false;
             }
             return true;
-        case SystemMode_Type::CALIBRATION:
-            logInfo("Starting calibration mode for: " + name_);
-            if(!configureCalibration())
-            {
-                logError("Failed to configure calibration for: " + name_);
-                cleanUp();
-                return false;
-            }
-            break;
         default:
             logInfo("Unimplemented mode for CameraAgent: " + std::to_string(static_cast<int>(new_mode)));
             return false;
@@ -136,9 +136,9 @@ bool CameraAgent::handleSystemCommand(const SystemCommandMsg &command_msg)
     {
         case SystemCommandMsg::CommandID::Calibrate:
         {
-            if(lm_mode_ != SystemMode_Type::CALIBRATION)
+            if(lm_mode_ != SystemMode_Type::CALIBRATION && lm_mode_ != SystemMode_Type::VIEWFINDER)
             {
-                logWarning("Received calibration command while not in CALIBRATION mode for: " + name_);
+                logWarning("Received calibration command while not in CALIBRATION or VIEWFINDER mode for: " + name_);
                 return false;
             }
             logInfo("Processing calibration command for: " + name_);
@@ -158,6 +158,12 @@ bool CameraAgent::handleSystemCommand(const SystemCommandMsg &command_msg)
 bool CameraAgent::configureStandby()
 {
     logInfo("Configuring standby mode for: " + name_);
+    // NOTE: Loading the config database should really only be done once at startup,
+    // however we want the system manager to be the first to access the database to ensure it
+    // is loaded and ready before any agents attempt to access it, so for now we will load it
+    // in each agent's standby mode configuration since all agents should start in standby mode. 
+    // We can optimize this later by implementing a more robust database access layer with connection pooling and shared instances,
+    // or have the camera agent have a "first time initialization" flag to only load the database on the first transition to standby mode.
     if(!calibration_data_)
     {
         calibration_data_ = CalibrationData::getInstance();
@@ -189,6 +195,7 @@ bool CameraAgent::configureStandby()
         logInfo("Closing camera for standby mode: " + name_);
         camera_->closeCamera();
     }
+    loadCameraSettings();
     // Clear frame buffer
     frame_buffer_->clear();
     return true;
@@ -198,16 +205,7 @@ bool CameraAgent::configureViewfinder()
 {
     logInfo("Configuring viewfinder mode for: " + name_);
     // TODO: Load these settings from a config file or parameters later
-    camera_->setResolution(1456 / 2, 1088 / 2); // Half resolution for
-                                                // viewfinder
-    camera_->setExposureTime(20000); // 20ms - increased from 2ms for better
-                                     // exposure
-    camera_->setSensorSize(3.674f, 2.760f); // IMX219 sensor size in mm
-    camera_->setFrameRate(10.0f); // 10 FPS
-    camera_->setAnalogGain(4.0f); // Increased gain for better brightness
-    camera_->setFocalLength(2.8f);
-    camera_->setTriggerMode(TriggerMode::FREE_RUNNING);
-
+    loadCameraSettings();
     // Open the camera if not already open
     if(camera_ == nullptr)
     {
@@ -234,148 +232,7 @@ bool CameraAgent::configureViewfinder()
         logError("Failed to start camera for: " + name_);
         return false;
     }
-    // Attempt to load existing calibration data for this camera to apply to the
-    // viewfinder stream
-    if(calibration_data_->getBestCalibrationEntry(camera_uuid_info_.uuid, cal_entry_))
-    {
-        valid_calibration_data_ = true;
-        switch(cal_entry_.calibration_type)
-        {
-            case CalibrationModel::STANDARD:
-                if(!calibration_data_->getCalibrationEntryData(cal_entry_, dist_coeffs_, intrinsics_))
-                {
-                    logError("Failed to retrieve standard calibration distortion and intrinsics for: " + name_);
-                    valid_calibration_data_ = false;
-                }
-                else
-                {
-                    dist_coeffs_mat_ = (cv::Mat_<double>(5, 1) << dist_coeffs_.k1, dist_coeffs_.k2, dist_coeffs_.p1, dist_coeffs_.p2, dist_coeffs_.k3);
-                }
-                break;
-            case CalibrationModel::FISHEYE:
-                if(!calibration_data_->getCalibrationEntryData(cal_entry_, fisheye_dist_coeffs_, intrinsics_))
-                {
-                    logError("Failed to retrieve fisheye calibration distortion and intrinsics for: " + name_);
-                    valid_calibration_data_ = false;
-                }
-                else
-                {
-                    dist_coeffs_mat_ = (cv::Mat_<double>(4, 1) << fisheye_dist_coeffs_.k1, fisheye_dist_coeffs_.k2, fisheye_dist_coeffs_.k3, fisheye_dist_coeffs_.k4);
-                }
-                break;
-            default:
-                logWarning("Unknown calibration model type in retrieved calibration entry for: " + name_);
-                valid_calibration_data_ = false;
-        }
-        
-        if(valid_calibration_data_)
-        {
-            // For now, hardcode the scaling since we know streaming is 544x728 and calibration was at full res
-            // You can make this dynamic later by storing the calibration resolution in the database
-            cv::Size streamingSize(728, 544);  // width x height of streaming frames
-            cv::Size calibrationSize(1456, 1088); // width x height of calibration frames (estimated from cx value)
-            
-            // Calculate scale factors
-            double scale_x = static_cast<double>(streamingSize.width) / static_cast<double>(calibrationSize.width);
-            double scale_y = static_cast<double>(streamingSize.height) / static_cast<double>(calibrationSize.height);
-            
-            // Scale the camera matrix parameters
-            double scaled_fx = intrinsics_.focal_length_x * scale_x;
-            double scaled_fy = intrinsics_.focal_length_y * scale_y;
-            double scaled_cx = intrinsics_.principal_point_x * scale_x;
-            double scaled_cy = intrinsics_.principal_point_y * scale_y;
-            
-            camera_matrix_ = (cv::Mat_<double>(3, 3) << scaled_fx, 0, scaled_cx, 0, scaled_fy, scaled_cy, 0, 0, 1);
-            
-            logInfo("Applying best distortion calibration to viewfinder stream for: " + name_);
-            logInfo("Calibration entry ID: " + std::to_string(cal_entry_.calibration_id) + ", Type: " + std::to_string(static_cast<int>(cal_entry_.calibration_type)) + ", Reprojection Error: " + std::to_string(cal_entry_.reprojection_error) + " pixels, Date: " + cal_entry_.calibration_date);
-            logInfo("Original camera intrinsics (at " + std::to_string(calibrationSize.width) + "x" + std::to_string(calibrationSize.height) + ") - fx: " + std::to_string(intrinsics_.focal_length_x) + ", fy: " + std::to_string(intrinsics_.focal_length_y) + ", cx: " + std::to_string(intrinsics_.principal_point_x) + ", cy: " + std::to_string(intrinsics_.principal_point_y));        
-            logInfo("Scaled camera intrinsics (for " + std::to_string(streamingSize.width) + "x" + std::to_string(streamingSize.height) + ") - fx: " + std::to_string(scaled_fx) + ", fy: " + std::to_string(scaled_fy) + ", cx: " + std::to_string(scaled_cx) + ", cy: " + std::to_string(scaled_cy));
-            logInfo("Scale factors - x: " + std::to_string(scale_x) + ", y: " + std::to_string(scale_y));
-            
-            // Log the appropriate distortion coefficients based on calibration model
-            if(cal_entry_.calibration_type == CalibrationModel::FISHEYE)
-            {
-                logInfo("Fisheye distortion coefficients (unchanged) - k1: " + std::to_string(fisheye_dist_coeffs_.k1) + ", k2: " + std::to_string(fisheye_dist_coeffs_.k2) + ", k3: " + std::to_string(fisheye_dist_coeffs_.k3) + ", k4: " + std::to_string(fisheye_dist_coeffs_.k4));
-            }
-            else
-            {
-                logInfo("Standard distortion coefficients (unchanged) - k1: " + std::to_string(dist_coeffs_.k1) + ", k2: " + std::to_string(dist_coeffs_.k2) + ", p1: " + std::to_string(dist_coeffs_.p1) + ", p2: " + std::to_string(dist_coeffs_.p2) + ", k3: " + std::to_string(dist_coeffs_.k3));
-            }
-        }
-    }
-    else
-    {
-        logInfo("No existing distortion calibration found for viewfinder stream for: " + name_);
-    }
     if(!camera_->startContinuousCapture(std::bind(&CameraAgent::viewfinderCallback, this, std::placeholders::_1)))
-    {
-        logError("Failed to start continuous capture for: " + name_);
-        return false;
-    }
-    frame_counter_ = 0; // Reset frame counter
-    return true;
-}
-
-void CameraAgent::viewfinderCallback(cv::Mat &frame)
-{
-    // Stream the captured frame. No other functionality needed here for
-    // viewfinder.
-    streamFrame(frame, apply_calibrations_to_viewfinder_);
-    frame_counter_++;
-}
-
-bool CameraAgent::configureCalibration()
-{
-    // TODO: Load these settings from a config file or parameters later
-    // Configure full resolution for calibration
-    camera_->setResolution(1456, 1088);
-    const double exposure_ms = 1 / 30.0 * 1000.0; // 1/30s in ms
-    camera_->setExposureTime(static_cast<uint32_t>(exposure_ms * 1000)); // Convert
-                                                                         // ms
-                                                                         // to
-                                                                         // us
-    camera_->setSensorSize(3.674f, 2.760f); // IMX219 sensor size in mm
-    camera_->setFrameRate(30.0f); // 30 FPS - faster response for still capture
-    camera_->setAnalogGain(6.0f); // Increased gain for better brightness
-    camera_->setFocalLength(2.8f);
-    camera_->setNumBuffers(1); // Single buffer for still capture
-    camera_->setTriggerMode(TriggerMode::FREE_RUNNING);
-    // Ensure the camera object was created
-    if(camera_ == nullptr)
-    {
-        logError("Camera interface is null for: " + name_);
-        return false;
-    }
-    // If the camera was not closed properly before, close it now
-    if(camera_->isCameraOpen())
-    {
-        logInfo("Camera already open, closing for re-initialization: " + name_);
-        camera_->closeCamera();
-    }
-    // Open or re-open the camera
-    logInfo("Opening camera for: " + name_);
-    if (!camera_->openCamera())
-    {
-        logError("Failed to open camera for: " + name_);
-        return false;
-    }
-    // Configure the camera stream for still capture
-    if(!camera_->isCameraConfigured())
-    {
-        logInfo("Initializing camera for: " + name_);
-        if(!camera_->configureStream(libcamera::StreamRole::StillCapture))
-        {
-            logError("Failed to configure camera stream for: " + name_);
-            return false;
-        }
-    }
-    if(!camera_->start())
-    {
-        logError("Failed to start camera for: " + name_);
-        return false;
-    }
-    if(!camera_->startContinuousCapture(nullptr))
     {
         logError("Failed to start continuous capture for: " + name_);
         return false;
@@ -388,9 +245,24 @@ bool CameraAgent::configureCalibration()
         logError("Failed to create distortion calibrator for: " + name_);
         return false;
     }
+    // Set checkerboard dimensions (inner corners) - TODO: make this dynamic later. 
+    // It could event be part of the calibration command parameters if we want to support different checkerboard patterns.
+    distortion_calibrator_->setDimensions(6, 9); // default to 6x9 checkerboard
+    distortion_calibrator_->setCalibrationModel(current_calibration_model_);
     frame_counter_ = 0; // Reset frame counter
-
     return true;
+}
+
+void CameraAgent::viewfinderCallback(cv::Mat &frame)
+{
+    frame_buffer_->addFrame(frame);
+    if(pause_stream_)
+    {
+        return; // Skip streaming if paused
+    }
+    // Stream the captured frame.
+    streamFrame(frame, apply_calibrations_to_viewfinder_);
+    frame_counter_++;
 }
 
 bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::string> &commandParams)
@@ -405,60 +277,72 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
         if (action == "capture_image")
         {
             logInfo(name_ + ": Capturing calibration image");
-            cv::Mat calibration_frame = camera_->captureFrame(5000); // 5 second
-                                                                     // timeout
-            if (!calibration_frame.empty())
-            {
-                // Store in frame buffer for processing
-                frame_buffer_->addFrame(calibration_frame);
-                frame_counter_ = frame_buffer_->size();
-                streamFrame(calibration_frame, false); // Stream captured
-                                                       // calibration
-                // image
-                logInfo(name_ + ": Calibration image captured successfully");
-                return true;
-            }
-            else
+            // Capture a single frame for calibration, use the frame buffer from the viewfinder stream to ensure we get the most recent frame and avoid interrupting the continuous capture for viewfinder mode. The viewfinder callback will continue to add frames to the buffer, so we just need to grab the latest one when we get this command.
+            cv::Mat calibration_frame;
+            if(!frame_buffer_->getFrame(calibration_frame))
             {
                 logError(name_ + ": Failed to capture calibration image - empty frame returned");
                 return false;
             }
+            // Pause streaming while we process this command to avoid conflicts with the viewfinder callback adding new frames to the buffer while we are trying to retrieve the latest frame for calibration. We will unpause after we are done processing this command.
+            pause_stream_.store(true);
+            cv::Mat debug_image;
+            const CalibrateDistortion::ImageQuality quality = distortion_calibrator_->processImage(calibration_frame, debug_image); 
+            logInfo(name_ + ": Calibration image captured with quality: " + CalibrateDistortion::imageQualityToString(quality));
+            // Stream the debug image without applying calibration so the user can see the quality metrics and decide whether to keep or discard this calibration image.
+            streamFrame(debug_image, false); 
+        }
+        else if(action == "accept_image")
+        {
+            logInfo(name_ + ": Accepting calibration image and adding to calibrator");
+            const size_t image_index = distortion_calibrator_->appendImage();
+            pause_stream_.store(false); // Unpause streaming after processing the captured image
+        }
+        else if(action == "reject_image")
+        {
+            logInfo(name_ + ": Last calibration image rejected and cleared from buffer");
+            distortion_calibrator_->clearLastImageData();
+            pause_stream_.store(false); // Unpause streaming after rejecting the image
         }
         else if(action == "do_distortion_cal")
         {
             logInfo(name_ + ": Performing distortion calibration");
             // Retrieve all frames from the buffer for calibration
-            std::vector<cv::Mat> calibration_frames(0);
-            cv::Mat frame;
-            while(frame_buffer_->getFrame(frame))
-            {
-                calibration_frames.push_back(frame);
-            }
-            if(calibration_frames.empty())
-            {
-                logError(name_ + ": No frames available for distortion calibration");
-                return false;
-            }
-            distortion_calibrator_->setDimensions(6, 7);
-            distortion_calibrator_->setImages(calibration_frames);
             distortion_calibrator_->setCalibrationModel(current_calibration_model_);
+            pause_stream_.store(false);
             if(!distortion_calibrator_->doDistortionCalibration())
             {
                 logError(name_ + ": Distortion calibration failed");
-                return false;
+                return false; 
             }
             if(!distortion_calibrator_->isCalibrationValid())
             {
                 logWarning(name_ + ": Distortion calibration completed but results may be invalid");
             }
-            // std::vector<cv::Mat> debug_images = distortion_calibrator_->getDebugImages();
-            // Stream debug images if available
-            // for(auto &dbg_img : debug_images)
-            // {
-            //     streamFrame(dbg_img, false); // Don't apply calibration to debug
-            //                                  // images
-            // }
-            // Store calibration results in the database
+            std::array<double, 4> intrinsics_coeffs = distortion_calibrator_->getCameraIntrinsics();
+            CameraIntrinsics_Type intrinsics(intrinsics_coeffs);
+            switch(current_calibration_model_)
+            {
+                case CalibrationModel::FISHEYE:
+                {
+                    std::array<double, 4> distortion_coeffs = distortion_calibrator_->getFisheyeDistortionCoefficients();
+                    FisheyeDistortionCoefficients_Type distortionCoeffs(distortion_coeffs);
+                    break;
+                }
+                case CalibrationModel::STANDARD:
+                {
+                    std::array<double, 5> distortion_coeffs = distortion_calibrator_->getDistortionCoefficients();
+                    DistortionCoefficients_Type distortionCoeffs(distortion_coeffs);
+                    break;
+                }
+            }
+            valid_calibration_data_.store(true);
+            logInfo(name_ + ": Distortion calibration completed successfully with reprojection error: " + std::to_string(distortion_calibrator_->getReprojectionError()) + " pixels");
+        }
+        else if(action == "save_calibration")
+        {
+            logInfo(name_ + ": Saving calibration results to database");
+            // Save the latest calibration results to the database with a new entry
             CalibrationEntry_Type entryInfo;
             entryInfo.calibration_type = current_calibration_model_;
             entryInfo.reprojection_error = distortion_calibrator_->getReprojectionError();
@@ -466,7 +350,6 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
             CameraIntrinsics_Type intrinsics(intrinsics_coeffs);
             switch(current_calibration_model_)
             {
-
                 case CalibrationModel::FISHEYE:
                 {
                     logInfo(name_ + ": Fisheye calibration completed with reprojection error: " + std::to_string(entryInfo.reprojection_error) + " pixels");
@@ -492,48 +375,28 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
                     break;
                 }
             }
-            
             logInfo(name_ + ": Calibration results stored in database successfully");
-            // Clear the frame buffer after calibration
-            frame_buffer_->clear();
-            distortion_calibrator_->clearImages();
-            logInfo(name_ + ": Distortion calibration completed with " + std::to_string(calibration_frames.size()) + " frames");
-            return true;
         }
         else if(action == "clear_buffer")
         {
             logInfo(name_ + ": Clearing calibration frame buffer");
+            // Clear the frame buffer after calibration
             frame_buffer_->clear();
             distortion_calibrator_->clearImages();
-            return true;
         }
-        // else if (action == "start_preview")
-        // {
-        //     logInfo(name_ + ": Starting calibration preview mode");
-        //     // Configure for preview and start continuous capture
-        //     // Implementation depends on your preview requirements
-        // }
-        // else if (action == "stop_preview") {
-        //     logInfo(name_ + ": Stopping calibration preview mode");
-        //     if (camera_->isCameraOpen()) {
-        //         camera_->stopContinuousCapture();
-        //     }
-        //     return true;
-        // }
         else
         {
             logError(name_ + ": Unknown calibration action: " + action);
             return false;
         }
     }
-
-    // Unknown or unhandled command
-    logWarning(name_ + ": Unknown calibration command action");
     return true;
 }
 
 bool CameraAgent::processConfigurationCommand(const std::map<std::string, std::string> &commandParams)
 {
+    bool config_change_success = true;
+    // Process configuration commands. These can include things like changing camera settings (exposure, gain, etc) or toggling whether to apply calibrations to the viewfinder stream.
     if(commandParams.find("apply_calibrations") != commandParams.end())
     {   // This will allow the user to toggle whether to apply calibrations to
         // the viewfinder stream on the fly,
@@ -544,7 +407,6 @@ bool CameraAgent::processConfigurationCommand(const std::map<std::string, std::s
         // Accept "true"/"1" as true, anything else as false
         apply_calibrations_to_viewfinder_ = (apply_calibrations_str == "true" || apply_calibrations_str == "1");
         logInfo(name_ + ": Setting apply_calibrations to " + std::to_string(apply_calibrations_to_viewfinder_));
-        return true;
     }
     if(commandParams.find("use_best_calibration") != commandParams.end())
     {   // This will allow the user to toggle what heuristic to use for loading
@@ -558,11 +420,74 @@ bool CameraAgent::processConfigurationCommand(const std::map<std::string, std::s
         // To avoid issues with loading calibrations while in viewfinder mode,
         // the new setting will be applied
         // on the next mode change to viewfinder, rather than immediately
-        return true;
     }
-    // Unknown or unhandled configuration command
-    logWarning(name_ + ": Unknown configuration command action");
-    return false;
+    if(commandParams.find("set_exposure") != commandParams.end())
+    {
+        std::string exposure_str = commandParams.at("set_exposure");
+        try
+        {
+            double exposure_s = std::stod(exposure_str);
+            current_camera_settings_.exposure_time_us = static_cast<uint32_t>(exposure_s * 1e6); // Convert seconds to microseconds
+            logInfo(name_ + ": Setting exposure time to " + std::to_string(exposure_s) + " seconds");
+        }
+        catch (const std::exception &e)
+        {
+            logError(name_ + ": Invalid exposure value: " + exposure_str + " - " + std::string(e.what()));
+            config_change_success &= false;
+        }
+    }
+    if(commandParams.find("set_gain") != commandParams.end())
+    {
+        std::string gain_str = commandParams.at("set_gain");
+        try
+        {
+            float gain = std::stof(gain_str);
+            current_camera_settings_.analog_gain = gain;
+            logInfo(name_ + ": Setting analog gain to " + std::to_string(gain));
+        }
+        catch (const std::exception &e)
+        {
+            logError(name_ + ": Invalid gain value: " + gain_str + " - " + std::string(e.what()));
+            config_change_success &= false;
+        }
+    }
+    if(commandParams.find("set_fov_scale") != commandParams.end())
+    {
+        std::string fov_scale_str = commandParams.at("set_fov_scale");
+        try
+        {
+            float fov_scale = std::stof(fov_scale_str);
+            current_camera_settings_.fov_scale = fov_scale;
+            logInfo(name_ + ": Setting FOV scale to " + std::to_string(fov_scale));
+        }
+        catch (const std::exception &e)
+        {
+            logError(name_ + ": Invalid FOV scale value: " + fov_scale_str + " - " + std::string(e.what()));
+            config_change_success &= false;
+        }
+    }
+    if(commandParams.find("apply_configuration") != commandParams.end())
+    {   // This will apply any pending configuration changes that have been set via other commands (like exposure, gain, etc) on the fly without needing to switch modes
+        // Apply the current camera settings to the camera interface immediately
+        logInfo(name_ + ": Applying pending camera configuration changes");
+        configureCamera(current_camera_settings_);
+        // Check if we should also save the updated settings to the database
+        std::string save_config_str = commandParams.at("apply_configuration");
+        // Accept "true"/"1" as true, anything else as false
+        bool save_config = (save_config_str == "true" || save_config_str == "1");
+        if(save_config)
+        {
+            // Save the current camera settings to the database so they can be loaded on next startup or mode change
+            if(!calibration_data_->setCameraSettings(camera_uuid_info_.uuid, current_camera_settings_))
+            {
+                logError(name_ + ": Failed to save camera settings to database");
+                config_change_success &= false;
+            }
+            logInfo(name_ + ": Camera settings saved to database");
+        }
+        // If we are not saving to the database, the changes will still be applied for the current session, but they will not persist across restarts or mode changes
+    }
+    return config_change_success;
 }
 
 void CameraAgent::streamFrame(cv::Mat &frame, const bool apply_calibration)
@@ -598,7 +523,7 @@ void CameraAgent::streamFrame(cv::Mat &frame, const bool apply_calibration)
                 }
                 break;
             case CalibrationModel::FISHEYE:
-                if (!CalUtils::undistortFrameFisheye(frame, camera_matrix_, dist_coeffs_mat_)) {
+                if (!CalUtils::undistortFrameFisheye(frame, camera_matrix_, dist_coeffs_mat_, camera_matrix_scaled_)) {
                     logWarning("Fisheye undistortion failed for " + name_);
                 }
                 break;
@@ -627,6 +552,116 @@ void CameraAgent::streamFrame(cv::Mat &frame, const bool apply_calibration)
         { {"Codec", "JPEG"}, {"Quality", "90"} }
         );
     frame_publisher_->sendMessage(frame_msg);
+}
+
+void CameraAgent::configureCamera(const CameraControlSettings_Type &settings)
+{
+    // This function can be called to apply new camera settings on the fly, for
+    // example in response to user configuration commands. For now, it only
+    // supports changing exposure and gain, but it can be expanded in the future to support more settings as needed.
+    camera_->setAnalogGain(settings.analog_gain);
+    camera_->setExposureTime(settings.exposure_time_us);
+    
+    if(valid_calibration_data_)
+    {
+        // Reset scaled matrix from original before applying scale factor
+        // This prevents cumulative scaling if configureCamera() is called multiple times
+        camera_matrix_scaled_ = camera_matrix_.clone();
+        
+        // Note: We are only scaling the focal lengths here for FOV scaling, not the principal point, as that is 
+        // a common approach for simulating a digital zoom effect. However, depending on the desired effect, we may 
+        // also want to scale the principal point accordingly, especially if we begin to support configurable 
+        // cropping or zooming in the future. For now, we will keep it simple and only scale the focal lengths.
+        camera_matrix_scaled_.at<double>(0, 0) *= settings.fov_scale; // Scale fx
+        camera_matrix_scaled_.at<double>(1, 1) *= settings.fov_scale; // Scale fy
+    }
+}
+
+void CameraAgent::loadCameraSettings()
+{
+    if(!calibration_data_)
+    {
+        calibration_data_ = CalibrationData::getInstance();
+    }
+    // Attempt to load existing calibration data for this camera to apply to the
+    // viewfinder stream
+    if(calibration_data_->getBestCalibrationEntry(camera_uuid_info_.uuid, cal_entry_))
+    {
+        valid_calibration_data_ = true;
+        switch(cal_entry_.calibration_type)
+        {
+            case CalibrationModel::STANDARD:
+                if(!calibration_data_->getCalibrationEntryData(cal_entry_, dist_coeffs_, intrinsics_))
+                {
+                    logError("Failed to retrieve standard calibration distortion and intrinsics for: " + name_);
+                    valid_calibration_data_ = false;
+                }
+                else
+                {
+                    dist_coeffs_mat_ = (cv::Mat_<double>(5, 1) << dist_coeffs_.k1, dist_coeffs_.k2, dist_coeffs_.p1, dist_coeffs_.p2, dist_coeffs_.k3);
+                }
+                break;
+            case CalibrationModel::FISHEYE:
+                if(!calibration_data_->getCalibrationEntryData(cal_entry_, fisheye_dist_coeffs_, intrinsics_))
+                {
+                    logError("Failed to retrieve fisheye calibration distortion and intrinsics for: " + name_);
+                    valid_calibration_data_ = false;
+                }
+                else
+                {
+                    dist_coeffs_mat_ = (cv::Mat_<double>(4, 1) << fisheye_dist_coeffs_.k1, fisheye_dist_coeffs_.k2, fisheye_dist_coeffs_.k3, fisheye_dist_coeffs_.k4);
+                }
+                break;
+            default:
+                logWarning("Unknown calibration model type in retrieved calibration entry for: " + name_);
+                valid_calibration_data_ = false;
+        }
+        
+        camera_matrix_ = (cv::Mat_<double>(3, 3) << intrinsics_.focal_length_x, 0, intrinsics_.principal_point_x, 0, intrinsics_.focal_length_y, intrinsics_.principal_point_y, 0, 0, 1);
+        // Scaled matrix will be configured in configureCamera() when we apply settings, since the scaling may depend on the current settings (e.g. FOV scale)
+        // If not then we want it to default to the original camera matrix, so we initialize it here as a clone of the original camera matrix. 
+        camera_matrix_scaled_ = camera_matrix_.clone();
+        if(valid_calibration_data_)
+        {            
+            
+            logInfo("Applying best distortion calibration to viewfinder stream for: " + name_);
+            logInfo("Calibration entry ID: " + std::to_string(cal_entry_.calibration_id) + ", Type: " + std::to_string(static_cast<int>(cal_entry_.calibration_type)) + ", Reprojection Error: " + std::to_string(cal_entry_.reprojection_error) + " pixels, Date: " + cal_entry_.calibration_date);
+            logInfo("Camera intrinsics - fx: " + std::to_string(intrinsics_.focal_length_x) + ", fy: " + std::to_string(intrinsics_.focal_length_y) + ", cx: " + std::to_string(intrinsics_.principal_point_x) + ", cy: " + std::to_string(intrinsics_.principal_point_y));
+            if(cal_entry_.calibration_type == CalibrationModel::STANDARD)
+            {
+                logInfo("Distortion coefficients - k1: " + std::to_string(dist_coeffs_.k1) + ", k2: " + std::to_string(dist_coeffs_.k2) + ", p1: " + std::to_string(dist_coeffs_.p1) + ", p2: " + std::to_string(dist_coeffs_.p2) + ", k3: " + std::to_string(dist_coeffs_.k3));
+            }
+            else if(cal_entry_.calibration_type == CalibrationModel::FISHEYE)
+            {
+                logInfo("Fisheye distortion coefficients - k1: " + std::to_string(fisheye_dist_coeffs_.k1) + ", k2: " + std::to_string(fisheye_dist_coeffs_.k2) + ", k3: " + std::to_string(fisheye_dist_coeffs_.k3) + ", k4: " + std::to_string(fisheye_dist_coeffs_.k4));
+            }
+        }
+    }
+    else
+    {
+        logInfo("No existing distortion calibration found for viewfinder stream for: " + name_);
+    }
+    // Load the current camera settings from the database if they exist, so we can apply them to the camera when we start it. 
+    // This allows settings to persist across mode changes and restarts.
+    if(!calibration_data_->getCameraSettings(camera_uuid_info_.uuid, current_camera_settings_))
+    {
+        logWarning("No existing camera settings found in database for UUID: " + camera_uuid_info_.uuid + " for: " + name_);
+        // Set some default settings for now. Ideally, we could pull this from a config file for the camera type or something like that later.
+        current_camera_settings_.analog_gain = 4.0f;
+        current_camera_settings_.exposure_time_us = 20000; // 20ms
+        current_camera_settings_.fov_scale = 1.0f; // Default to no FOV scaling
+        // Save the defaults to the database so they can be loaded and applied next time
+        if(!calibration_data_->setCameraSettings(camera_uuid_info_.uuid, current_camera_settings_))
+        {
+            logError("Failed to store default camera settings in database for UUID: " + camera_uuid_info_.uuid + " for: " + name_);
+        }
+        else
+        {
+            logInfo("Default camera settings stored in database for UUID: " + camera_uuid_info_.uuid + " for: " + name_);
+        }
+    }
+    logInfo("Current camera settings for " + name_ + " - Exposure time: " + std::to_string(current_camera_settings_.exposure_time_us) + " us, Analog gain: " + std::to_string(current_camera_settings_.analog_gain) + ", FOV scale: " + std::to_string(current_camera_settings_.fov_scale));
+    configureCamera(current_camera_settings_);
 }
 
 void CameraAgent::cleanUp()

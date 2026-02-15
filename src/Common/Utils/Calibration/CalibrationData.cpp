@@ -155,6 +155,20 @@ bool CalibrationData::prepareStatements()
         logger_->error("Failed to prepare GET_CALIBRATION_DISTORTION_STANDARD statement: " + std::string(sqlite3_errmsg(db_)));
         return false;
     }
+    // Query to insert or update distortion coefficients for a calibration entry
+    statement = "INSERT OR REPLACE INTO Camera_Controls (CameraID, ExposureTimeUs, AnalogGain, FOVScale) VALUES (?1, ?2, ?3, ?4);";
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[SET_CAMERA_SETTINGS], nullptr);
+    if (sql_status != SQLITE_OK)    {
+        logger_->error("Failed to prepare SET_CAMERA_SETTINGS statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+    // Query to retrieve camera settings for a camera UUID
+    statement = "SELECT ExposureTimeUs, AnalogGain, FOVScale FROM Camera_Controls WHERE CameraID = ?1;";
+    sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[GET_CAMERA_SETTINGS], nullptr);
+    if (sql_status != SQLITE_OK)    {
+        logger_->error("Failed to prepare GET_CAMERA_SETTINGS statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
     // Query to insert intrinsic parameters for a calibration entry
     statement = "INSERT INTO Intrinsic_Calibration (CalibrationID , FX, FY, CX, CY) VALUES (?1, ?2, ?3, ?4, ?5);";
     sql_status = sqlite3_prepare_v2(db_, statement.c_str(), -1, &preparedStatements_[PUT_CALIBRATION_INTRINSICS], nullptr);
@@ -287,6 +301,52 @@ bool CalibrationData::getCameraInfo(const std::string &uuid, CameraInfo_Type &ca
     else
     {
         logger_->error("Failed to execute GET_CAMERA_INFO statement: " + std::string(sqlite3_errmsg(db_)));
+        return false;
+    }
+}
+
+bool CalibrationData::setCameraSettings(const std::string &camera_uuid, const CameraControlSettings_Type &settings)
+{
+    sqlite3_stmt *stmt = preparedStatements_[SET_CAMERA_SETTINGS];
+    sqlite3_reset(stmt);
+    sqlite3_bind_text(stmt, 1, camera_uuid.c_str(), -1, SQLITE_TRANSIENT);
+    sqlite3_bind_int(stmt, 2, settings.exposure_time_us);
+    sqlite3_bind_double(stmt, 3, settings.analog_gain);
+    sqlite3_bind_double(stmt, 4, settings.fov_scale);
+
+    // Use retry logic for better concurrency handling
+    if (!executeWithRetry(stmt, 5)) // Retry up to 5 times
+    {
+        logger_->error("Failed to execute SET_CAMERA_SETTINGS statement after retries: " + std::string(sqlite3_errmsg(db_)));
+        sqlite3_reset(stmt); // Reset statement after failure
+        return false;
+    }
+    sqlite3_reset(stmt); // Reset statement after execution for next use
+    sqlite3_clear_bindings(stmt); // Clear bindings after execution
+    return true;
+}
+
+bool CalibrationData::getCameraSettings(const std::string &camera_uuid, CameraControlSettings_Type &settings)
+{
+    sqlite3_stmt *stmt = preparedStatements_[GET_CAMERA_SETTINGS];
+    sqlite3_reset(stmt);
+    sqlite3_bind_text(stmt, 1, camera_uuid.c_str(), -1, SQLITE_TRANSIENT);
+    int rc = sqlite3_step(stmt);
+    if (rc == SQLITE_ROW)
+    {
+        settings.exposure_time_us = sqlite3_column_int(stmt, 0);
+        settings.analog_gain = static_cast<float>(sqlite3_column_double(stmt, 1));
+        settings.fov_scale = static_cast<float>(sqlite3_column_double(stmt, 2));
+        return true;
+    }
+    else if (rc == SQLITE_DONE)
+    {
+        logger_->warning("No camera settings found for UUID: " + camera_uuid);
+        return false;
+    }
+    else
+    {
+        logger_->error("Failed to execute GET_CAMERA_SETTINGS statement: " + std::string(sqlite3_errmsg(db_)));
         return false;
     }
 }

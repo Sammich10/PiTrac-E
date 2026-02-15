@@ -24,7 +24,8 @@ class CalUtils
     (
         cv::Mat &frame,
         cv::Mat &cameraMatrix,
-        cv::Mat &distCoeffs
+        cv::Mat &distCoeffs,
+        cv::Mat &scaledCameraMatrix
     );
 
     private:

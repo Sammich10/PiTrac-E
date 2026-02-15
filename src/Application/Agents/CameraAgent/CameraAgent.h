@@ -101,11 +101,6 @@ class CameraAgent : public AgentBase
     );
 
     /**
-     * @brief Configures the camera for calibration mode.
-     */
-    virtual bool configureCalibration();
-
-    /**
      * @brief Processes a calibration command received from SystemManager.
      *
      * @param command The calibration command to process
@@ -132,6 +127,13 @@ class CameraAgent : public AgentBase
         const bool apply_calibration = true
     );
 
+    inline void configureCamera
+    (
+        const CameraControlSettings_Type &settings
+    );
+
+    void loadCameraSettings();
+
     /**
      * @brief Cleans up resources used by the camera agent in
      * preparation for mode chang or shutdown.
@@ -145,7 +147,7 @@ class CameraAgent : public AgentBase
     std::unique_ptr<CalibrateDistortion> distortion_calibrator_;
     std::shared_ptr<CalibrationData> calibration_data_;
     uint32_t camera_index_;
-    std::atomic<bool> running_;
+    std::atomic<bool> pause_stream_;
     std::atomic<bool> valid_calibration_data_;
     std::atomic<bool> apply_calibrations_to_viewfinder_;
     std::atomic<bool> use_best_calibration_;
@@ -158,11 +160,13 @@ class CameraAgent : public AgentBase
     GSCameraInterface::CameraInfo camera_basic_info_;
     CalibrationModel current_calibration_model_;
     cv::Mat camera_matrix_;
+    cv::Mat camera_matrix_scaled_;
     cv::Mat dist_coeffs_mat_;
     CalibrationEntry_Type cal_entry_;
     DistortionCoefficients_Type dist_coeffs_;
     FisheyeDistortionCoefficients_Type fisheye_dist_coeffs_;
     CameraIntrinsics_Type intrinsics_;
+    CameraControlSettings_Type current_camera_settings_;
 };
 } // namespace PiTrac
 

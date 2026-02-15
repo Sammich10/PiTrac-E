@@ -325,15 +325,16 @@ class GSCameraInterface
         horizontalFOV_deg_ = hFOV; verticalFOV_deg_ = vFOV;
     }
 
-    bool setExposureTime
+    virtual bool setExposureTime
     (
         uint32_t exposureUs
     )
     {
-        currentExposureUs_ = exposureUs; return true;
+        currentExposureUs_ = exposureUs; 
+        return true;
     }
 
-    bool setAnalogGain
+    virtual bool setAnalogGain
     (
         float gain
     )
