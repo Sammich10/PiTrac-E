@@ -745,21 +745,23 @@ GSCameraBase::CameraI2CInfo GSCameraBase::getCameraI2CInfo(const std::string &de
 
 bool GSCameraBase::setExposureTime(uint32_t exposureUs)
 {
-    // Update the current exposure time in microseconds, apply to 
-    // controls for all requests, then call the base class 
+    // Update the current exposure time in microseconds, apply to
+    // controls for all requests, then call the base class
     // implementation to update the member variable and return true.
     libcamera::ControlList controls;
     controls.set(libcamera::controls::ExposureTime, exposureUs);
-    for (auto &request : requests_)    {
+    for (auto &request : requests_)
+    {
         request->controls().merge(controls);
-    } 
+    }
     return GSCameraInterface::setExposureTime(exposureUs);
 }
 
 bool GSCameraBase::setAnalogGain(float gain)
 {
     // Update the current analog gain, apply to controls for all requests, then
-    // call the base class implementation to update the member variable and return
+    // call the base class implementation to update the member variable and
+    // return
     // true.
     libcamera::ControlList controls;
     controls.set(libcamera::controls::AnalogueGain, gain);
@@ -769,5 +771,4 @@ bool GSCameraBase::setAnalogGain(float gain)
     }
     return GSCameraInterface::setAnalogGain(gain);
 }
-
 } // namespace PiTrac

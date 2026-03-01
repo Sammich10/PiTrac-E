@@ -28,7 +28,7 @@ class CalUtils
         cv::Mat &scaledCameraMatrix
     );
 
-    private:
+  private:
     static std::shared_ptr<GSLogger> logger_;
 };
 } // namespace PiTrac

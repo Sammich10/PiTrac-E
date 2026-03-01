@@ -330,7 +330,7 @@ class GSCameraInterface
         uint32_t exposureUs
     )
     {
-        currentExposureUs_ = exposureUs; 
+        currentExposureUs_ = exposureUs;
         return true;
     }
 

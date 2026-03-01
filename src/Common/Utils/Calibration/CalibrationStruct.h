@@ -2,13 +2,15 @@
 #define __CALIBRATION_STRUCTS_H__
 
 #include <string>
+#include <array>
 
 namespace PiTrac
 {
 /**
  * @brief Enumeration for different camera distortion models
  */
-enum class CalibrationModel {
+enum class CalibrationModel
+{
     STANDARD,  ///< Standard radial-tangential model (k1,k2,p1,p2,k3)
     FISHEYE    ///< Fisheye model (k1,k2,k3,k4) - better for wide FOV cameras
 };
@@ -17,7 +19,9 @@ typedef struct CameraControlSettings
 {
     uint32_t exposure_time_us;
     float analog_gain;
-    float fov_scale; // Optional parameter to adjust field of view when applying calibration (e.g. 0.8 to preserve more FOV, 1.0 for no change)
+    float fov_scale; // Optional parameter to adjust field of view when applying
+                     // calibration (e.g. 0.8 to preserve more FOV, 1.0 for no
+                     // change)
 } CameraControlSettings_Type;
 
 typedef struct CameraInfo
@@ -83,8 +87,33 @@ typedef struct DistortionCoefficients
     }
 } DistortionCoefficients_Type;
 
+typedef struct CameraExtrinsics
+{
+    CameraExtrinsics()
+    {
+        rvec[0] = rvec[1] = rvec[2] = 0.0;
+        tvec[0] = tvec[1] = tvec[2] = 0.0;
+        reprojection_error = 0.0;
+        num_points = 0;
+    }
+
+    double rvec[3]; // Rotation vector (Rodrigues format)
+    double tvec[3]; // Translation vector (camera position in world coordinates)
+    double reprojection_error; // Average reprojection error for this
+                               // calibration
+    int num_points; // Number of calibration points used
+
+    bool valid() const
+    {
+        // Check if calibration has been performed (non-zero translation or
+        // rotation)
+        return (tvec[0] != 0.0 || tvec[1] != 0.0 || tvec[2] != 0.0 ||
+                rvec[0] != 0.0 || rvec[1] != 0.0 || rvec[2] != 0.0);
+    }
+} CameraExtrinsics_Type;
+
 typedef struct FisheyeDistortionCoefficients
-{   // OpenCV fisheye model uses 4 coefficients: k1, k2, k3, k4
+{
     FisheyeDistortionCoefficients(std::array<double, 4> coeffs = {0.0, 0.0, 0.0, 0.0})
     {
         k1 = coeffs[0];
@@ -104,7 +133,6 @@ typedef struct FisheyeDistortionCoefficients
         return (k1 != 0.0 || k2 != 0.0 || k3 != 0.0 || k4 != 0.0);
     }
 } FisheyeDistortionCoefficients_Type;
-
 } // namespace PiTrac
 
 #endif // __CALIBRATION_STRUCTS_H__

@@ -39,10 +39,10 @@ class GSCameraBase : public GSCameraInterface
 
     /**
      * @brief Initializes the camera by acquiring it and retrieving camera
-     *information.
+     * information.
      *
      * This method must be called before attempting to open the camera or
-     *capture frames.
+     * capture frames.
      *
      * @return true if initialization was successful, false otherwise.
      */
@@ -153,23 +153,27 @@ class GSCameraBase : public GSCameraInterface
     std::string toString() const override;
 
     /**
-     * @brief Update the camera's internal state and settings based on the current stream configuration.
-     * 
-     * Apply the updated settings to the current camera request if the camera is currently capturing.
+     * @brief Update the camera's internal state and settings based on the
+     * current stream configuration.
+     *
+     * Apply the updated settings to the current camera request if the camera is
+     * currently capturing.
      *
      * @param[in] exposureUs The desired exposure time in microseconds.
      * @return True if the exposure time was set successfully, false otherwise.
      */
     bool setExposureTime
     (
-         uint32_t exposureUs
+        uint32_t exposureUs
     ) override;
 
     /**
-     * @brief Update the camera's internal state and settings based on the current stream configuration.
-     * 
-     * Apply the updated settings to the current camera request if the camera is currently capturing.
-     * 
+     * @brief Update the camera's internal state and settings based on the
+     * current stream configuration.
+     *
+     * Apply the updated settings to the current camera request if the camera is
+     * currently capturing.
+     *
      * @param[in] gain The desired analog gain value.
      * @return True if the analog gain was set successfully, false otherwise.
      */
@@ -344,7 +348,7 @@ class GSCameraBase : public GSCameraInterface
 
     /**
      * @brief Retrieves camera information such as model, location, ID, and
-     *sensor
+     * sensor
      * details.
      */
     CameraI2CInfo getCameraI2CInfo
@@ -354,7 +358,7 @@ class GSCameraBase : public GSCameraInterface
 
     /**
      * @brief Retrieves camera information such as model, location, ID, and
-     *sensor
+     * sensor
      * details.
      */
     CameraInfo getCameraInfo() const;

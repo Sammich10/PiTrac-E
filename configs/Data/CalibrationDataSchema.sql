@@ -67,3 +67,21 @@ CREATE TABLE IF NOT EXISTS Camera_Controls (
     FOREIGN KEY (CameraID) REFERENCES Camera_Info(UUID),
     UNIQUE(CameraID)
 );
+
+CREATE TABLE IF NOT EXISTS Extrinsic_Calibration (
+    ExtrinsicID INTEGER PRIMARY KEY AUTOINCREMENT,
+    CalibrationID INTEGER NOT NULL,
+    -- Rotation vector (Rodrigues format, 3 values)
+    RVecX REAL NOT NULL,
+    RVecY REAL NOT NULL,
+    RVecZ REAL NOT NULL,
+    -- Translation vector (3 values, in world coordinate units)
+    TVecX REAL NOT NULL,
+    TVecY REAL NOT NULL,
+    TVecZ REAL NOT NULL,
+    -- Reprojection error for this extrinsic calibration
+    ReprojectionError REAL NOT NULL,
+    -- Number of calibration points used
+    NumPoints INTEGER NOT NULL,
+    FOREIGN KEY (CalibrationID) REFERENCES Calibration_Entries(CalibrationID)
+);

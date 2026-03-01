@@ -7,6 +7,8 @@
 #include "Common/Utils/CodecUtils/CodecUtils.h"
 #include "Common/Utils/Calibration/CalibrationData.h"
 #include "Common/Utils/Calibration/CalibrateDistortion.h"
+#include "Common/Utils/Calibration/CalibrationStruct.h"
+#include "Common/Utils/Detection/BallDetector.h"
 #include "Common/System/System.h"
 #include <opencv2/opencv.hpp>
 #include <thread>
@@ -132,6 +134,11 @@ class CameraAgent : public AgentBase
         const CameraControlSettings_Type &settings
     );
 
+    void enableBallDetection
+    (
+        const bool enable
+    );
+
     void loadCameraSettings();
 
     /**
@@ -146,11 +153,13 @@ class CameraAgent : public AgentBase
     std::unique_ptr<GSCameraInterface> camera_;
     std::unique_ptr<CalibrateDistortion> distortion_calibrator_;
     std::shared_ptr<CalibrationData> calibration_data_;
+    std::unique_ptr<BallDetector> ball_detector_;
     uint32_t camera_index_;
     std::atomic<bool> pause_stream_;
     std::atomic<bool> valid_calibration_data_;
     std::atomic<bool> apply_calibrations_to_viewfinder_;
     std::atomic<bool> use_best_calibration_;
+    std::atomic<bool> enable_ball_detection_;
     uint64_t frame_counter_;
     CodecParams frame_codec_params_;
     // Calibration command handling

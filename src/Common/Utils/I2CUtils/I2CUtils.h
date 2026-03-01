@@ -26,11 +26,11 @@ class I2CUtils
   public:
     /**
      * @brief Maps a libcamera device tree path to the corresponding I2C bus
-     *number
+     * number
      *
      * Takes a device tree path like "/base/axi/pcie@1000120000/rp1/i2c@80000"
      * and finds the corresponding /dev/i2c-X device by matching the controller
-     *address.
+     * address.
      *
      * @param deviceTreePath The device tree path from libcamera camera->id()
      * @return I2C bus number (e.g., 13 for /dev/i2c-13), or -1 if not found

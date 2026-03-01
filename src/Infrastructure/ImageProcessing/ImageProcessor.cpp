@@ -912,10 +912,10 @@ bool BallImageProc::GetBall(const cv::Mat &rgbImg,
         }
 
         case kUnknown: {
-            default:
-                GS_LOG_MSG(error, "BallImageProc::GetBall called with invalid search_mode");
-                return false;
-                break;
+                default:
+                    GS_LOG_MSG(error, "BallImageProc::GetBall called with invalid search_mode");
+                    return false;
+                    break;
         }
     }
 

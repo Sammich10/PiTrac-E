@@ -392,7 +392,7 @@ class BallDetectionFactory
      */
     static std::unique_ptr<IBallDetectionAlgorithm> createFromConfig
     (
-        const std :    : string &config_file
+        const std::string &config_file
     );
 
     /**

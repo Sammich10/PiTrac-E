@@ -13,7 +13,7 @@ namespace PiTrac
 {
 /**
  * @brief Utility class for camera-related functions, including image data
- *unpacking,
+ * unpacking,
  * conversion, and frame processing.
  */
 class CameraUtils
@@ -41,7 +41,7 @@ class CameraUtils
      * @brief Converts a libcamera::FrameBuffer to an OpenCV cv::Mat object.
      *
      * @param buffer Pointer to the libcamera::FrameBuffer containing the image
-     *data.
+     * data.
      * @param streamConfig The stream configuration associated with the buffer.
      *
      * @return cv::Mat The resulting OpenCV matrix containing the image.

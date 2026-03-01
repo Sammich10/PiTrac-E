@@ -18,10 +18,9 @@
 
 namespace PiTrac
 {
-
 /**
  * @brief Virtual class containing interface methods for camera distortion
- *calibration
+ * calibration
  */
 class CalibrateDistortion
 {
@@ -38,15 +37,67 @@ class CalibrateDistortion
     static constexpr double REPROJECTION_GOOD = 0.6; // pixels
     static constexpr double REPROJECTION_FAIR = 1.0; // pixels
     static constexpr double REPROJECTION_POOR = 2.0; // pixels
-    static constexpr double CHECKERBOARD_COVERAGE_TOO_LOW = 0.2; // 20% of images with valid detections is too low
-    static constexpr double CHECKERBOARD_COVERAGE_GOOD = 0.5; // 50% of images with valid detections is good
-    static constexpr double CHECKERBOARD_COVERAGE_EXCELLENT = 0.8; // 80% of images with valid detections is excellent
-    static constexpr double CHECKERBOARD_COVERAGE_TOO_HIGH = 0.95; // 95% of images with valid detections may indicate overfitting or lack of variety in calibration images
-    static constexpr double SHARPNESS_THRESHOLD_LOW = 50.0; // Variance of Laplacian below this is considered too blurry
-    static constexpr double SHARPNESS_THRESHOLD_HIGH = 100.0; // Variance of Laplacian above this is considered very sharp
-    static constexpr double MIN_CORNER_CLUSTERING = 0.15; // Average distance of corners from center below this (normalized by image diagonal) is considered too clustered
-    static constexpr double CORNER_CLUSTERING_GOOD = 0.20; // Average distance of corners from center above this (normalized by image diagonal) is considered good spread
-    static constexpr double CORNER_CLUSTERING_EXCELLENT = 0.25; // Average distance of corners from center above this (normalized by image diagonal) is considered excellent spread
+    static constexpr double CHECKERBOARD_COVERAGE_TOO_LOW = 0.2; // 20% of
+                                                                 // images with
+                                                                 // valid
+                                                                 // detections
+                                                                 // is too low
+    static constexpr double CHECKERBOARD_COVERAGE_GOOD = 0.5; // 50% of images
+                                                              // with valid
+                                                              // detections is
+                                                              // good
+    static constexpr double CHECKERBOARD_COVERAGE_EXCELLENT = 0.8; // 80% of
+                                                                   // images
+                                                                   // with valid
+                                                                   // detections
+                                                                   // is
+                                                                   // excellent
+    static constexpr double CHECKERBOARD_COVERAGE_TOO_HIGH = 0.95; // 95% of
+                                                                   // images
+                                                                   // with valid
+                                                                   // detections
+                                                                   // may
+                                                                   // indicate
+                                                                   // overfitting
+                                                                   // or lack of
+                                                                   // variety in
+                                                                   // calibration
+                                                                   // images
+    static constexpr double SHARPNESS_THRESHOLD_LOW = 50.0; // Variance of
+                                                            // Laplacian below
+                                                            // this is
+                                                            // considered too
+                                                            // blurry
+    static constexpr double SHARPNESS_THRESHOLD_HIGH = 100.0; // Variance of
+                                                              // Laplacian above
+                                                              // this is
+                                                              // considered very
+                                                              // sharp
+    static constexpr double MIN_CORNER_CLUSTERING = 0.15; // Average distance of
+                                                          // corners from center
+                                                          // below this
+                                                          // (normalized by
+                                                          // image diagonal) is
+                                                          // considered too
+                                                          // clustered
+    static constexpr double CORNER_CLUSTERING_GOOD = 0.20; // Average distance
+                                                           // of corners from
+                                                           // center above this
+                                                           // (normalized by
+                                                           // image diagonal) is
+                                                           // considered good
+                                                           // spread
+    static constexpr double CORNER_CLUSTERING_EXCELLENT = 0.25; // Average
+                                                                // distance of
+                                                                // corners from
+                                                                // center above
+                                                                // this
+                                                                // (normalized
+                                                                // by image
+                                                                // diagonal) is
+                                                                // considered
+                                                                // excellent
+                                                                // spread
 
     enum class ImageQuality
     {
@@ -85,19 +136,13 @@ class CalibrateDistortion
     (
         cv::Mat &image,
         cv::Mat &debugImage
-    ) = 0; 
+    ) = 0;
 
-    size_t appendImage
-    (
-    );
+    size_t appendImage();
 
-    size_t popImage
-    (
-    );
+    size_t popImage();
 
-    size_t clearLastImageData
-    (
-    );
+    size_t clearLastImageData();
 
     /**
      * @brief Clear all calibration images and reset count
@@ -183,10 +228,12 @@ class CalibrateDistortion
     virtual double getReprojectionError() const;
 
   protected:
-    virtual bool findObjectAndImagePoints() = 0; // Pure virtual method to be implemented by derived classes  
+    virtual bool findObjectAndImagePoints() = 0; // Pure virtual method to be
+                                                 // implemented by derived
+                                                 // classes
     /**
      * @brief Checkerboard dimensions (number of inner corners per chessboard
-     *row
+     * row
      * and column)
      */
     size_t success_count_;
@@ -197,23 +244,30 @@ class CalibrateDistortion
     std::vector<cv::Mat> calibrationImages_;
     std::array<uint32_t, 2> checkerboardDimensions_;
     std::array<double, 5> distortionCoefficients_; ///< Distortion coefficients
-                                                   // (k1, k2, p1, p2, k3)
-    std::array<double, 4> fisheyeDistortionCoefficients_; ///< Fisheye distortion coefficients (k1, k2, k3, k4)
+    // (k1, k2, p1, p2, k3)
+    std::array<double, 4> fisheyeDistortionCoefficients_; ///< Fisheye
+    // distortion
+    // coefficients (k1,
+    // k2, k3, k4)
     std::array<double, 4> cameraIntrinsics_;  ///< fx, fy, cx, cy
-    CalibrationModel calibrationModel_ = CalibrationModel::STANDARD; ///< Current calibration model
+    CalibrationModel calibrationModel_ = CalibrationModel::STANDARD; ///<
+    // Current
+    // calibration
+    // model
     cv::Mat cameraMatrix_;                        ///< Camera matrix
     cv::Mat distCoeffs_;                         ///< Distortion coefficients
-                                                 // matrix
+    // matrix
     std::vector<std::vector<cv::Point3f> > objectPoints_; ///< 3D points in real
-                                                          // world space
+    // world space
     std::vector<std::vector<cv::Point2f> > imagePoints_; ///< 2D points in image
-                                                         // plane
+    // plane
     std::vector<cv::Mat> rvecs_;                    ///< Rotation vectors
     std::vector<cv::Mat> tvecs_;                    ///< Translation vectors
     std::vector<cv::Mat> drawnCalibrationImages_;   ///< Images with drawn
-                                                    // corners
-    std::vector<cv::Mat> undistortedCalibrationImages_; ///< Undistorted images for
-                                                        // visualization
+    // corners
+    std::vector<cv::Mat> undistortedCalibrationImages_; ///< Undistorted images
+    // for
+    // visualization
     size_t numCalibrationImages_;
     std::shared_ptr<GSLogger> logger_ = GSLogger::getInstance();
 }; // End class CalibrateDistortion
@@ -224,9 +278,14 @@ class CheckerboardCalibration : public CalibrateDistortion
 
     CheckerboardCalibration();
     ~CheckerboardCalibration();
-    ImageQuality processImage(cv::Mat &image, cv::Mat &debugImage) override;
+    ImageQuality processImage
+    (
+        cv::Mat &image,
+        cv::Mat &debugImage
+    ) override;
   private:
-    bool findObjectAndImagePoints() override; // Implement corner detection and point extraction
+    bool findObjectAndImagePoints() override; // Implement corner detection and
+                                              // point extraction
 }; // End class CheckerboardCalibration
 
 // class CharucoCalibration : public CalibrateDistortion
@@ -238,8 +297,10 @@ class CheckerboardCalibration : public CalibrateDistortion
 
 //     /**
 //      * @brief Set the square and marker sizes for the CharuCo board
-//      * @param squareLength Length of the checkerboard square side (in meters or any consistent unit)
-//      * @param markerLength Length of the ArUco marker side (typically 75% of square length)
+//      * @param squareLength Length of the checkerboard square side (in meters
+// or any consistent unit)
+//      * @param markerLength Length of the ArUco marker side (typically 75% of
+// square length)
 //      */
 //     void setBoardSizes(float squareLength, float markerLength)
 //     {
@@ -257,14 +318,13 @@ class CheckerboardCalibration : public CalibrateDistortion
 //     }
 
 //   private:
-//     bool findObjectAndImagePoints() override; // Implement charuco corner detection and point extraction
-    
+//     bool findObjectAndImagePoints() override; // Implement charuco corner
+// detection and point extraction
+
 //     float squareLength_ = 0.012f;  // 12mm squares
 //     float markerLength_ = 0.009f;  // 9mm markers (75% of 12mm)
 //     int arucoDictId_ = cv::aruco::DICT_6X6_1000;         // DICT_6X6_250
 // }; // End class CharucoCalibration
-
-
 } // End namespace PiTrac
 
 #endif // __CALIBRATE_DISTORTION_H__

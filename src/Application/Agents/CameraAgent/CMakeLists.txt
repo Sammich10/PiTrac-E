@@ -19,4 +19,5 @@ target_link_libraries(
     ${SQLite3_LIBRARIES}
     Calibration
     FileUtils
+    Detection
 )

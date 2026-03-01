@@ -55,18 +55,21 @@ std::vector<BallDetection> ColorBasedDetection::detectBalls(const cv::Mat &frame
         float radius = circle[2];
 
         // Calculate confidence based on mask density around the circle
-        cv::Mat roi;
-        cv::Rect roi_rect(
-            std::max(0, static_cast<int>(center.x - radius)),
-            std::max(0, static_cast<int>(center.y - radius)),
-            std::min(static_cast<int>(2 * radius), mask.cols - static_cast<int>(center.x - radius)),
-            std::min(static_cast<int>(2 * radius), mask.rows - static_cast<int>(center.y - radius))
-            );
+        // Properly clamp ROI to image boundaries
+        int x_start = std::max(0, static_cast<int>(center.x - radius));
+        int y_start = std::max(0, static_cast<int>(center.y - radius));
+        int x_end = std::min(mask.cols, static_cast<int>(center.x + radius));
+        int y_end = std::min(mask.rows, static_cast<int>(center.y + radius));
+
+        cv::Rect roi_rect(x_start, y_start, x_end - x_start, y_end - y_start);
 
         float confidence = 0.8f; // Default confidence for color-based detection
-        if (roi_rect.width > 0 && roi_rect.height > 0)
+        if (roi_rect.width > 0 && roi_rect.height > 0 &&
+            roi_rect.x >= 0 && roi_rect.y >= 0 &&
+            roi_rect.x + roi_rect.width <= mask.cols &&
+            roi_rect.y + roi_rect.height <= mask.rows)
         {
-            mask(roi_rect).copyTo(roi);
+            cv::Mat roi = mask(roi_rect);
             confidence = static_cast<float>(cv::countNonZero(roi)) / (roi.rows * roi.cols);
         }
 
@@ -283,8 +286,8 @@ bool BallDetector::processFrame(const cv::Mat &frame)
         std::remove_if(current_detections.begin(), current_detections.end(),
                        [this](const BallDetection &detection) {
             return detection.confidence < config_.min_confidence ||
-            detection.radius < config_.min_radius ||
-            detection.radius > config_.max_radius;
+                   detection.radius < config_.min_radius ||
+                   detection.radius > config_.max_radius;
         }),
         current_detections.end());
 

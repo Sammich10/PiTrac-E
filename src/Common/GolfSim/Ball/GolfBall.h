@@ -19,8 +19,6 @@
 #include <opencv4/opencv2/core.hpp>
 #include <opencv4/opencv2/core/matx.hpp>
 
-#include "Common/GolfSim/Global/gs_globals.h"
-
 namespace PiTrac
 {
 // Ball constants

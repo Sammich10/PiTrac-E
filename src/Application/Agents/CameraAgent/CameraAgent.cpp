@@ -1,6 +1,7 @@
 #include "Application/Agents/CameraAgent/CameraAgent.h"
 #include "Interfaces/Camera/GSCameraBase/GSCameraBase.h"
 #include "Common/Utils/Calibration/CalibrationUtils.h"
+#include "Common/Utils/Detection/BallDetectionUtils.h"
 #include <libcamera/camera_manager.h>
 #include <thread>
 #include <semaphore>
@@ -11,7 +12,7 @@ namespace PiTrac
 CameraAgent::CameraAgent(const size_t camera_index, const std::string &process_name)
     : AgentBase(process_name)
     , frame_buffer_(std::make_shared<FrameBuffer>(4)) // Default buffer size of
-                                                       // 4 frames
+                                                      // 4 frames
     , camera_(nullptr)
     , distortion_calibrator_(nullptr)
     , camera_index_(camera_index)
@@ -19,7 +20,11 @@ CameraAgent::CameraAgent(const size_t camera_index, const std::string &process_n
     , frame_counter_(0)
     , apply_calibrations_to_viewfinder_(false)
     , use_best_calibration_(true)
-    , current_calibration_model_(CalibrationModel::FISHEYE) // Default to standard model, can be changed via config/command
+    , current_calibration_model_(CalibrationModel::FISHEYE) // Default to
+                                                            // standard model,
+                                                            // can be changed
+                                                            // via
+                                                            // config/command
 {
     logInfo("CameraAgent created: " + name_);
 }
@@ -53,14 +58,18 @@ bool CameraAgent::setupProcess()
         logError("Failed to initialize camera interface for: " + name_);
         return false;
     }
-    // Load camera settings that will not change or are not configurable at runtime (like resolution) and apply.
-    // Again these are currently hard-coded but should be loaded from config file in the future
+    // Load camera settings that will not change or are not configurable at
+    // runtime (like resolution) and apply.
+    // Again these are currently hard-coded but should be loaded from config
+    // file in the future
     camera_->setResolution(1456, 1088); // Full resolution
     camera_->setSensorSize(3.674f, 2.760f); // IMX219 sensor size in mm
     camera_->setFocalLength(2.8f); // Focal length in mm (estimated for IMX219)
-    camera_->setFrameRate(10.0f); // 10 FPS max for to reduce CPU load, can be increased if needed
+    camera_->setFrameRate(10.0f); // 10 FPS max for to reduce CPU load, can be
+                                  // increased if needed
     camera_->setTriggerMode(TriggerMode::FREE_RUNNING);
-    // Load dynamic camera settings from the calibration database (like exposure time, gain, etc) and apply
+    // Load dynamic camera settings from the calibration database (like exposure
+    // time, gain, etc) and apply
     loadCameraSettings();
     // Retrieve & validate camera UUID and basic info
     camera_uuid_info_ = camera_->getUUIDInfo();
@@ -95,6 +104,62 @@ bool CameraAgent::setupProcess()
     }
     // TODO: Load codec params from config later
     frame_codec_params_ = { { {"quality", "90"} } };
+
+    // Calculate expected ball size based on camera parameters
+    // Using camera physical parameters: focal length, sensor size, resolution
+    float focal_length_mm = camera_->getFocalLength();  // e.g., 2.8mm for IMX219
+    int image_width = 1456;  // From setResolution above
+    float sensor_width_mm = 3.674f;  // From setSensorSize above
+
+    // Calculate focal length in pixels
+    float focal_length_px = BallDetectionUtils::calculateFocalLengthPixels(
+        focal_length_mm, image_width, sensor_width_mm);
+
+    // Expected ball distance range (adjust based on your setup)
+    float min_distance_mm = 500.0f;   // Closest ball distance: 0.5m
+    float max_distance_mm = 3000.0f;  // Farthest ball distance: 3.0m
+    float margin_factor = 1.5f;       // 50% margin for safety
+
+    float min_radius, max_radius;
+    BallDetectionUtils::calculateBallRadiusRange(
+        BallDetectionUtils::GolfBallConstants::DIAMETER_MM,
+        min_distance_mm,
+        max_distance_mm,
+        focal_length_px,
+        margin_factor,
+        min_radius,
+        max_radius
+        );
+
+    logInfo("Calculated ball detection radius range: " +
+            std::to_string(min_radius) + " - " + std::to_string(max_radius) +
+            " pixels (focal_length_px: " + std::to_string(focal_length_px) + ")");
+
+    cv::Scalar lower_hsv(0, 0, 200);      // White ball lower bound
+    cv::Scalar upper_hsv(180, 50, 255);   // White ball upper bound
+    auto algorithm = std::make_unique<ColorBasedDetection>(lower_hsv, upper_hsv, min_radius, max_radius);
+    BallDetectionConfig ball_config;
+    ball_config.required_consecutive_frames = 3;
+    ball_config.max_movement_distance = 50.0f;
+    ball_config.min_confidence = 0.5f;
+    ball_config.min_radius = min_radius;
+    ball_config.max_radius = max_radius;
+    ball_config.max_detection_age = std::chrono::milliseconds(1000);
+    ball_detector_ = std::make_unique<BallDetector>(std::move(algorithm), ball_config);
+    // Set up detection callbacks
+    ball_detector_->setOnBallDetected([this](const BallDetection &detection) {
+            // Called for every raw detection (before validation)
+            logInfo("Ball detected at (" + std::to_string(detection.center.x) + ", " +
+                    std::to_string(detection.center.y) + ") radius: " +
+                    std::to_string(detection.radius) + " confidence: " +
+                    std::to_string(detection.confidence));
+        });
+
+    ball_detector_->setOnBallValidated([this](const BallDetection &detection, int frame_count) {
+            // Called only for validated detections (appeared in consecutive frames)
+            logInfo("VALIDATED ball at (" + std::to_string(detection.center.x) + ", " +
+                    std::to_string(detection.center.y) + ") in " + std::to_string(frame_count) + " frames");
+        });
     return true;
 }
 
@@ -158,12 +223,18 @@ bool CameraAgent::handleSystemCommand(const SystemCommandMsg &command_msg)
 bool CameraAgent::configureStandby()
 {
     logInfo("Configuring standby mode for: " + name_);
-    // NOTE: Loading the config database should really only be done once at startup,
-    // however we want the system manager to be the first to access the database to ensure it
-    // is loaded and ready before any agents attempt to access it, so for now we will load it
-    // in each agent's standby mode configuration since all agents should start in standby mode. 
-    // We can optimize this later by implementing a more robust database access layer with connection pooling and shared instances,
-    // or have the camera agent have a "first time initialization" flag to only load the database on the first transition to standby mode.
+    // NOTE: Loading the config database should really only be done once at
+    // startup,
+    // however we want the system manager to be the first to access the database
+    // to ensure it
+    // is loaded and ready before any agents attempt to access it, so for now we
+    // will load it
+    // in each agent's standby mode configuration since all agents should start
+    // in standby mode.
+    // We can optimize this later by implementing a more robust database access
+    // layer with connection pooling and shared instances,
+    // or have the camera agent have a "first time initialization" flag to only
+    // load the database on the first transition to standby mode.
     if(!calibration_data_)
     {
         calibration_data_ = CalibrationData::getInstance();
@@ -245,8 +316,10 @@ bool CameraAgent::configureViewfinder()
         logError("Failed to create distortion calibrator for: " + name_);
         return false;
     }
-    // Set checkerboard dimensions (inner corners) - TODO: make this dynamic later. 
-    // It could event be part of the calibration command parameters if we want to support different checkerboard patterns.
+    // Set checkerboard dimensions (inner corners) - TODO: make this dynamic
+    // later.
+    // It could event be part of the calibration command parameters if we want
+    // to support different checkerboard patterns.
     distortion_calibrator_->setDimensions(6, 9); // default to 6x9 checkerboard
     distortion_calibrator_->setCalibrationModel(current_calibration_model_);
     frame_counter_ = 0; // Reset frame counter
@@ -259,6 +332,19 @@ void CameraAgent::viewfinderCallback(cv::Mat &frame)
     if(pause_stream_)
     {
         return; // Skip streaming if paused
+    }
+    if(enable_ball_detection_)
+    {
+        const bool ball_detected = ball_detector_->processFrame(frame);
+        if(ball_detected)
+        {
+            ball_detector_->drawDebugInfo(frame, true); // Draw debug info for validated detections
+        }
+        else
+        {
+            cv::putText(frame, "No Ball Detected", cv::Point(10, 30),
+                        cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
+        }
     }
     // Stream the captured frame.
     streamFrame(frame, apply_calibrations_to_viewfinder_);
@@ -277,32 +363,44 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
         if (action == "capture_image")
         {
             logInfo(name_ + ": Capturing calibration image");
-            // Capture a single frame for calibration, use the frame buffer from the viewfinder stream to ensure we get the most recent frame and avoid interrupting the continuous capture for viewfinder mode. The viewfinder callback will continue to add frames to the buffer, so we just need to grab the latest one when we get this command.
+            // Capture a single frame for calibration, use the frame buffer from
+            // the viewfinder stream to ensure we get the most recent frame and
+            // avoid interrupting the continuous capture for viewfinder mode.
+            // The viewfinder callback will continue to add frames to the
+            // buffer, so we just need to grab the latest one when we get this
+            // command.
             cv::Mat calibration_frame;
             if(!frame_buffer_->getFrame(calibration_frame))
             {
                 logError(name_ + ": Failed to capture calibration image - empty frame returned");
                 return false;
             }
-            // Pause streaming while we process this command to avoid conflicts with the viewfinder callback adding new frames to the buffer while we are trying to retrieve the latest frame for calibration. We will unpause after we are done processing this command.
+            // Pause streaming while we process this command to avoid conflicts
+            // with the viewfinder callback adding new frames to the buffer
+            // while we are trying to retrieve the latest frame for calibration.
+            // We will unpause after we are done processing this command.
             pause_stream_.store(true);
             cv::Mat debug_image;
-            const CalibrateDistortion::ImageQuality quality = distortion_calibrator_->processImage(calibration_frame, debug_image); 
+            const CalibrateDistortion::ImageQuality quality = distortion_calibrator_->processImage(calibration_frame, debug_image);
             logInfo(name_ + ": Calibration image captured with quality: " + CalibrateDistortion::imageQualityToString(quality));
-            // Stream the debug image without applying calibration so the user can see the quality metrics and decide whether to keep or discard this calibration image.
-            streamFrame(debug_image, false); 
+            // Stream the debug image without applying calibration so the user
+            // can see the quality metrics and decide whether to keep or discard
+            // this calibration image.
+            streamFrame(debug_image, false);
         }
         else if(action == "accept_image")
         {
             logInfo(name_ + ": Accepting calibration image and adding to calibrator");
             const size_t image_index = distortion_calibrator_->appendImage();
-            pause_stream_.store(false); // Unpause streaming after processing the captured image
+            pause_stream_.store(false); // Unpause streaming after processing
+                                        // the captured image
         }
         else if(action == "reject_image")
         {
             logInfo(name_ + ": Last calibration image rejected and cleared from buffer");
             distortion_calibrator_->clearLastImageData();
-            pause_stream_.store(false); // Unpause streaming after rejecting the image
+            pause_stream_.store(false); // Unpause streaming after rejecting the
+                                        // image
         }
         else if(action == "do_distortion_cal")
         {
@@ -313,7 +411,7 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
             if(!distortion_calibrator_->doDistortionCalibration())
             {
                 logError(name_ + ": Distortion calibration failed");
-                return false; 
+                return false;
             }
             if(!distortion_calibrator_->isCalibrationValid())
             {
@@ -342,7 +440,8 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
         else if(action == "save_calibration")
         {
             logInfo(name_ + ": Saving calibration results to database");
-            // Save the latest calibration results to the database with a new entry
+            // Save the latest calibration results to the database with a new
+            // entry
             CalibrationEntry_Type entryInfo;
             entryInfo.calibration_type = current_calibration_model_;
             entryInfo.reprojection_error = distortion_calibrator_->getReprojectionError();
@@ -396,7 +495,9 @@ bool CameraAgent::processCalibrationCommand(const std::map<std::string, std::str
 bool CameraAgent::processConfigurationCommand(const std::map<std::string, std::string> &commandParams)
 {
     bool config_change_success = true;
-    // Process configuration commands. These can include things like changing camera settings (exposure, gain, etc) or toggling whether to apply calibrations to the viewfinder stream.
+    // Process configuration commands. These can include things like changing
+    // camera settings (exposure, gain, etc) or toggling whether to apply
+    // calibrations to the viewfinder stream.
     if(commandParams.find("apply_calibrations") != commandParams.end())
     {   // This will allow the user to toggle whether to apply calibrations to
         // the viewfinder stream on the fly,
@@ -427,7 +528,10 @@ bool CameraAgent::processConfigurationCommand(const std::map<std::string, std::s
         try
         {
             double exposure_s = std::stod(exposure_str);
-            current_camera_settings_.exposure_time_us = static_cast<uint32_t>(exposure_s * 1e6); // Convert seconds to microseconds
+            current_camera_settings_.exposure_time_us = static_cast<uint32_t>(exposure_s * 1e6); // Convert
+                                                                                                 // seconds
+                                                                                                 // to
+                                                                                                 // microseconds
             logInfo(name_ + ": Setting exposure time to " + std::to_string(exposure_s) + " seconds");
         }
         catch (const std::exception &e)
@@ -467,7 +571,9 @@ bool CameraAgent::processConfigurationCommand(const std::map<std::string, std::s
         }
     }
     if(commandParams.find("apply_configuration") != commandParams.end())
-    {   // This will apply any pending configuration changes that have been set via other commands (like exposure, gain, etc) on the fly without needing to switch modes
+    {   // This will apply any pending configuration changes that have been set
+        // via other commands (like exposure, gain, etc) on the fly without
+        // needing to switch modes
         // Apply the current camera settings to the camera interface immediately
         logInfo(name_ + ": Applying pending camera configuration changes");
         configureCamera(current_camera_settings_);
@@ -477,7 +583,8 @@ bool CameraAgent::processConfigurationCommand(const std::map<std::string, std::s
         bool save_config = (save_config_str == "true" || save_config_str == "1");
         if(save_config)
         {
-            // Save the current camera settings to the database so they can be loaded on next startup or mode change
+            // Save the current camera settings to the database so they can be
+            // loaded on next startup or mode change
             if(!calibration_data_->setCameraSettings(camera_uuid_info_.uuid, current_camera_settings_))
             {
                 logError(name_ + ": Failed to save camera settings to database");
@@ -485,7 +592,16 @@ bool CameraAgent::processConfigurationCommand(const std::map<std::string, std::s
             }
             logInfo(name_ + ": Camera settings saved to database");
         }
-        // If we are not saving to the database, the changes will still be applied for the current session, but they will not persist across restarts or mode changes
+        // If we are not saving to the database, the changes will still be
+        // applied for the current session, but they will not persist across
+        // restarts or mode changes
+    }
+    if(commandParams.find("enable_live_detection") != commandParams.end())
+    {
+        std::string enable_str = commandParams.at("enable_live_detection");
+        bool enable = (enable_str == "true" || enable_str == "1");
+        enableBallDetection(enable);
+        logInfo(name_ + ": Ball detection " + std::string(enable ? "enabled" : "disabled"));
     }
     return config_change_success;
 }
@@ -516,21 +632,27 @@ void CameraAgent::streamFrame(cv::Mat &frame, const bool apply_calibration)
     {   // Only apply calibration if the flag is set, which allows us to stream
         // uncalibrated frames for testing or if the user prefers that way
         switch(cal_entry_.calibration_type)
-        { // Apply the appropriate distortion correction based on the calibration model type
+        { // Apply the appropriate distortion correction based on the
+            // calibration model type
             case CalibrationModel::STANDARD:
-                if (!CalUtils::undistortFrame(frame, camera_matrix_, dist_coeffs_mat_)) {
+                if (!CalUtils::undistortFrame(frame, camera_matrix_, dist_coeffs_mat_))
+                {
                     logWarning("Standard undistortion failed for " + name_);
                 }
                 break;
             case CalibrationModel::FISHEYE:
-                if (!CalUtils::undistortFrameFisheye(frame, camera_matrix_, dist_coeffs_mat_, camera_matrix_scaled_)) {
+                if (!CalUtils::undistortFrameFisheye(frame, camera_matrix_, dist_coeffs_mat_, camera_matrix_scaled_))
+                {
                     logWarning("Fisheye undistortion failed for " + name_);
                 }
                 break;
             default:
                 break;
-                // Maybe handle this case, but it shouldn't ever happen, and we dont want to spam warnings
-                // logWarning("Unknown calibration model type for camera " + std::to_string(camera_index_) + " - skipping distortion correction");
+                // Maybe handle this case, but it shouldn't ever happen, and we
+                // dont want to spam warnings
+                // logWarning("Unknown calibration model type for camera " +
+                // std::to_string(camera_index_) + " - skipping distortion
+                // correction");
         }
     }
     // Encode the frame using the specified codec and parameters
@@ -558,22 +680,30 @@ void CameraAgent::configureCamera(const CameraControlSettings_Type &settings)
 {
     // This function can be called to apply new camera settings on the fly, for
     // example in response to user configuration commands. For now, it only
-    // supports changing exposure and gain, but it can be expanded in the future to support more settings as needed.
+    // supports changing exposure and gain, but it can be expanded in the future
+    // to support more settings as needed.
     camera_->setAnalogGain(settings.analog_gain);
     camera_->setExposureTime(settings.exposure_time_us);
-    
+
     if(valid_calibration_data_)
     {
         // Reset scaled matrix from original before applying scale factor
-        // This prevents cumulative scaling if configureCamera() is called multiple times
+        // This prevents cumulative scaling if configureCamera() is called
+        // multiple times
         camera_matrix_scaled_ = camera_matrix_.clone();
-        
-        // Note: We are only scaling the focal lengths here for FOV scaling, not the principal point, as that is 
-        // a common approach for simulating a digital zoom effect. However, depending on the desired effect, we may 
-        // also want to scale the principal point accordingly, especially if we begin to support configurable 
-        // cropping or zooming in the future. For now, we will keep it simple and only scale the focal lengths.
-        camera_matrix_scaled_.at<double>(0, 0) *= settings.fov_scale; // Scale fx
-        camera_matrix_scaled_.at<double>(1, 1) *= settings.fov_scale; // Scale fy
+
+        // Note: We are only scaling the focal lengths here for FOV scaling, not
+        // the principal point, as that is
+        // a common approach for simulating a digital zoom effect. However,
+        // depending on the desired effect, we may
+        // also want to scale the principal point accordingly, especially if we
+        // begin to support configurable
+        // cropping or zooming in the future. For now, we will keep it simple
+        // and only scale the focal lengths.
+        camera_matrix_scaled_.at<double>(0, 0) *= settings.fov_scale; // Scale
+                                                                      // fx
+        camera_matrix_scaled_.at<double>(1, 1) *= settings.fov_scale; // Scale
+                                                                      // fy
     }
 }
 
@@ -616,24 +746,30 @@ void CameraAgent::loadCameraSettings()
                 logWarning("Unknown calibration model type in retrieved calibration entry for: " + name_);
                 valid_calibration_data_ = false;
         }
-        
+
         camera_matrix_ = (cv::Mat_<double>(3, 3) << intrinsics_.focal_length_x, 0, intrinsics_.principal_point_x, 0, intrinsics_.focal_length_y, intrinsics_.principal_point_y, 0, 0, 1);
-        // Scaled matrix will be configured in configureCamera() when we apply settings, since the scaling may depend on the current settings (e.g. FOV scale)
-        // If not then we want it to default to the original camera matrix, so we initialize it here as a clone of the original camera matrix. 
+        // Scaled matrix will be configured in configureCamera() when we apply
+        // settings, since the scaling may depend on the current settings (e.g.
+        // FOV scale)
+        // If not then we want it to default to the original camera matrix, so
+        // we initialize it here as a clone of the original camera matrix.
         camera_matrix_scaled_ = camera_matrix_.clone();
         if(valid_calibration_data_)
-        {            
-            
+        {
             logInfo("Applying best distortion calibration to viewfinder stream for: " + name_);
-            logInfo("Calibration entry ID: " + std::to_string(cal_entry_.calibration_id) + ", Type: " + std::to_string(static_cast<int>(cal_entry_.calibration_type)) + ", Reprojection Error: " + std::to_string(cal_entry_.reprojection_error) + " pixels, Date: " + cal_entry_.calibration_date);
-            logInfo("Camera intrinsics - fx: " + std::to_string(intrinsics_.focal_length_x) + ", fy: " + std::to_string(intrinsics_.focal_length_y) + ", cx: " + std::to_string(intrinsics_.principal_point_x) + ", cy: " + std::to_string(intrinsics_.principal_point_y));
+            logInfo("Calibration entry ID: " + std::to_string(cal_entry_.calibration_id) + ", Type: " + std::to_string(static_cast<int>(cal_entry_.calibration_type)) + ", Reprojection Error: " +
+                    std::to_string(cal_entry_.reprojection_error) + " pixels, Date: " + cal_entry_.calibration_date);
+            logInfo("Camera intrinsics - fx: " + std::to_string(intrinsics_.focal_length_x) + ", fy: " + std::to_string(intrinsics_.focal_length_y) + ", cx: " +
+                    std::to_string(intrinsics_.principal_point_x) + ", cy: " + std::to_string(intrinsics_.principal_point_y));
             if(cal_entry_.calibration_type == CalibrationModel::STANDARD)
             {
-                logInfo("Distortion coefficients - k1: " + std::to_string(dist_coeffs_.k1) + ", k2: " + std::to_string(dist_coeffs_.k2) + ", p1: " + std::to_string(dist_coeffs_.p1) + ", p2: " + std::to_string(dist_coeffs_.p2) + ", k3: " + std::to_string(dist_coeffs_.k3));
+                logInfo("Distortion coefficients - k1: " + std::to_string(dist_coeffs_.k1) + ", k2: " + std::to_string(dist_coeffs_.k2) + ", p1: " + std::to_string(dist_coeffs_.p1) + ", p2: " +
+                        std::to_string(dist_coeffs_.p2) + ", k3: " + std::to_string(dist_coeffs_.k3));
             }
             else if(cal_entry_.calibration_type == CalibrationModel::FISHEYE)
             {
-                logInfo("Fisheye distortion coefficients - k1: " + std::to_string(fisheye_dist_coeffs_.k1) + ", k2: " + std::to_string(fisheye_dist_coeffs_.k2) + ", k3: " + std::to_string(fisheye_dist_coeffs_.k3) + ", k4: " + std::to_string(fisheye_dist_coeffs_.k4));
+                logInfo("Fisheye distortion coefficients - k1: " + std::to_string(fisheye_dist_coeffs_.k1) + ", k2: " + std::to_string(fisheye_dist_coeffs_.k2) + ", k3: " +
+                        std::to_string(fisheye_dist_coeffs_.k3) + ", k4: " + std::to_string(fisheye_dist_coeffs_.k4));
             }
         }
     }
@@ -641,16 +777,19 @@ void CameraAgent::loadCameraSettings()
     {
         logInfo("No existing distortion calibration found for viewfinder stream for: " + name_);
     }
-    // Load the current camera settings from the database if they exist, so we can apply them to the camera when we start it. 
+    // Load the current camera settings from the database if they exist, so we
+    // can apply them to the camera when we start it.
     // This allows settings to persist across mode changes and restarts.
     if(!calibration_data_->getCameraSettings(camera_uuid_info_.uuid, current_camera_settings_))
     {
         logWarning("No existing camera settings found in database for UUID: " + camera_uuid_info_.uuid + " for: " + name_);
-        // Set some default settings for now. Ideally, we could pull this from a config file for the camera type or something like that later.
+        // Set some default settings for now. Ideally, we could pull this from a
+        // config file for the camera type or something like that later.
         current_camera_settings_.analog_gain = 4.0f;
         current_camera_settings_.exposure_time_us = 20000; // 20ms
         current_camera_settings_.fov_scale = 1.0f; // Default to no FOV scaling
-        // Save the defaults to the database so they can be loaded and applied next time
+        // Save the defaults to the database so they can be loaded and applied
+        // next time
         if(!calibration_data_->setCameraSettings(camera_uuid_info_.uuid, current_camera_settings_))
         {
             logError("Failed to store default camera settings in database for UUID: " + camera_uuid_info_.uuid + " for: " + name_);
@@ -660,8 +799,23 @@ void CameraAgent::loadCameraSettings()
             logInfo("Default camera settings stored in database for UUID: " + camera_uuid_info_.uuid + " for: " + name_);
         }
     }
-    logInfo("Current camera settings for " + name_ + " - Exposure time: " + std::to_string(current_camera_settings_.exposure_time_us) + " us, Analog gain: " + std::to_string(current_camera_settings_.analog_gain) + ", FOV scale: " + std::to_string(current_camera_settings_.fov_scale));
+    logInfo("Current camera settings for " + name_ + " - Exposure time: " + std::to_string(current_camera_settings_.exposure_time_us) + " us, Analog gain: " +
+            std::to_string(current_camera_settings_.analog_gain) + ", FOV scale: " + std::to_string(current_camera_settings_.fov_scale));
     configureCamera(current_camera_settings_);
+}
+
+void CameraAgent::enableBallDetection(const bool enable)
+{
+    if(enable)
+    {
+        logInfo("Enabling ball detection for: " + name_);
+        enable_ball_detection_.store(true);
+    }
+    else
+    {
+        logInfo("Disabling ball detection for: " + name_);
+        enable_ball_detection_.store(false);
+    }
 }
 
 void CameraAgent::cleanUp()
