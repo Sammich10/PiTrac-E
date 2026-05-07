@@ -14,45 +14,12 @@
 #include <atomic>
 #include <memory>
 #include <functional>
+#include "Common/Camera/CameraStructs.h"
 
 namespace PiTrac
 {
 // Callback type for request completion, e.g., for handling captured frames
 using requestCompleteCallback = std::function<void (cv::Mat &frame)>;
-
-enum CAMERA_TYPE
-{
-    CAMERA_TYPE_UNKNOWN = 0,
-    CAMERA_GENERIC_RASPBERRY_PI,
-    CAMERA_PICAM_V3,
-    CAMERA_INNOMAKER_IMX296GS,
-    CAMERA_TYPE_MAX
-};
-
-enum class TriggerMode
-{
-    FREE_RUNNING = 0,   // Normal continuous capture
-    EXTERNAL_TRIGGER    // Wait for external trigger signal
-};
-
-enum class CameraStatus
-{
-    CAMERA_STATUS_OK = 0,
-    CAMERA_STATUS_ERROR,
-    CAMERA_STATUS_NOT_CONFIGURED,
-    CAMERA_STATUS_NOT_OPEN,
-    CAMERA_STATUS_MAX
-};
-
-enum class StreamType
-{
-    STREAM_TYPE_PREVIEW = 0,
-    STREAM_TYPE_MAIN,
-    STREAM_TYPE_HQ,
-    STREAM_TYPE_MAX
-};
-
-
 class GSCameraInterface
 {
 /**

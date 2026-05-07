@@ -22,7 +22,6 @@ enum class SystemMode_Type
 {
     STARTING_UP = 0,
     STANDBY,
-    VIEWFINDER,
     CALIBRATION,
     LAUNCH_MONITOR,
     DIAGNOSTIC,
@@ -61,8 +60,6 @@ class System
                 return "STARTING_UP";
             case SystemMode_Type::STANDBY:
                 return "STANDBY";
-            case SystemMode_Type::VIEWFINDER:
-                return "VIEWFINDER";
             case SystemMode_Type::CALIBRATION:
                 return "CALIBRATION";
             case SystemMode_Type::LAUNCH_MONITOR:
@@ -83,10 +80,6 @@ class System
         else if (mode_str == "STANDBY")
         {
             return SystemMode_Type::STANDBY;
-        }
-        else if (mode_str == "VIEWFINDER")
-        {
-            return SystemMode_Type::VIEWFINDER;
         }
         else if (mode_str == "CALIBRATION")
         {

@@ -1,24 +1,50 @@
 SRC_DIR=src
 TEST_DIR=${SRC_DIR}/tests
 BUILD_DIR=build
+DEBUG_DIR=$(BUILD_DIR)/debug
 CMAKEFLAGS=-DCMAKE_TOOLCHAIN_FILE=$(OECORE_NATIVE_SYSROOT)/usr/share/cmake/OEToolchainConfig.cmake \
 		-G "Ninja" \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-default: pitrac-src
+default: pitrac_src
 
 .PHONY: pitrac
-pitrac: cpp-messages pitrac-src
+pitrac: cpp-messages pitrac_src
 
-.PHONY: pitrac-src
-pitrac-src:
-	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS)
+.PHONY: pitrac_src
+pitrac_src:
+	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS) -DCMAKE_BUILD_TYPE=Debug
+	cmake --build $(BUILD_DIR)
+
+.PHONY: pitrac_release
+pitrac_release: 
+	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS) -DCMAKE_BUILD_TYPE=Release
 	cmake --build $(BUILD_DIR)
 
 .PHONY: pitrac_debug
-pitrac_debug: 
-	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS)
-	cmake --build $(BUILD_DIR)
+pitrac_debug: pitrac_src
+	@echo "Extracting debug symbols..."
+	@mkdir -p $(DEBUG_DIR)
+	@echo "Processing executables in $(BUILD_DIR)/bin..."
+	@for binary in $(BUILD_DIR)/bin/*; do \
+		if [ -f "$$binary" ] && [ -x "$$binary" ]; then \
+			echo "  Extracting debug symbols from $$(basename $$binary)"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --only-keep-debug "$$binary" "$(DEBUG_DIR)/$$(basename $$binary).debug"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --strip-debug "$$binary"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --add-gnu-debuglink="$(DEBUG_DIR)/$$(basename $$binary).debug" "$$binary"; \
+		fi; \
+	done
+	@echo "Processing shared libraries in $(BUILD_DIR)/lib..."
+	@for library in $(BUILD_DIR)/lib/*.so*; do \
+		if [ -f "$$library" ] && [ ! -L "$$library" ]; then \
+			echo "  Extracting debug symbols from $$(basename $$library)"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --only-keep-debug "$$library" "$(DEBUG_DIR)/$$(basename $$library).debug"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --strip-debug "$$library"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --add-gnu-debuglink="$(DEBUG_DIR)/$$(basename $$library).debug" "$$library"; \
+		fi; \
+	done
+	@echo "Debug symbols extracted to $(DEBUG_DIR)"
+	@echo "Stripped binaries in $(BUILD_DIR)/bin and $(BUILD_DIR)/lib"
 
 .PHONY: help
 help:

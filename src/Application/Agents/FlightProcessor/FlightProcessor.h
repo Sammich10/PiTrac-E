@@ -9,6 +9,7 @@
 #include "Common/Utils/Calibration/CalibrateDistortion.h"
 #include "Common/Utils/Calibration/CalibrationStruct.h"
 #include "Common/Utils/Detection/BallDetector.h"
+#include "Common/Camera/CameraStructs.h"
 #include "Common/System/System.h"
 #include <opencv2/opencv.hpp>
 #include <thread>
@@ -18,43 +19,43 @@
 #include <queue>
 #include <mutex>
 #include "Infrastructure/Messaging/Messages/SystemCommandMsg.h"
+#include "Infrastructure/Messaging/Messages/CameraConfigurationMsg.h"
 
 namespace PiTrac
 {
 /**
- * @brief The CameraAgent class is responsible for operating a camera
+ * @brief The FlightProcessor class is responsible for operating a camera
  * through the Camera Interface and publishing raw camera frames to a
  * messaging system.
  *
  * At it's core, it will implement different camera operations such as
  * opening, configuring, capturing frames, and closing the camera.
- * The CameraAgent will also enqueue captured frames into a FrameBuffer
+ * The FlightProcessor will also enqueue captured frames into a FrameBuffer
  * to be consumed by the FrameProcessorAgent.
  *
  * On top of this, it will support different modes of operation to support
  * the functionality of the launch monitor system.
  */
-class CameraAgent : public AgentBase
+class FlightProcessor : public AgentBase
 {
   public:
     /**
-     * @brief Constructs a CameraAgent object.
+     * @brief Constructs a FlightProcessor object.
      *
      * @param camera_index Index of the camera
      */
-    CameraAgent
+    FlightProcessor
     (
-        const size_t camera_index,
-        const std::string &process_name = "CameraAgent"
+        const std::string &process_name = "FlightProcessor"
     );
 
     /**
-     * @brief Destructor for the CameraAgent class.
+     * @brief Destructor for the FlightProcessor class.
      *
      * Cleans up resources and performs necessary shutdown procedures
-     * when a CameraAgent object is destroyed.
+     * when a FlightProcessor object is destroyed.
      */
-    ~CameraAgent();
+    ~FlightProcessor();
 
     /**
      * @brief Sets up the camera agent.
@@ -96,10 +97,13 @@ class CameraAgent : public AgentBase
      *
      * Viewfinder mode continuously captures frames from the camera and
      * publishes them to the messaging system.
+     * @param frame The captured frame from the camera
+     * @param camera_index The index of the camera that captured this frame
      */
     virtual void viewfinderCallback
     (
-        cv::Mat &frame
+        cv::Mat &frame,
+        const uint32_t camera_index
     );
 
     /**
@@ -126,12 +130,14 @@ class CameraAgent : public AgentBase
     inline void streamFrame
     (
         cv::Mat &frame,
+        const uint32_t camera_index,
         const bool apply_calibration = true
     );
 
     inline void configureCamera
     (
-        const CameraControlSettings_Type &settings
+        const CameraControlSettings_Type &settings,
+        const LMCameras camera_index
     );
 
     void enableBallDetection
@@ -139,7 +145,10 @@ class CameraAgent : public AgentBase
         const bool enable
     );
 
-    void loadCameraSettings();
+    void loadCameraSettings
+    (
+        const uint32_t camera_index
+    );
 
     /**
      * @brief Cleans up resources used by the camera agent in
@@ -147,35 +156,36 @@ class CameraAgent : public AgentBase
      */
     inline void cleanUp();
 
-    std::unique_ptr<MessagerBase> frame_publisher_;
+    std::unique_ptr<MessagerBase> data_publisher_;
     std::unique_ptr<FrameCodec> frame_codec_;
-    std::shared_ptr<FrameBuffer> frame_buffer_;
-    std::unique_ptr<GSCameraInterface> camera_;
+    std::array<std::shared_ptr<FrameBuffer>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> frame_buffer_;
+    std::array<std::unique_ptr<GSCameraInterface>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_;
     std::unique_ptr<CalibrateDistortion> distortion_calibrator_;
     std::shared_ptr<CalibrationData> calibration_data_;
     std::unique_ptr<BallDetector> ball_detector_;
-    uint32_t camera_index_;
-    std::atomic<bool> pause_stream_;
-    std::atomic<bool> valid_calibration_data_;
-    std::atomic<bool> apply_calibrations_to_viewfinder_;
+    std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> pause_stream_;
+    std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> valid_calibration_data_;
+    std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> apply_calibrations_to_viewfinder_;
     std::atomic<bool> use_best_calibration_;
     std::atomic<bool> enable_ball_detection_;
-    uint64_t frame_counter_;
+    std::array<uint64_t, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> frame_counter_;
     CodecParams frame_codec_params_;
     // Calibration command handling
     std::mutex calibration_queue_mutex_;
-    CameraInfo_Type camera_info_;
-    GSCameraInterface::CameraUUIDInfo camera_uuid_info_;
-    GSCameraInterface::CameraInfo camera_basic_info_;
+    std::array<CameraInfo_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_info_;
+    std::array<GSCameraInterface::CameraUUIDInfo, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_uuid_info_;
+    std::array<GSCameraInterface::CameraInfo, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_basic_info_;
     CalibrationModel current_calibration_model_;
-    cv::Mat camera_matrix_;
-    cv::Mat camera_matrix_scaled_;
-    cv::Mat dist_coeffs_mat_;
-    CalibrationEntry_Type cal_entry_;
-    DistortionCoefficients_Type dist_coeffs_;
-    FisheyeDistortionCoefficients_Type fisheye_dist_coeffs_;
-    CameraIntrinsics_Type intrinsics_;
-    CameraControlSettings_Type current_camera_settings_;
+    std::array<CameraIntrinsics_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_matrix_;
+    std::array<cv::Mat, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> dist_coeffs_mat_;
+    std::array<CalibrationEntry_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> cal_entry_;
+    std::array<DistortionCoefficients_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> dist_coeffs_;
+    std::array<CameraIntrinsics_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> intrinsics_;
+    std::array<CameraControlSettings_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> current_camera_settings_;
+    std::array<std::vector<cv::Point2f>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> last_corners_;
+    std::array<std::vector<cv::Point3f>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> last_object_points_;
+    std::array<std::vector<std::vector<cv::Point2f>>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> calibration_corners_buffer_;
+    std::array<std::vector<std::vector<cv::Point3f>>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> calibration_object_points_buffer_;
 };
 } // namespace PiTrac
 

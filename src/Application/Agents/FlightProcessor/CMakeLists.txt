@@ -1,15 +1,14 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(CameraAgent)
+project(FlightProcessor)
 
-# Add the source files for the CameraAgent class
-file(GLOB CAMERA_AGENT_SOURCES
+# Add the source files for the FlightProcessor class
+file(GLOB FLIGHT_PROCESSOR_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
 )
 
-# Add the static library for CameraAgent
-add_library(CameraAgent STATIC ${CAMERA_AGENT_SOURCES})
+add_executable(FlightProcessor ${FLIGHT_PROCESSOR_SOURCES})
 
 # Link OpenCV libraries
 target_link_libraries(
@@ -20,4 +19,8 @@ target_link_libraries(
     Calibration
     FileUtils
     Detection
+    Messaging
+    GSCameraInterface
+    GSCameraBase
+    imx296
 )

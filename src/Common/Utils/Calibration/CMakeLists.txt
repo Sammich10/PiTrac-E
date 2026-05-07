@@ -6,6 +6,8 @@ project(Calibration)
 file(GLOB CALIBRATION_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/*.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/Detectors/*.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/Detectors/*.h
 )
 
 # Add the shared library

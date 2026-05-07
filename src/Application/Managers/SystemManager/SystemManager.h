@@ -26,9 +26,9 @@ class SystemManager : public GSManagerBase
     std::unique_ptr<MessagerBase> system_command_listener_;
 
     // Frame forwarding system
-    std::unique_ptr<MessagerBase> frame_collector_;  // PULL socket for agent
-                                                     // frames
-    std::unique_ptr<MessagerBase> frame_publisher_;  // PUB socket to Flask
+    std::unique_ptr<MessagerBase> data_collector;  // PULL socket for agent
+                                                   // frames
+    std::unique_ptr<MessagerBase> data_publisher_;  // PUB socket to Flask
 
     bool setupProcess() override;
     void cleanupProcess() override;
@@ -131,7 +131,7 @@ class SystemManager : public GSManagerBase
     );
 
     // Frame forwarding system
-    void frameForwardingHandler
+    void dataForwardingHandler
     (
         std::unique_ptr<MessageInterface> message
     );

@@ -6,12 +6,17 @@
 
 namespace PiTrac
 {
-// Mathematical constants
-constexpr double kPi = M_PI;
-constexpr double kTwoPi = 2.0 * M_PI;
-constexpr double kHalfPi = M_PI / 2.0;
-constexpr double kRadToDeg = 180.0 / M_PI;
-constexpr double kDegToRad = M_PI / 180.0;
+class Constants
+{
+  public:
+    // Mathematical constants
+    static constexpr double PI = M_PI;
+    static constexpr double TWO_PI = 2.0 * M_PI;
+    static constexpr double HALF_PI = M_PI / 2.0;
+    static constexpr double RAD_TO_DEG = 180.0 / M_PI;
+    static constexpr double DEG_TO_RAD = M_PI / 180.0;
+    static constexpr double MICROSECONDS_TO_SECONDS = 1e-6;
+}; // Class Constants
 } // namespace PiTrac
 
 #endif // __CONSTANTS_H__

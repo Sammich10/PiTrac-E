@@ -286,8 +286,8 @@ bool BallDetector::processFrame(const cv::Mat &frame)
         std::remove_if(current_detections.begin(), current_detections.end(),
                        [this](const BallDetection &detection) {
             return detection.confidence < config_.min_confidence ||
-                   detection.radius < config_.min_radius ||
-                   detection.radius > config_.max_radius;
+            detection.radius < config_.min_radius ||
+            detection.radius > config_.max_radius;
         }),
         current_detections.end());
 

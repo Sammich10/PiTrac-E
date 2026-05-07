@@ -26,13 +26,13 @@ class Endpoints
         return "ipc://agent_task_endpoint";
     }
 
-    static const std::string getFrameCollectionEndpoint()
+    static const std::string getDataCollectionEndpoint()
     {
         // SystemManager binds PULL socket here for agent frames
-        return "ipc://frame_collection_endpoint";
+        return "ipc://data_collection_endpoint";
     }
 
-    static const std::string getFrameStreamEndpoint()
+    static const std::string getOutgoingDataEndpoint()
     {
         // SystemManager publishes aggregated frames here for Flask
         return "tcp://0.0.0.0:6001";

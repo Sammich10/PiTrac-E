@@ -375,7 +375,7 @@ bool CalibrationData::getCameraSettings(const std::string &camera_uuid, CameraCo
 
 bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid,
                                           const CalibrationEntry_Type &entryInfo,
-                                          const DistortionCoefficients_Type &distortionCoeffs,
+                                          const DistortionCoefficients_Type::StandardCoeffs &distortionCoeffs,
                                           const CameraIntrinsics_Type &intrinsics)
 {
     // This function will need to execute multiple statements in a transaction:
@@ -485,7 +485,7 @@ bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid,
 
 bool CalibrationData::putCalibrationEntry(const std::string &camera_uuid,
                                           const CalibrationEntry_Type &entryInfo,
-                                          const FisheyeDistortionCoefficients_Type &distortionCoeffs,
+                                          const DistortionCoefficients_Type::FisheyeCoeffs &distortionCoeffs,
                                           const CameraIntrinsics_Type &intrinsics)
 {
     // This function will need to execute multiple statements in a transaction:
@@ -653,7 +653,7 @@ bool CalibrationData::getBestCalibrationEntry(const std::string &uuid, Calibrati
     }
 }
 
-bool CalibrationData::getCalibrationEntryData(CalibrationEntry_Type &entryInfo, DistortionCoefficients_Type &distortionCoeffs, CameraIntrinsics_Type &intrinsics)
+bool CalibrationData::getCalibrationEntryData(CalibrationEntry_Type &entryInfo, DistortionCoefficients_Type::StandardCoeffs &distortionCoeffs, CameraIntrinsics_Type &intrinsics)
 {
     // This function will execute separate queries to get the distortion
     // coefficients and intrinsic parameters for a given CalibrationID
@@ -692,7 +692,7 @@ bool CalibrationData::getCalibrationEntryData(CalibrationEntry_Type &entryInfo, 
     return true; // Placeholder - implement actual queries and data extraction
 }
 
-bool CalibrationData::getCalibrationEntryData(CalibrationEntry_Type &entryInfo, FisheyeDistortionCoefficients_Type &distortionCoeffs, CameraIntrinsics_Type &intrinsics)
+bool CalibrationData::getCalibrationEntryData(CalibrationEntry_Type &entryInfo, DistortionCoefficients_Type::FisheyeCoeffs &distortionCoeffs, CameraIntrinsics_Type &intrinsics)
 {
     // This function will execute separate queries to get the fisheye distortion
     // coefficients and intrinsic parameters for a given CalibrationID

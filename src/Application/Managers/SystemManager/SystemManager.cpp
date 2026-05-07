@@ -7,8 +7,8 @@ SystemManager::SystemManager()
     : GSManagerBase("SystemManager")
     , task_control_router_(std::make_unique<MessageRouter>())
     , system_command_listener_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Reply))
-    , frame_collector_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Pull))
-    , frame_publisher_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Publisher))
+    , data_collector(std::make_unique<MessagerBase>(MessagerBase::SocketType::Pull))
+    , data_publisher_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Publisher))
 {
 }
 
@@ -31,11 +31,11 @@ bool SystemManager::setupProcess()
         );
 
     logInfo("Setting up frame forwarding system");
-    frame_collector_->bind(Endpoints::getFrameCollectionEndpoint());
-    frame_collector_->startReceiving(
-        std::bind(&SystemManager::frameForwardingHandler, this, std::placeholders::_1)
+    data_collector->bind(Endpoints::getDataCollectionEndpoint());
+    data_collector->startReceiving(
+        std::bind(&SystemManager::dataForwardingHandler, this, std::placeholders::_1)
         );
-    frame_publisher_->bind(Endpoints::getFrameStreamEndpoint());
+    data_publisher_->bind(Endpoints::getOutgoingDataEndpoint());
 
     // For now, we can create the calibration database here to ensure the
     // database is set up before any agents try to access it
@@ -72,8 +72,8 @@ void SystemManager::cleanupProcess()
     system_command_listener_->stop();
 
     logInfo("Stopping frame forwarding system");
-    frame_collector_->stop();
-    frame_publisher_->stop();
+    data_collector->stop();
+    data_publisher_->stop();
     system_command_listener_.reset();
 }
 
@@ -263,6 +263,8 @@ bool SystemManager::handleConfigurationCommand(const SystemCommandMsg &cmd_msg)
         return false;
     }
     std::string target_agent_name = params["task_name"];
+    // Remove task_name from params before forwarding, as it's only used for routing and not needed by the agent itself
+    params.erase("task_name");
     if(target_agent_name.empty())
     {
         logError("Configure command has empty 'task_name' parameter");
@@ -271,10 +273,8 @@ bool SystemManager::handleConfigurationCommand(const SystemCommandMsg &cmd_msg)
     if(target_agent_name == "system")
     {
         logInfo("Received configuration command targeting the system itself");
-        // Handle any system-level configuration commands here based on other
-        // parameters
-        // For now, we don't have any specific system-level configurations, so
-        // just log and return success
+        // Handle any system-level configuration commands here based on other parameters
+        // For now, we don't have any specific system-level configurations, so just log and return success
         logInfo("No specific system-level configuration handling implemented yet");
         return true;
     }
@@ -509,14 +509,14 @@ std::vector<SystemManager::RegisteredAgent> SystemManager::getActiveAgents()
     return agents;
 }
 
-void SystemManager::frameForwardingHandler(std::unique_ptr<MessageInterface> message)
+void SystemManager::dataForwardingHandler(std::unique_ptr<MessageInterface> message)
 {
     // Simply forward any received frame data to Flask
     if (message)
     {
         try
         {
-            frame_publisher_->sendMessage(*message);
+            data_publisher_->sendMessage(*message);
         }
         catch (const std::exception &e)
         {

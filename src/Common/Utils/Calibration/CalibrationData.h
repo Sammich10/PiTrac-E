@@ -73,7 +73,7 @@ class CalibrationData
     (
         const std::string &camera_uuid,
         const CalibrationEntry_Type &entryInfo,
-        const DistortionCoefficients_Type &distortionCoeffs,
+        const DistortionCoefficients_Type::StandardCoeffs &distortionCoeffs,
         const CameraIntrinsics_Type &intrinsics
     );
 
@@ -81,7 +81,7 @@ class CalibrationData
     (
         const std::string &camera_uuid,
         const CalibrationEntry_Type &entryInfo,
-        const FisheyeDistortionCoefficients_Type &distortionCoeffs,
+        const DistortionCoefficients_Type::FisheyeCoeffs &distortionCoeffs,
         const CameraIntrinsics_Type &intrinsics
     );
 
@@ -100,14 +100,14 @@ class CalibrationData
     bool getCalibrationEntryData
     (
         CalibrationEntry_Type &entryInfo,
-        DistortionCoefficients_Type &distortionCoeffs,
+        DistortionCoefficients_Type::StandardCoeffs &distortionCoeffs,
         CameraIntrinsics_Type &intrinsics
     );
 
     bool getCalibrationEntryData
     (
         CalibrationEntry_Type &entryInfo,
-        FisheyeDistortionCoefficients_Type &distortionCoeffs,
+        DistortionCoefficients_Type::FisheyeCoeffs &distortionCoeffs,
         CameraIntrinsics_Type &intrinsics
     );
 

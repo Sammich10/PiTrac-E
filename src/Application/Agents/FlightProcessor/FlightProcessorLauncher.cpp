@@ -1,4 +1,4 @@
-#include "Application/Agents/TeeAgent/TeeAgent.h"
+#include "Application/Agents/FlightProcessor/FlightProcessor.h"
 #include "Common/Utils/Logging/GSLogger.h"
 #include <cstdlib>
 #include <thread>
@@ -13,7 +13,7 @@ constexpr size_t PI_CPU_MAX = 3;
 
 // Global flag for graceful shutdown
 std::atomic<bool> g_shutdown_requested(false);
-PiTrac::TeeAgent *g_camera_task = nullptr;
+PiTrac::FlightProcessor *g_camera_task = nullptr;
 
 void signalHandler(int signal)
 {
@@ -32,29 +32,14 @@ int main(int argc, char *argv[])
 {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
-    // Verify the minimum correct number of arguments
-    if (argc < 2)
-    {
-        printf("Usage: CameraTaskLauncher <camera_index> <frame_buffer_size>\n");
-        return EXIT_FAILURE;
-    }
-    // Parse argument 1 (camera index)
-    if(!std::all_of(argv[1], argv[1] + std::strlen(argv[1]), ::isdigit))
-    {
-        printf("Invalid camera index argument, must be a non-negative integer\n");
-        return EXIT_FAILURE;
-    }
-    else
-    {
-        size_t camera_index = std::stoul(argv[1]);
-    }
-    size_t camera_index = std::stoul(argv[1]);
+    // No arguments expected for the FlightProcessor, but we can add argument parsing here if needed in the future (e.g., for debug mode, config file path, etc)
     try {
         printf("Starting Camera Agent Task Launcher\n");
-        std::string procname = "TeeAgent_" + std::to_string(camera_index);
+        std::string procname = "FlightProcessor";
         prctl(PR_SET_NAME, procname.c_str(), 0, 0, 0);
         // Create and start the camera agent task
-        PiTrac::TeeAgent camera_agent(camera_index);
+        PiTrac::FlightProcessor camera_agent(procname);
+        // Set CPU affinity to limit the camera agent to specific cores (e.g., 0-3)
         g_camera_task = &camera_agent;
 
         if (!camera_agent.run())
