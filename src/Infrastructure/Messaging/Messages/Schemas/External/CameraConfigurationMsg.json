@@ -1,0 +1,37 @@
+{
+  "message_name": "CameraConfigurationMsg",
+  "description": "Camera configuration data with settings and metadata",
+  "message_type": "CameraConfiguration",
+  "fields": {
+    "camera_id": {
+      "type": "uint32",
+      "description": "Unique camera identifier"
+    },
+    "resolution_width": {
+      "type": "uint64",
+      "description": "Width of the camera resolution"
+    },
+    "resolution_height": {
+      "type": "uint64",
+      "description": "Height of the camera resolution"
+    },
+    "frame_rate": {
+      "type": "float64",
+      "description": "Frame rate of the camera"
+    },
+    "exposure_time_us": {
+      "type": "uint64",
+      "description": "Exposure time in microseconds"
+    },
+    "analog_gain": {
+        "type": "float64",
+        "description": "Analog gain setting for the camera"
+    },
+    "fov_scale": {
+        "type": "float64",
+        "description": "Field of view scale factor"
+    }
+  },
+  "custom_methods": [
+  ]
+}
