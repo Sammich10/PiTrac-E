@@ -12,8 +12,10 @@ build
 sdk
 tmp
 # Generated message files
-src/Infrastructure/Messaging/Messages/
+src/Infrastructure/Messaging/Messages/*.cpp
+src/Infrastructure/Messaging/Messages/*.h
 !src/Infrastructure/Messaging/Messages/.gitkeep
+!src/Infrastructure/Messaging/Messages/Schemas/*
 # Image files
 *.png
 *.jpg
