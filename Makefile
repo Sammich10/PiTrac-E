@@ -5,6 +5,7 @@ DEBUG_DIR=$(BUILD_DIR)/debug
 CMAKEFLAGS=-DCMAKE_TOOLCHAIN_FILE=$(OECORE_NATIVE_SYSROOT)/usr/share/cmake/OEToolchainConfig.cmake \
 		-G "Ninja" \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+BUILD_TYPE ?= Debug
 
 default: pitrac_src
 
@@ -13,15 +14,11 @@ pitrac: cpp-messages pitrac_src
 
 .PHONY: pitrac_src
 pitrac_src:
-	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS) -DCMAKE_BUILD_TYPE=Debug
-	cmake --build $(BUILD_DIR)
-
-.PHONY: pitrac_release
-pitrac_release: 
-	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS) -DCMAKE_BUILD_TYPE=Release
+	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
 	cmake --build $(BUILD_DIR)
 
 .PHONY: pitrac_debug
+pitrac_debug: BUILD_TYPE=Debug
 pitrac_debug: pitrac_src
 	@echo "Extracting debug symbols..."
 	@mkdir -p $(DEBUG_DIR)

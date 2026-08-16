@@ -26,6 +26,12 @@ class TaskBase
 {
   public:
 
+    /**
+     * @brief Constructs a TaskBase object with the specified name. 
+     * Creates a unique task ID, initializes the logger, and creates a ZMQ context for the process.
+     *
+     * @param name The name of the task for identification and logging purposes.
+     */
     TaskBase(const std::string &name)
         : name_(name)
         , task_id_(generateTaskId())
@@ -36,7 +42,10 @@ class TaskBase
         logInfo("Task created: " + name_ + " [" + task_id_ + "]");
         MessagerBase::createContext();
     }
-
+ 
+    /**
+     * @brief Destructor for the TaskBase class.
+     */
     ~TaskBase()
     {
         if (isRunning())
@@ -47,40 +56,34 @@ class TaskBase
         logInfo("Task destroyed: " + name_);
     }
 
+    /**
+     * @brief Primary task entry point, starts the task execution in the current process.
+     * 
+     * @throws std::exception if setupProcess or processMain throws an exception.
+     * 
+     * @return true upon successful task exit, false if the task failed to start.
+     */
     bool run()
     {
+        // Guard against running the task if it's already running 
         if (getStatus() == TaskStatus::Running)
         {
             logWarning("Task already running: " + name_);
             return false;
         }
-
-        logInfo("Starting task: " + name_);
         changeStatus(TaskStatus::Starting);
-
         start_time_ = std::chrono::steady_clock::now();
-
-        logInfo("Process started for task: " + name_);
-
-        try {
-            // Setup process environment
-            if (!setupProcess())
-            {
-                logError("Failed to setup process");
-                exit(1);
-            }
-            // Run main loop
-            processMain();
-        } catch (const std::exception &e) {
-            logError("Exception in process main for task: " + name_ + " - " +
-                     std::string(e.what()));
-            exit(1);
-        } catch (...) {
-            logError("Unknown exception in process main for task: " + name_);
+        // Setup process environment
+        if (!setupProcess())
+        {
+            throw std::runtime_error("Failed to setup process for task: " + name_);
             exit(1);
         }
 
-        // Cleanup
+        // Run main loop
+        processMain();
+        
+        // Cleanup the task process environment and resources
         cleanupProcess();
 
         logInfo("Process exiting for task: " + name_);
@@ -91,14 +94,13 @@ class TaskBase
 
     void end()
     {
-        logInfo("Ending task: " + name_);
+        logInfo("Signal ending task: " + name_);
 
         if (!isRunning())
         {
             logWarning("Task not running, cannot end: " + name_);
             return;
         }
-        preStopHook();
 
         changeStatus(TaskStatus::Stopping);
 
@@ -116,21 +118,41 @@ class TaskBase
         exit(1);
     }
 
+    /**
+     * @brief Returns the current status of the task.
+     * 
+     * @return The current TaskStatus of the task.
+     */
     TaskStatus getStatus() const
     {
         return status_;
     }
 
+    /**
+     * @brief Checks if the task is currently running.
+     * 
+     * @return true if the task is running, false otherwise.
+     */
     bool isRunning() const
     {
         return status_ == TaskStatus::Running;
     }
 
+    /**
+     * @brief Returns the name of the task.
+     * 
+     * @return A constant reference to the task name string.
+     */
     const std::string &getTaskName() const
     {
         return name_;
     }
-
+    
+    /**
+     * @brief Returns the unique identifier for the task instance.
+     * 
+     * @return A constant reference to the task ID string.
+     */
     const std::string &getTaskId() const
     {
         return task_id_;
@@ -151,33 +173,70 @@ class TaskBase
     // @brief Logger instance for logging task-related messages
     std::shared_ptr<GSLogger> logger_;
 
+    /**
+     * @brief Abstract method to set up the task process environment.
+     * This method should be implemented by derived classes to perform any necessary setup before the task starts execution.
+     */
     virtual bool setupProcess
     (
         void
     ) = 0;
 
+    /**
+     * @brief Abstract method that acts as the main execution loop for the task.
+     * This method should be implemented by derived classes to define the primary behavior of the task.
+     */
     virtual void processMain
     (
         void
     ) = 0;
 
+    /**
+     * @brief Abstract method to clean up the task process environment.
+     * This method should be implemented by derived classes to perform any necessary cleanup after the task has
+     */
     virtual void cleanupProcess
     (
         void
     ) = 0;
 
-    virtual void preStopHook
+    /**
+     * @brief Virtual method to end the task process. This method can be overridden by derived classes to implement custom behavior when ending the task.
+     * After any overriding behavior, the derived class should call the base class implementation to ensure proper cleanup and logging.
+     */
+    virtual void endProcess
     (
         void
     )
     {
+        logInfo("Ending task: " + name_);
+
+        if (!isRunning())
+        {
+            logWarning("Task not running, cannot end: " + name_);
+            return;
+        }
+
+        changeStatus(TaskStatus::Stopping);
+
+        should_stop_ = true;
+
+        auto runtime = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time_);
+
+        logInfo("Task " + name_ + " execution completed. Runtime: " +
+                std::to_string(runtime.count()) + "s, ");
     }
+
 
     void logInfo(const std::string &message) const
     {
         if (logger_)
         {
             logger_->info(message);
+        }
+        else
+        {
+            printf("[INFO] %s\n", message.c_str());
         }
     }
 
@@ -187,6 +246,10 @@ class TaskBase
         {
             logger_->warning(message);
         }
+        else
+        {
+            printf("[WARNING] %s\n", message.c_str());
+        }
     }
 
     void logError(const std::string &message) const
@@ -194,6 +257,10 @@ class TaskBase
         if (logger_)
         {
             logger_->error(message);
+        }
+        else 
+        {
+            printf("[ERROR] %s\n", message.c_str());
         }
     }
 

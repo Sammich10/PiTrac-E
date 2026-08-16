@@ -40,17 +40,24 @@ class AgentBase : public TaskBase
 
     ~AgentBase()
     {
-        if (agent_thread_.joinable())
+        for(auto &thread : agent_thread_pool_)
         {
-            end();
-            agent_thread_.join();
+            if(thread.joinable())
+            {
+                thread.join();
+            }
+            else
+            {
+                logWarning("Agent thread not joinable for: " + name_);
+            }
         }
         logInfo("Agent destroyed: " + name_);
     }
 
   protected:
-
-    std::thread agent_thread_;
+    // Agent thread pool for multithreaded behavior
+    std::vector<std::thread> agent_thread_pool_;
+    // Primary agent 
     std::unique_ptr<MessageDealer> agent_control_;
     std::string agent_control_endpoint_;
     std::function<void(std::unique_ptr<MessageInterface>)> message_handler_;
@@ -58,25 +65,13 @@ class AgentBase : public TaskBase
     std::atomic<bool> run_;
     std::mutex mode_mutex_;
 
-    // Override processMain, calls execute in a new thread. This will be
-    // the main entry point for the agent.
+    /**
+     * @brief Agent task main loop
+     * Registers the process with the System Manager
+     */
     void processMain() override
     {
-        if (getStatus() == TaskStatus::Running)
-        {
-            logWarning("Agent already running: " + name_);
-            return;
-        }
-
-        if (getStatus() == TaskStatus::Paused)
-        {
-            changeStatus(TaskStatus::Running);
-            logInfo("Resuming agent: " + name_);
-            return;
-        }
         // Use DEALER socket for registration (part of ROUTER-DEALER pattern)
-        // The agent_control_ is already a DEALER socket, so we'll use that for
-        // registration too
         auto dealer_identity = agent_control_->getIdentity();
         if (dealer_identity.has_value())
         {
@@ -86,54 +81,10 @@ class AgentBase : public TaskBase
         {
             logWarning("DEALER socket has no identity set!");
         }
+        // Connect to the SystemManager's ROUTER socket for control messages
         agent_control_->connect(agent_control_endpoint_);
-
-        RegisterTaskMsg reg_msg(getpid(), name_);
-        int registration_timeout = 10000; // 10 seconds
-        const int registration_message_interval = 1000; // 1 second between
-                                                        // retries
-        while(registration_timeout > 0)
-        {
-            logInfo(name_ + ": Registering agent with SystemManager");
-            try
-            {
-                std::unique_ptr<MessageInterface> response = agent_control_->sendRequestAndWaitForResponse(reg_msg, registration_message_interval); // 1
-                                                                                                                                                    // second
-                                                                                                                                                    // timeout
-                if (response)
-                {
-                    if(response->getMessageType() != Message_Type::AckMessage)
-                    {
-                        logError("Unexpected response type during registration: " + response->toString());
-                        continue; // Retry
-                    }
-                    auto ack_msg = dynamic_cast<AckMessage *>(response.get());
-                    if(static_cast<AckMessage::AckStatus>(ack_msg->getAck_status()) != AckMessage::AckStatus::Success)
-                    {
-                        logError("Registration failed, received NACK: " + ack_msg->toString());
-                        continue; // Retry
-                    }
-                    logInfo("Registration acknowledged by SystemManager: " + response->toString());
-                    break; // Successfully registered
-                }
-                else
-                {
-                    logError("No response received for registration attempt, retrying...");
-                }
-            }
-            catch (const std::exception &e)
-            {
-                logError("Registration attempt failed: " + std::string(e.what()));
-            }
-            registration_timeout -= registration_message_interval;
-            logInfo("Retrying registration... Time left: " + std::to_string(registration_timeout) + " milliseconds");
-        }
-        if (registration_timeout <= 0)
-        {
-            logError("Failed to register with SystemManager after multiple attempts. Exiting.");
-            exit(1);
-        }
-
+        // Register the agent with the SystemManager
+        registerAgent();
         // Set up message handler before starting to receive
         agent_control_->startReceiving(message_handler_);
 
@@ -295,6 +246,48 @@ class AgentBase : public TaskBase
         } catch (const std::exception &e) {
             logError("Failed to send shutdown notification: " + std::string(e.what()));
         }
+    }
+
+    inline bool registerAgent()
+    {
+        RegisterTaskMsg reg_msg(getpid(), name_);
+        // 10 seconds
+        int registration_timeout = 10000; 
+        // 1 second between retries
+        constexpr int registration_message_interval = 1000; 
+        while(registration_timeout > 0)
+        {
+            logInfo(name_ + ": Registering agent with SystemManager");
+            std::unique_ptr<MessageInterface> response = agent_control_->sendRequestAndWaitForResponse(reg_msg, registration_message_interval);
+            if (response)
+            {
+                if(response->getMessageType() != Message_Type::AckMessage)
+                {
+                    logError("Unexpected response type during registration: " + response->toString());
+                    continue; // Retry
+                }
+                auto ack_msg = dynamic_cast<AckMessage *>(response.get());
+                if(static_cast<AckMessage::AckStatus>(ack_msg->getAck_status()) != AckMessage::AckStatus::Success)
+                {
+                    logError("Registration failed, received NACK: " + ack_msg->toString());
+                    continue; // Retry
+                }
+                logInfo("Registration acknowledged by SystemManager: " + response->toString());
+                break; // Successfully registered
+            }
+            else
+            {
+                logError("No response received for registration attempt, retrying...");
+            }
+            registration_timeout -= registration_message_interval;
+        }
+        logInfo("Retrying registration... Time left: " + std::to_string(registration_timeout) + " milliseconds");
+        if (registration_timeout <= 0)
+        {
+            logError("Failed to register with SystemManager after multiple attempts. Exiting.");
+            return false;
+        }
+        return true;
     }
 };
 } // namespace PiTrac
