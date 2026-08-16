@@ -705,11 +705,7 @@ void FlightProcessor::cleanUp()
     logInfo("Cleaning up: " + name_);
     // Stop current operations
     run_.store(false);
-    // Wait for current thread to finish
-    if(agent_thread_.joinable())
-    {
-        agent_thread_.join();
-    }
+
     // Close all cameras if open to release resources and prepare for new mode
     for(uint32_t cam = 0; cam < static_cast<uint32_t>(LMCameras::NUM_CAMERAS); ++cam)
     {
