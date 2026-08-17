@@ -1,0 +1,40 @@
+[
+  # ===== Standard Library Private Headers =====
+  # Map C++ standard library internal headers to their public equivalents
+  { include: ["<bits/.*>", private, "<vector>", public] },
+  { include: ["<bits/.*>", private, "<string>", public] },
+  { include: ["<bits/.*>", private, "<map>", public] },
+  { include: ["<bits/.*>", private, "<memory>", public] },
+  { include: ["<bits/.*>", private, "<algorithm>", public] },
+  { include: ["<bits/.*>", private, "<iostream>", public] },
+  
+  # ===== OpenCV =====
+  # Keep specific OpenCV module headers (don't force everything to opencv.hpp)
+  { include: ["@<opencv4/opencv2/.*>", public, "<opencv4/opencv2/@1>", public] },
+  { include: ["<opencv2/core/.*>", private, "<opencv2/core.hpp>", public] },
+  { include: ["<opencv2/imgproc/.*>", private, "<opencv2/imgproc.hpp>", public] },
+  { include: ["<opencv2/highgui/.*>", private, "<opencv2/highgui.hpp>", public] },
+  { include: ["<opencv2/videoio/.*>", private, "<opencv2/videoio.hpp>", public] },
+  { include: ["<opencv2/calib3d/.*>", private, "<opencv2/calib3d.hpp>", public] },
+  { include: ["<opencv2/aruco/.*>", private, "<opencv2/aruco.hpp>", public] },
+  { include: ["<opencv2/features2d/.*>", private, "<opencv2/features2d.hpp>", public] },
+  
+  # ===== Boost =====
+  # Boost library mappings - keep specific headers
+  { include: ["<boost/circular_buffer/.*>", private, "<boost/circular_buffer.hpp>", public] },
+  { include: ["<boost/log/.*>", private, "<boost/log/trivial.hpp>", public] },
+  { include: ["<boost/property_tree/.*>", private, "<boost/property_tree/ptree.hpp>", public] },
+  { include: ["<boost/property_tree/.*>", private, "<boost/property_tree/json_parser.hpp>", public] },
+  { include: ["<boost/range/adaptor/.*>", private, "<boost/range/adaptor/reversed.hpp>", public] },
+  
+  # ===== msgpack =====
+  { include: ["<msgpack/.*>", private, "<msgpack.hpp>", public] },
+  
+  # ===== SQLite =====
+  { include: ["<sqlite3ext.h>", private, "<sqlite3.h>", public] },
+  
+  # ===== POSIX/System Headers =====
+  { include: ["<sys/socket.h>", public, "<sys/socket.h>", public] },
+  { include: ["<netinet/in.h>", public, "<netinet/in.h>", public] },
+  { include: ["<pthread.h>", public, "<pthread.h>", public] },
+]

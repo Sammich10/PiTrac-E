@@ -19,10 +19,14 @@ RUN apt-get update && apt-get install -y \
     unzip \
     dos2unix \
     uncrustify \
-    iwyu \
+    cppcheck \
+    graphviz \
     curl \
     build-essential \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Install Python-based code analysis tools
+RUN pip3 install --no-cache-dir lizard
 
 # Development stage - includes Yocto SDK
 FROM base AS development

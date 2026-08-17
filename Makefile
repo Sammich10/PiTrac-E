@@ -7,6 +7,10 @@ CMAKEFLAGS=-DCMAKE_TOOLCHAIN_FILE=$(OECORE_NATIVE_SYSROOT)/usr/share/cmake/OEToo
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 BUILD_TYPE ?= Debug
 
+# IWYU variables
+IWYU_MAPPING_FILE = tools/Formatting/iwyu.imp
+IWYU_OUTPUT = build/iwyu_output.txt
+
 default: pitrac_src
 
 .PHONY: pitrac
@@ -62,6 +66,13 @@ help:
 	@echo "Testing:"
 	@echo "  build_tests      - Build unit tests"
 	@echo "  run_tests        - Run all unit tests"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  format           - Run all formatters (uncrustify + iwyu)"
+	@echo "  uncrustify       - Format code with uncrustify"
+	@echo "  iwyu             - Analyze includes (saves results to build/)"
+	@echo "  iwyu-fix         - Analyze and automatically fix includes"
+	@echo "  iwyu-check       - Check includes (including headers)"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  clean            - Clean build directory"
@@ -125,6 +136,31 @@ run_tests: build_tests
 		qemu-aarch64 -L $(OECORE_TARGET_SYSROOT) "$$test" || echo "Test failed: $$test"; \
 		echo ""; \
 	done
+
+.PHONY: format
+format: uncrustify iwyu-fix
+
+.PHONY: uncrustify
+uncrustify:
+	./tools/Formatting/uncrustify.sh --all --yes
+
+.PHONY: iwyu
+iwyu:
+	@echo "Running include-what-you-use analysis..."
+	@iwyu_tool -p $(BUILD_DIR) -- -Xiwyu --mapping_file=$(IWYU_MAPPING_FILE) -x c++ > $(IWYU_OUTPUT) 2>&1 || true
+	@echo "IWYU analysis complete. Results saved to $(IWYU_OUTPUT)"
+	@echo "Review the output and run 'make iwyu-fix' to apply fixes automatically."
+
+.PHONY: iwyu-fix
+iwyu-fix:
+	@echo "Running IWYU and applying automatic fixes..."
+	@iwyu_tool -p $(BUILD_DIR) -- -Xiwyu --mapping_file=$(IWYU_MAPPING_FILE) -x c++ | fix_include --comments --reorder
+	@echo "Include fixes applied!"
+
+.PHONY: iwyu-check
+iwyu-check:
+	@echo "Running IWYU in check-only mode (no fixes)..."
+	@iwyu_tool -p $(BUILD_DIR) -- -Xiwyu --mapping_file=$(IWYU_MAPPING_FILE) -Xiwyu --check_also='*.h' -Xiwyu --check_also='*.hpp' -x c++
 
 .PHONY: all
 all: pitrac build_tests

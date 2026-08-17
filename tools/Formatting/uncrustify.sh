@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # This script will run uncrustify on all source files in the src/ directory and check for formatting issues.
 # Default behavior is to check files changed in the current branch against the master branch, but can be overridden to check all files in the src/ directory.
 
