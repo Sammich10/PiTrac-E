@@ -5,6 +5,7 @@
 #include "Infrastructure/Messaging/Messages/MessageFactory.h"
 #include <zmq.h>
 #include <memory>
+#include <string>
 #include <functional>
 #include <thread>
 #include <atomic>

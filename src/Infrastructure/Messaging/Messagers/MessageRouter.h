@@ -2,9 +2,9 @@
 #define MESSAGE_ROUTER_H
 
 #include "Infrastructure/Messaging/Messagers/MessagerBase.h"
-#include <map>
-#include <string>
-#include <functional>
+#include <set>
+#include <vector>
+#include <mutex>
 
 namespace PiTrac
 {

@@ -30,3 +30,4 @@ __pycache__/
 # database files
 *.db*
 *.sqlite
+dev-env

@@ -12,9 +12,7 @@ DEST_LIB_DIR=/usr/lib
 DEST_CFG_DIR=/etc/pitrac/configs
 DEST_DAT_DIR=/var/lib/pitrac/data
 
-PITRAC_IP=192.168.100.212
-PITRAC_HOSTNAME=pitrac-pi
-PITRAC_USER="root"
+. dev-env
 
 PITRAC_TARGET="${PITRAC_USER}@${PITRAC_HOSTNAME}"
 
