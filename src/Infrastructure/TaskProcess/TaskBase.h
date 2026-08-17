@@ -27,7 +27,7 @@ class TaskBase
   public:
 
     /**
-     * @brief Constructs a TaskBase object with the specified name. 
+     * @brief Constructs a TaskBase object with the specified name.
      * Creates a unique task ID, initializes the logger, and creates a ZMQ context for the process.
      *
      * @param name The name of the task for identification and logging purposes.
@@ -42,7 +42,7 @@ class TaskBase
         logInfo("Task created: " + name_ + " [" + task_id_ + "]");
         MessagerBase::createContext();
     }
- 
+
     /**
      * @brief Destructor for the TaskBase class.
      */
@@ -58,14 +58,14 @@ class TaskBase
 
     /**
      * @brief Primary task entry point, starts the task execution in the current process.
-     * 
+     *
      * @throws std::exception if setupProcess or processMain throws an exception.
-     * 
+     *
      * @return true upon successful task exit, false if the task failed to start.
      */
     bool run()
     {
-        // Guard against running the task if it's already running 
+        // Guard against running the task if it's already running
         if (getStatus() == TaskStatus::Running)
         {
             logWarning("Task already running: " + name_);
@@ -82,7 +82,7 @@ class TaskBase
 
         // Run main loop
         processMain();
-        
+
         // Cleanup the task process environment and resources
         cleanupProcess();
 
@@ -120,7 +120,7 @@ class TaskBase
 
     /**
      * @brief Returns the current status of the task.
-     * 
+     *
      * @return The current TaskStatus of the task.
      */
     TaskStatus getStatus() const
@@ -130,7 +130,7 @@ class TaskBase
 
     /**
      * @brief Checks if the task is currently running.
-     * 
+     *
      * @return true if the task is running, false otherwise.
      */
     bool isRunning() const
@@ -140,17 +140,17 @@ class TaskBase
 
     /**
      * @brief Returns the name of the task.
-     * 
+     *
      * @return A constant reference to the task name string.
      */
     const std::string &getTaskName() const
     {
         return name_;
     }
-    
+
     /**
      * @brief Returns the unique identifier for the task instance.
-     * 
+     *
      * @return A constant reference to the task ID string.
      */
     const std::string &getTaskId() const
@@ -227,7 +227,6 @@ class TaskBase
                 std::to_string(runtime.count()) + "s, ");
     }
 
-
     void logInfo(const std::string &message) const
     {
         if (logger_)
@@ -258,7 +257,7 @@ class TaskBase
         {
             logger_->error(message);
         }
-        else 
+        else
         {
             printf("[ERROR] %s\n", message.c_str());
         }

@@ -63,7 +63,7 @@ class SystemManager : public GSManagerBase
     // Message handlers
     void taskControlMessageHandler
     (
-        std::unique_ptr<MessagerBase::IdentityMessage> identity_message
+        std::unique_ptr<MessageInterface> message
     );
     void externalMessageHandler
     (

@@ -13,7 +13,7 @@ namespace PiTrac
 {
 class ChArUcoDetector : public PatternDetector
 {
-public:
+  public:
     ChArUcoDetector
     (
         const CalibrationModel model
@@ -28,7 +28,7 @@ public:
         std::vector<cv::Point3f> &objectPoints
     )override;
 
-    private:
+  private:
 
     uint32_t squareLength_;
     uint32_t markerLength_;

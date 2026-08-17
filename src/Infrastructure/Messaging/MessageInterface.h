@@ -28,6 +28,7 @@ class MessageInterface
     (
         msgpack::sbuffer &buffer
     ) const = 0;
+
     virtual void deserialize
     (
         const char *data,
@@ -39,6 +40,7 @@ class MessageInterface
     (
         zmq_msg_t &msg
     ) const = 0;
+
     virtual void fromZmqMessage
     (
         zmq_msg_t &msg
@@ -48,12 +50,39 @@ class MessageInterface
     virtual std::string toString() const = 0;
     virtual std::unique_ptr<MessageInterface> clone() const = 0;
 
+    virtual bool isValid() const
+    {
+        return is_valid_;
+    }
+
+    bool hasIdentity() const
+    {
+        return has_identity_;
+    }
+
+    const std::string &getIdentity() const
+    {
+        return identity_;
+    }
+
+    void setIdentity(const std::string &identity)
+    {
+        identity_ = identity;
+        has_identity_ = true;
+    }
+
   protected:
     const std::string incorrectMessageTypeString(const Message_Type incorrectMessageType) const
     {
         return "Message type mismatch: expected " + std::to_string(static_cast<int>(getMessageType())) +
                ", got " + std::to_string(static_cast<int>(incorrectMessageType));
     }
+
+    // Flag to indicate if the message is valid (e.g., after deserialization) TODO: Implement validation logic in derived classes
+    bool is_valid_ = true;
+    std::string error_message_ = "";
+    bool has_identity_ = false;
+    std::string identity_ = "";
 };
 } // namespace PiTrac
 

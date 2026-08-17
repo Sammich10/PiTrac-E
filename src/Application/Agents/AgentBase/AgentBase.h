@@ -57,7 +57,7 @@ class AgentBase : public TaskBase
   protected:
     // Agent thread pool for multithreaded behavior
     std::vector<std::thread> agent_thread_pool_;
-    // Primary agent 
+    // Primary agent
     std::unique_ptr<MessageDealer> agent_control_;
     std::string agent_control_endpoint_;
     std::function<void(std::unique_ptr<MessageInterface>)> message_handler_;
@@ -65,11 +65,7 @@ class AgentBase : public TaskBase
     std::atomic<bool> run_;
     std::mutex mode_mutex_;
 
-    /**
-     * @brief Agent task main loop
-     * Registers the process with the System Manager
-     */
-    void processMain() override
+    virtual bool setupProcess() override
     {
         // Use DEALER socket for registration (part of ROUTER-DEALER pattern)
         auto dealer_identity = agent_control_->getIdentity();
@@ -79,12 +75,21 @@ class AgentBase : public TaskBase
         }
         else
         {
-            logWarning("DEALER socket has no identity set!");
+            logError("DEALER socket has no identity set!");
+            return false;
         }
         // Connect to the SystemManager's ROUTER socket for control messages
         agent_control_->connect(agent_control_endpoint_);
         // Register the agent with the SystemManager
-        registerAgent();
+        return registerAgent();
+    }
+
+    /**
+     * @brief Agent task main loop
+     * Registers the process with the System Manager
+     */
+    void processMain() override
+    {
         // Set up message handler before starting to receive
         agent_control_->startReceiving(message_handler_);
 
@@ -252,14 +257,21 @@ class AgentBase : public TaskBase
     {
         RegisterTaskMsg reg_msg(getpid(), name_);
         // 10 seconds
-        int registration_timeout = 10000; 
+        int registration_timeout = 10000;
         // 1 second between retries
-        constexpr int registration_message_interval = 1000; 
+        constexpr int registration_message_interval = 1000;
+        const MessagerBase::RequestStatus send_status = agent_control_->sendMessage(reg_msg);
+        if(send_status != MessagerBase::RequestStatus::Success)
+        {
+            logError("Failed to send registration message: " + std::to_string(static_cast<int>(send_status)));
+            return false;
+        }
         while(registration_timeout > 0)
         {
             logInfo(name_ + ": Registering agent with SystemManager");
-            std::unique_ptr<MessageInterface> response = agent_control_->sendRequestAndWaitForResponse(reg_msg, registration_message_interval);
-            if (response)
+            std::unique_ptr<MessageInterface> response;
+            const MessagerBase::RequestStatus recv_status = agent_control_->recvMessage(response, registration_message_interval);
+            if (recv_status == MessagerBase::RequestStatus::Success && response)
             {
                 if(response->getMessageType() != Message_Type::AckMessage)
                 {

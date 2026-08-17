@@ -184,8 +184,8 @@ class FlightProcessor : public AgentBase
     std::array<CameraControlSettings_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> current_camera_settings_;
     std::array<std::vector<cv::Point2f>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> last_corners_;
     std::array<std::vector<cv::Point3f>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> last_object_points_;
-    std::array<std::vector<std::vector<cv::Point2f>>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> calibration_corners_buffer_;
-    std::array<std::vector<std::vector<cv::Point3f>>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> calibration_object_points_buffer_;
+    std::array<std::vector<std::vector<cv::Point2f> >, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> calibration_corners_buffer_;
+    std::array<std::vector<std::vector<cv::Point3f> >, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> calibration_object_points_buffer_;
 };
 } // namespace PiTrac
 

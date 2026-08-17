@@ -17,35 +17,18 @@ class MessageRouter : public MessagerBase
 
     virtual ~MessageRouter() = default;
 
-    // Router-specific send method - sends to specific dealer identity
-    void sendMessageToIdentity
+    // Override base send method to require identity for router
+    RequestStatus sendMessage
     (
         const MessageInterface &message,
-        const std::string &identity
-    );
+        const std::string &extra = ""
+    ) final override;
 
-    // Override base send method to require identity for router
-    void sendMessage(const MessageInterface &message) override
-    {
-        throw std::runtime_error("Router requires identity - use sendMessageToIdentity() instead");
-    }
-
-    // Router doesn't use topic-based sending
-    void sendMessage(const MessageInterface &message, const std::string &topic) override
-    {
-        throw std::runtime_error("Router doesn't support topic sending - use sendMessageToIdentity() instead");
-    }
-
-    // Router-specific receiving with identity tracking
-    void startReceivingWithIdentity
+    // Override base receive method to return message with identity
+    RequestStatus recvMessage
     (
-        std::function<void(std::unique_ptr<MessagerBase::IdentityMessage>)> handler
-    );
-
-    // Override base receiving to use identity-aware version
-    void startReceiving
-    (
-        std::function<void(std::unique_ptr<MessageInterface>)> handler
+        std::unique_ptr<MessageInterface> &message,
+        int timeout_ms = 1000
     ) override;
 
     // Broadcast message to all known dealer identities
@@ -63,15 +46,8 @@ class MessageRouter : public MessagerBase
         const std::string &identity
     ) const;
 
-  protected:
-    void receiveLoop() override;
-
   private:
-    // Receive message with identity information
-    std::unique_ptr<MessagerBase::IdentityMessage> receiveMessageWithIdentity();
 
-    // Handler functions
-    std::function<void(std::unique_ptr<MessagerBase::IdentityMessage>)> identity_message_handler_;
     std::function<void(std::unique_ptr<MessageInterface>)> legacy_message_handler_;
 
     // Track connected dealers

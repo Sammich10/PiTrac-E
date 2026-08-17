@@ -15,6 +15,13 @@ namespace PiTrac
 class MessagerBase
 {
   public:
+    enum class RequestStatus
+    {
+        Success,
+        Timeout,
+        Error
+    };
+
     enum class SocketType
     {
         Publisher,
@@ -34,32 +41,9 @@ class MessagerBase
 
     ~MessagerBase();
 
-    static void createContext()
-    {
-        if (!context_)
-        {
-            context_ = zmq_ctx_new();
-            if (!context_)
-            {
-                throw std::runtime_error("Failed to create ZMQ context");
-            }
-            context_ref_count_ = 0;
-        }
-        context_ref_count_++;
-    }
+    static RequestStatus createContext();
 
-    static void destroyContext()
-    {
-        if (context_ && context_ref_count_ > 0)
-        {
-            context_ref_count_--;
-            if (context_ref_count_ == 0)
-            {
-                zmq_ctx_destroy(context_);
-                context_ = nullptr;
-            }
-        }
-    }
+    static void destroyContext();
 
     void setTimeout
     (
@@ -68,69 +52,32 @@ class MessagerBase
 
     int getTimeout() const;
 
-    void bind
+    RequestStatus bind
     (
         const std::string &endpoint
     );
 
-    void connect
+    RequestStatus connect
     (
         const std::string &endpoint
     );
 
-    void disconnect
+    RequestStatus disconnect
     (
         const std::string &endpoint
     );
 
-    void subscribe
-    (
-        const std::string &topic = ""
-    );
-
-    virtual void sendMessage
-    (
-        const MessageInterface &message
-    );
-
-    virtual void sendMessage
+    virtual RequestStatus sendMessage
     (
         const MessageInterface &message,
-        const std::string &topic
+        const std::string &extra = ""
     );
 
-    // Structure to hold message with sender identity (used by router/dealer
-    // classes)
-    struct IdentityMessage
-    {
-        std::string sender_identity;
-        std::unique_ptr<MessageInterface> message;
-    };
-
-    template<typename MessageType>
-    std::unique_ptr<MessageType> receiveMessage(int timeout_ms = -1)
-    {
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
-
-        int rc = zmq_msg_recv(&msg, socket_, 0);
-        if (rc < 0)
-        {
-            zmq_msg_close(&msg);
-            if (errno == EAGAIN)
-            {
-                return nullptr; // Timeout
-            }
-            throw std::runtime_error("Failed to receive message: " + std::string(zmq_strerror(
-                                                                                     errno)));
-        }
-
-        auto message = std::make_unique<MessageType>();
-        message->fromZmqMessage(msg);
-        zmq_msg_close(&msg);
-
-        return message;
-    }
+    virtual RequestStatus recvMessage
+    (
+        std::unique_ptr<MessageInterface> &message,
+        int timeout_ms = 1000
+    );
 
     virtual void startReceiving
     (
@@ -141,27 +88,25 @@ class MessagerBase
 
   protected:
     // Protected members for derived classes
-    void *getSocket()
+    inline void *getSocket()
     {
         return socket_;
     }
 
-    SocketType getSocketType() const
+    inline SocketType getSocketType() const
     {
         return socket_type_;
     }
 
-    bool isRunning() const
+    inline bool isRunning() const
     {
         return running_.load();
     }
 
-    void setRunning(bool running)
+    inline void setRunning(bool running)
     {
         running_.store(running);
     }
-
-    MessageFactory message_factory_ = MessageFactory();
 
     virtual void receiveLoop();
 
@@ -180,16 +125,17 @@ class MessagerBase
     // Thread management - accessible to derived classes
     std::thread receive_thread_;
     std::function<void(std::unique_ptr<MessageInterface>)> message_handler_;
-    std::function<void(std::unique_ptr<IdentityMessage>)> identity_message_handler_;
     std::shared_ptr<GSLogger> logger_;
+    MessageFactory message_factory_;
+
+    void *socket_;
+    SocketType socket_type_;
+    std::atomic<bool> running_;
+    int timeout_ms_ = 1000;
 
   private:
     static void *context_;
     static int context_ref_count_;
-    void *socket_;
-    SocketType socket_type_;
-    std::atomic<bool> running_;
-    int timeout_ms_ = 1000; // Default: 1 second
 }; // class MessagerBase
 } // namespace PiTrac
 

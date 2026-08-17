@@ -1,15 +1,12 @@
 SRC_DIR=src
 TEST_DIR=${SRC_DIR}/tests
 BUILD_DIR=build
+DOCS_DIR=$(BUILD_DIR)/docs
 DEBUG_DIR=$(BUILD_DIR)/debug
 CMAKEFLAGS=-DCMAKE_TOOLCHAIN_FILE=$(OECORE_NATIVE_SYSROOT)/usr/share/cmake/OEToolchainConfig.cmake \
 		-G "Ninja" \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 BUILD_TYPE ?= Debug
-
-# IWYU variables
-IWYU_MAPPING_FILE = tools/Formatting/iwyu.imp
-IWYU_OUTPUT = build/iwyu_output.txt
 
 default: pitrac_src
 
@@ -68,11 +65,12 @@ help:
 	@echo "  run_tests        - Run all unit tests"
 	@echo ""
 	@echo "Code Quality:"
-	@echo "  format           - Run all formatters (uncrustify + iwyu)"
+	@echo "  format           - Run all formatters (uncrustify)"
 	@echo "  uncrustify       - Format code with uncrustify"
-	@echo "  iwyu             - Analyze includes (saves results to build/)"
-	@echo "  iwyu-fix         - Analyze and automatically fix includes"
-	@echo "  iwyu-check       - Check includes (including headers)"
+	@echo "  cppcheck         - Static analysis (cross-compilation safe)"
+	@echo "  complexity       - Analyze code complexity with lizard"
+	@echo "  dead-code        - Find potentially unused functions"
+	@echo "  code-metrics     - Full code quality report"
 	@echo ""
 	@echo "Utilities:"
 	@echo "  clean            - Clean build directory"
@@ -137,30 +135,88 @@ run_tests: build_tests
 		echo ""; \
 	done
 
-.PHONY: format
-format: uncrustify iwyu-fix
-
 .PHONY: uncrustify
 uncrustify:
 	./tools/Formatting/uncrustify.sh --all --yes
 
-.PHONY: iwyu
-iwyu:
-	@echo "Running include-what-you-use analysis..."
-	@iwyu_tool -p $(BUILD_DIR) -- -Xiwyu --mapping_file=$(IWYU_MAPPING_FILE) -x c++ > $(IWYU_OUTPUT) 2>&1 || true
-	@echo "IWYU analysis complete. Results saved to $(IWYU_OUTPUT)"
-	@echo "Review the output and run 'make iwyu-fix' to apply fixes automatically."
+.PHONY: cppcheck
+cppcheck:
+	@echo "Running cppcheck static analysis..."
+	@mkdir -p $(DOCS_DIR)
+	@cppcheck --enable=warning,performance,portability \
+		--suppress=missingIncludeSystem \
+		--suppress=unmatchedSuppression \
+		--inline-suppr \
+		--project=$(BUILD_DIR)/compile_commands.json \
+		--output-file=$(DOCS_DIR)/cppcheck_output.txt \
+		-j 4 2>&1 || true
+	@echo "Cppcheck complete. Results saved to $(DOCS_DIR)/cppcheck_output.txt"
 
-.PHONY: iwyu-fix
-iwyu-fix:
-	@echo "Running IWYU and applying automatic fixes..."
-	@iwyu_tool -p $(BUILD_DIR) -- -Xiwyu --mapping_file=$(IWYU_MAPPING_FILE) -x c++ | fix_include --comments --reorder
-	@echo "Include fixes applied!"
+.PHONY: complexity
+complexity:
+	@mkdir -p $(DOCS_DIR)
+	@lizard $(SRC_DIR) -l cpp -w -o $(DOCS_DIR)/complexity_report.txt || true
+	@echo ""
+	@echo "===== High Complexity Functions (CCN > 15) ====="
+	@lizard $(SRC_DIR) -l cpp -C 15 -w 2>&1 || true
+	@echo ""
+	@echo "Complexity report: $(DOCS_DIR)/complexity_report.txt"
+	@echo ""
+	@echo "Refactoring Guide:"
+	@echo "  CCN 1-10:  Simple (good)"
+	@echo "  CCN 11-20: Moderate (acceptable)"
+	@echo "  CCN 21-50: Complex (consider refactoring)"
+	@echo "  CCN 50+:   Very complex (refactor required!)"
 
-.PHONY: iwyu-check
-iwyu-check:
-	@echo "Running IWYU in check-only mode (no fixes)..."
-	@iwyu_tool -p $(BUILD_DIR) -- -Xiwyu --mapping_file=$(IWYU_MAPPING_FILE) -Xiwyu --check_also='*.h' -Xiwyu --check_also='*.hpp' -x c++
+.PHONY: dead-code
+dead-code: pitrac
+	@echo "Analyzing for potentially unused code..."
+	@mkdir -p $(DOCS_DIR)
+	@# Extract defined symbols (functions)
+	@nm -C -g $(BUILD_DIR)/lib/*.so $(BUILD_DIR)/bin/* 2>/dev/null | \
+		grep " T " | awk '{print $$3}' | sort -u > $(DOCS_DIR)/defined_symbols.txt || true
+	@# Extract referenced symbols
+	@nm -C -u $(BUILD_DIR)/lib/*.so $(BUILD_DIR)/bin/* 2>/dev/null | \
+		awk '{print $$2}' | sort -u > $(DOCS_DIR)/used_symbols.txt || true
+	@# Find symbols defined but never used
+	@comm -23 $(DOCS_DIR)/defined_symbols.txt $(DOCS_DIR)/used_symbols.txt > $(DOCS_DIR)/potentially_unused.txt || true
+	@echo "Found $$(wc -l < $(DOCS_DIR)/potentially_unused.txt) potentially unused symbols"
+	@echo "Review $(DOCS_DIR)/potentially_unused.txt for details"
+
+.PHONY: dependency-graphs
+dependency-graphs:
+	@echo "Generating dependency graph..."
+	cmake -E make_directory $(BUILD_DIR)/dot
+	cmake -E make_directory $(DOCS_DIR)/graphs
+	cmake -S $(SRC_DIR) -B $(BUILD_DIR) --graphviz=$(BUILD_DIR)/dot/dependency_graph.dot
+	dot -Tpng $(BUILD_DIR)/dot/dependency_graph.dot -o $(DOCS_DIR)/graphs/dependency_graph.png
+	@echo "Dependency graph generated at $(DOCS_DIR)/graphs/dependency_graph.png"
+
+.PHONY: code-metrics
+code-metrics: cppcheck complexity dependency-graphs
+	@echo ""
+	@echo "===== Code Quality Summary ====="
+	@echo ""
+	@echo "Lines of Code:"
+	@find $(SRC_DIR) -name "*.cpp" -o -name "*.h" | xargs wc -l | tail -1
+	@echo ""
+	@echo "File Counts:"
+	@echo "  C++ sources: $$(find $(SRC_DIR) -name "*.cpp" | wc -l)"
+	@echo "  Headers:     $$(find $(SRC_DIR) -name "*.h" | wc -l)"
+	@echo ""
+	@echo "Cppcheck: $(BUILD_DIR)/cppcheck_output.txt"
+	@echo "Complexity: $(BUILD_DIR)/complexity_report.txt"
+	@echo ""
+
+.PHONY: all
+all: pitrac build_tests
+
+.PHONY: clean
+clean:
+	cmake -E remove_directory $(BUILD_DIR)
+eck: $(BUILD_DIR)/cppcheck_output.txt"
+	@echo "Complexity: $(BUILD_DIR)/complexity_report.txt"
+	@echo ""
 
 .PHONY: all
 all: pitrac build_tests

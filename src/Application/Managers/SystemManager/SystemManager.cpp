@@ -21,7 +21,7 @@ bool SystemManager::setupProcess()
 {
     logInfo("Setting up task control router");
     task_control_router_->bind(Endpoints::getTaskControlEndpoint());
-    task_control_router_->startReceivingWithIdentity(
+    task_control_router_->startReceiving(
         std::bind(&SystemManager::taskControlMessageHandler, this, std::placeholders::_1)
         );
     logInfo("Setting up system command listener");
@@ -209,7 +209,7 @@ bool SystemManager::handleCalibrationCommand(const SystemCommandMsg &cmd_msg)
                     SystemCommandMsg calib_msg;
                     calib_msg.setCommand_id(static_cast<int32_t>(SystemCommandMsg::CommandID::Calibrate));
                     calib_msg.setCommand_params(params);
-                    task_control_router_->sendMessageToIdentity(calib_msg, agent.zmq_identity);
+                    task_control_router_->sendMessage(calib_msg, agent.zmq_identity);
                 }
                 catch(const std::exception &e)
                 {
@@ -234,7 +234,7 @@ bool SystemManager::handleCalibrationCommand(const SystemCommandMsg &cmd_msg)
                 SystemCommandMsg calib_msg;
                 calib_msg.setCommand_id(static_cast<int32_t>(SystemCommandMsg::CommandID::Calibrate));
                 calib_msg.setCommand_params(params);
-                task_control_router_->sendMessageToIdentity(calib_msg, identity);
+                task_control_router_->sendMessage(calib_msg, identity);
             }
             catch(const std::exception &e)
             {
@@ -290,7 +290,7 @@ bool SystemManager::handleConfigurationCommand(const SystemCommandMsg &cmd_msg)
             SystemCommandMsg config_msg;
             config_msg.setCommand_id(static_cast<int32_t>(SystemCommandMsg::CommandID::Configure));
             config_msg.setCommand_params(params);
-            task_control_router_->sendMessageToIdentity(config_msg, identity);
+            task_control_router_->sendMessage(config_msg, identity);
         }
         catch(const std::exception &e)
         {
@@ -307,10 +307,9 @@ bool SystemManager::handleConfigurationCommand(const SystemCommandMsg &cmd_msg)
 }
 
 // Enhanced handler for ROUTER-DEALER pattern with identity
-void SystemManager::taskControlMessageHandler(std::unique_ptr<MessagerBase::IdentityMessage> identity_message)
+void SystemManager::taskControlMessageHandler(std::unique_ptr<MessageInterface> message)
 {
-    const std::string &sender_identity = identity_message->sender_identity;
-    std::unique_ptr<MessageInterface> &message = identity_message->message;
+    const std::string &sender_identity = message->getIdentity();
 
     const Message_Type type = message->getMessageType();
     switch(type)
@@ -406,7 +405,7 @@ void SystemManager::sendAcknowledgmentToAgent(const std::string &identity, const
     try
     {
         std::lock_guard<std::mutex> router_lock(router_mutex_);
-        task_control_router_->sendMessageToIdentity(ack, identity);
+        task_control_router_->sendMessage(ack, identity);
         logInfo("Sent acknowledgment to agent: " + identity);
     }
     catch (const std::exception &e)
@@ -443,7 +442,7 @@ void SystemManager::sendModeChangeToAgent(const std::string &identity, SystemMod
         ChangeModeMsg mode_msg((int32_t)new_mode);
         try {
             std::lock_guard<std::mutex> router_lock(router_mutex_);
-            task_control_router_->sendMessageToIdentity(mode_msg, identity);
+            task_control_router_->sendMessage(mode_msg, identity);
             agent_it->second.current_mode = new_mode;
             logInfo("Sent mode change to " + agent_it->second.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
         } catch (const std::exception &e) {
@@ -465,7 +464,7 @@ bool SystemManager::broadcastModeChange(SystemMode_Type new_mode)
         ChangeModeMsg mode_msg((int32_t)new_mode);
         try {
             std::lock_guard<std::mutex> router_lock(router_mutex_);
-            task_control_router_->sendMessageToIdentity(mode_msg, identity);
+            task_control_router_->sendMessage(mode_msg, identity);
             registered_agents_[identity].current_mode = new_mode;
             logInfo("Broadcasted mode change to " + agent.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
         } catch (const std::exception &e) {

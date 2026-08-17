@@ -301,112 +301,112 @@ bool FlightProcessor::processCalibrationCommand(const std::map<std::string, std:
     // Parse calibration parameters from command
     if (commandParams.find("action") != commandParams.end())
     {
-    std::string action = commandParams.at("action");
-    int32_t camera_index = commandParams.find("camera_index") != commandParams.end() ? std::stoul(commandParams.at("camera_index")) : -1; // Default to camera 0 if not specified
-    if(camera_index < 0 || camera_index >= static_cast<int32_t>(LMCameras::NUM_CAMERAS))
-    {
-        logWarning(name_ + ": Invalid or missing camera index in calibration command, defaulting to camera 0");
-        return false;
-    }
-    if (action == "capture_image")
-    {
-        logInfo(name_ + ": Capturing calibration image");
-        // Capture a single frame for calibration, use the frame buffer from the viewfinder stream to ensure we get the most recent frame and
-        // avoid interrupting the continuous capture for viewfinder mode. The viewfinder callback will continue to add frames to the
-        // buffer, so we just need to grab the latest one when we get this command.
-        cv::Mat calibration_frame, debug_image;
-        frame_buffer_[camera_index]->getFrame(calibration_frame);
-        debug_image = calibration_frame.clone(); // Create a copy of the frame for drawing debug info
-        const ImageQuality quality = distortion_calibrator_->processImage(calibration_frame, debug_image, last_corners_[camera_index], last_object_points_[camera_index]);
-        // Stream the debug image without applying calibration so the user can see the quality metrics and decide whether to keep or discard this calibration image.
-        pause_stream_[camera_index].store(true); // Pause streaming while we process this calibration image and wait for user feedback
-        streamFrame(debug_image, camera_index, false);
-        // logInfo(name_ + ": Calibration image captured with quality: " + ImageQualityToString(quality));
-    }
-    else if(action == "accept_image")
-    {
-        logInfo(name_ + ": Accepting calibration image and adding to calibrator");
-        if(last_corners_[camera_index].empty() || last_object_points_[camera_index].empty())
+        std::string action = commandParams.at("action");
+        int32_t camera_index = commandParams.find("camera_index") != commandParams.end() ? std::stoul(commandParams.at("camera_index")) : -1; // Default to camera 0 if not specified
+        if(camera_index < 0 || camera_index >= static_cast<int32_t>(LMCameras::NUM_CAMERAS))
         {
-            logWarning(name_ + ": No valid corners or object points detected for the last calibration image, cannot accept image");
+            logWarning(name_ + ": Invalid or missing camera index in calibration command, defaulting to camera 0");
             return false;
         }
-        calibration_corners_buffer_[camera_index].push_back(last_corners_[camera_index]);
-        calibration_object_points_buffer_[camera_index].push_back(last_object_points_[camera_index]);
-        last_corners_[camera_index].clear(); // Clear the last corners and object points after adding to the buffer
-        last_object_points_[camera_index].clear();
-        // Unpause streaming after processing the captured image
-        pause_stream_[camera_index].store(false); 
-    }
-    else if(action == "reject_image")
-    {
-        logInfo(name_ + ": Last calibration image rejected and cleared from buffer");
-        last_corners_[camera_index].clear();
-        last_object_points_[camera_index].clear();
-        pause_stream_[camera_index].store(false); // Unpause streaming after rejecting the image
-    }
-    else if(action == "do_distortion_cal")
-    {
-        logInfo(name_ + ": Performing distortion calibration");
-        pause_stream_[camera_index].store(false);
-        if(!distortion_calibrator_->doDistortionCalibration(calibration_corners_buffer_[camera_index], calibration_object_points_buffer_[camera_index]))
+        if (action == "capture_image")
         {
-            logError(name_ + ": Distortion calibration failed");
-            return false;
+            logInfo(name_ + ": Capturing calibration image");
+            // Capture a single frame for calibration, use the frame buffer from the viewfinder stream to ensure we get the most recent frame and
+            // avoid interrupting the continuous capture for viewfinder mode. The viewfinder callback will continue to add frames to the
+            // buffer, so we just need to grab the latest one when we get this command.
+            cv::Mat calibration_frame, debug_image;
+            frame_buffer_[camera_index]->getFrame(calibration_frame);
+            debug_image = calibration_frame.clone(); // Create a copy of the frame for drawing debug info
+            const ImageQuality quality = distortion_calibrator_->processImage(calibration_frame, debug_image, last_corners_[camera_index], last_object_points_[camera_index]);
+            // Stream the debug image without applying calibration so the user can see the quality metrics and decide whether to keep or discard this calibration image.
+            pause_stream_[camera_index].store(true); // Pause streaming while we process this calibration image and wait for user feedback
+            streamFrame(debug_image, camera_index, false);
+            // logInfo(name_ + ": Calibration image captured with quality: " + ImageQualityToString(quality));
         }
-        camera_matrix_[camera_index] = distortion_calibrator_->getCameraMatrix();
-        dist_coeffs_[camera_index] = distortion_calibrator_->getDistortionCoefficients();
-        
-        logInfo(name_ + ": Distortion calibration completed successfully with reprojection error: " + std::to_string(distortion_calibrator_->getReprojectionError()) + " pixels");
-    }
-    else if(action == "save_calibration")
-    {
-        if(!valid_calibration_data_[camera_index].load())
+        else if(action == "accept_image")
         {
-            logWarning("No valid calibration data to save for camera index " + std::to_string(camera_index));
-            return false;
-        }
-        logInfo(name_ + ": Saving calibration results to database");
-        // Save the latest calibration results to the database with a new entry
-        CalibrationEntry_Type entryInfo;
-        entryInfo.calibration_type = distortion_calibrator_->getCalibrationModel();
-        entryInfo.reprojection_error = distortion_calibrator_->getReprojectionError();
-        bool save_success = false;
-        switch(distortion_calibrator_->getCalibrationModel())
-        {
-            case CalibrationModel::STANDARD:
-                save_success = calibration_data_->putCalibrationEntry(camera_info_[camera_index].uuid, entryInfo, dist_coeffs_[camera_index].coeffs.standard, camera_matrix_[camera_index]);
-                break;
-            case CalibrationModel::FISHEYE:
-                save_success = calibration_data_->putCalibrationEntry(camera_info_[camera_index].uuid, entryInfo, dist_coeffs_[camera_index].coeffs.fisheye, camera_matrix_[camera_index]);
-                break;
-            default:
-                logError(name_ + ": Unknown calibration model, cannot save to database");
+            logInfo(name_ + ": Accepting calibration image and adding to calibrator");
+            if(last_corners_[camera_index].empty() || last_object_points_[camera_index].empty())
+            {
+                logWarning(name_ + ": No valid corners or object points detected for the last calibration image, cannot accept image");
                 return false;
+            }
+            calibration_corners_buffer_[camera_index].push_back(last_corners_[camera_index]);
+            calibration_object_points_buffer_[camera_index].push_back(last_object_points_[camera_index]);
+            last_corners_[camera_index].clear(); // Clear the last corners and object points after adding to the buffer
+            last_object_points_[camera_index].clear();
+            // Unpause streaming after processing the captured image
+            pause_stream_[camera_index].store(false);
         }
-        if(!save_success)
+        else if(action == "reject_image")
         {
-            logError(name_ + ": Failed to save calibration results to database");
+            logInfo(name_ + ": Last calibration image rejected and cleared from buffer");
+            last_corners_[camera_index].clear();
+            last_object_points_[camera_index].clear();
+            pause_stream_[camera_index].store(false); // Unpause streaming after rejecting the image
+        }
+        else if(action == "do_distortion_cal")
+        {
+            logInfo(name_ + ": Performing distortion calibration");
+            pause_stream_[camera_index].store(false);
+            if(!distortion_calibrator_->doDistortionCalibration(calibration_corners_buffer_[camera_index], calibration_object_points_buffer_[camera_index]))
+            {
+                logError(name_ + ": Distortion calibration failed");
+                return false;
+            }
+            camera_matrix_[camera_index] = distortion_calibrator_->getCameraMatrix();
+            dist_coeffs_[camera_index] = distortion_calibrator_->getDistortionCoefficients();
+
+            logInfo(name_ + ": Distortion calibration completed successfully with reprojection error: " + std::to_string(distortion_calibrator_->getReprojectionError()) + " pixels");
+        }
+        else if(action == "save_calibration")
+        {
+            if(!valid_calibration_data_[camera_index].load())
+            {
+                logWarning("No valid calibration data to save for camera index " + std::to_string(camera_index));
+                return false;
+            }
+            logInfo(name_ + ": Saving calibration results to database");
+            // Save the latest calibration results to the database with a new entry
+            CalibrationEntry_Type entryInfo;
+            entryInfo.calibration_type = distortion_calibrator_->getCalibrationModel();
+            entryInfo.reprojection_error = distortion_calibrator_->getReprojectionError();
+            bool save_success = false;
+            switch(distortion_calibrator_->getCalibrationModel())
+            {
+                case CalibrationModel::STANDARD:
+                    save_success = calibration_data_->putCalibrationEntry(camera_info_[camera_index].uuid, entryInfo, dist_coeffs_[camera_index].coeffs.standard, camera_matrix_[camera_index]);
+                    break;
+                case CalibrationModel::FISHEYE:
+                    save_success = calibration_data_->putCalibrationEntry(camera_info_[camera_index].uuid, entryInfo, dist_coeffs_[camera_index].coeffs.fisheye, camera_matrix_[camera_index]);
+                    break;
+                default:
+                    logError(name_ + ": Unknown calibration model, cannot save to database");
+                    return false;
+            }
+            if(!save_success)
+            {
+                logError(name_ + ": Failed to save calibration results to database");
+                return false;
+            }
+            logInfo("Calibration results stored in database successfully");
+        }
+        else if(action == "clear_buffer")
+        {
+            logInfo(name_ + ": Clearing calibration frame buffer");
+            // Clear the frame buffer after calibration
+            frame_buffer_[camera_index]->clear();
+            distortion_calibrator_->reset();
+            last_corners_[camera_index].clear();
+            last_object_points_[camera_index].clear();
+            calibration_corners_buffer_[camera_index].clear();
+            calibration_object_points_buffer_[camera_index].clear();
+        }
+        else
+        {
+            logError(name_ + ": Unknown calibration action: " + action);
             return false;
         }
-        logInfo("Calibration results stored in database successfully");
-    }
-    else if(action == "clear_buffer")
-    {
-        logInfo(name_ + ": Clearing calibration frame buffer");
-        // Clear the frame buffer after calibration
-        frame_buffer_[camera_index]->clear();
-        distortion_calibrator_->reset();
-        last_corners_[camera_index].clear();
-        last_object_points_[camera_index].clear();
-        calibration_corners_buffer_[camera_index].clear();
-        calibration_object_points_buffer_[camera_index].clear();
-    }
-    else
-    {
-        logError(name_ + ": Unknown calibration action: " + action);
-        return false;
-    }
     }
     return true;
 }
@@ -603,10 +603,10 @@ void FlightProcessor::streamFrame(cv::Mat &frame, const uint32_t camera_index, c
         camera_[camera_index]->getFrameRate(),
         encoded_data,
         { {"Codec", "JPEG"}
-        , {"Quality", "90"}
-        , {"ExposureTime", std::to_string((double)current_camera_settings_[camera_index].exposure_time_us * Constants::MICROSECONDS_TO_SECONDS)}
-        , {"AnalogGain", std::to_string(current_camera_settings_[camera_index].analog_gain)}
-        , {"FOVScale", std::to_string(current_camera_settings_[camera_index].fov_scale)} 
+            , {"Quality", "90"}
+            , {"ExposureTime", std::to_string((double)current_camera_settings_[camera_index].exposure_time_us * Constants::MICROSECONDS_TO_SECONDS)}
+            , {"AnalogGain", std::to_string(current_camera_settings_[camera_index].analog_gain)}
+            , {"FOVScale", std::to_string(current_camera_settings_[camera_index].fov_scale)}
         }
         );
     data_publisher_->sendMessage(frame_msg);

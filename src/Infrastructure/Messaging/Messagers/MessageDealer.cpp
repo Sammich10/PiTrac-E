@@ -20,97 +20,31 @@ std::optional<std::string> MessageDealer::getIdentity() const
     return identity_;
 }
 
-std::unique_ptr<MessageInterface> MessageDealer::sendRequestAndWaitForResponse(
-    const MessageInterface &request,
-    int timeout_ms)
+MessageDealer::RequestStatus MessageDealer::sendEmptyFrame()
 {
-    // Send the request
-    sendMessage(request);
-
-    // Wait for response
-    void *socket = getSocket();
-
-    // Set receive timeout
-    zmq_setsockopt(socket, ZMQ_RCVTIMEO, &timeout_ms, sizeof(timeout_ms));
-
-    // Check for multi-part message (empty frame + message)
-    zmq_msg_t first_msg;
-    zmq_msg_init(&first_msg);
-
-    int rc = zmq_msg_recv(&first_msg, socket, 0);
+    zmq_msg_t empty_frame;
+    zmq_msg_init(&empty_frame);
+    int rc = zmq_msg_send(&empty_frame, socket_, ZMQ_SNDMORE);
     if (rc < 0)
     {
-        zmq_msg_close(&first_msg);
-        if (errno == EAGAIN)
-        {
-            return nullptr; // Timeout
-        }
-        throw std::runtime_error("Failed to receive response: " + std::string(zmq_strerror(errno)));
+        zmq_msg_close(&empty_frame);
+        return RequestStatus::Error;
     }
+    zmq_msg_close(&empty_frame);
+    return RequestStatus::Success;
+}
 
-    // Check if this is a multi-part message
-    int more;
-    size_t more_size = sizeof(more);
-    zmq_getsockopt(socket, ZMQ_RCVMORE, &more, &more_size);
-
-    if (more)
+MessageDealer::RequestStatus MessageDealer::sendMessage(const MessageInterface &message, const std::string &extra)
+{
+    // For DEALER sockets, send empty frame first to be compatible with ROUTER
+    // DEALER will automatically prepend identity: [identity][empty][message]
+    RequestStatus empty_frame_status = sendEmptyFrame();
+    if (empty_frame_status != RequestStatus::Success)
     {
-        // This was an empty frame, receive the actual message
-        zmq_msg_close(&first_msg);
-        zmq_msg_t msg;
-        zmq_msg_init(&msg);
-        rc = zmq_msg_recv(&msg, socket, 0);
-
-        if (rc < 0)
-        {
-            zmq_msg_close(&msg);
-            if (errno == EAGAIN)
-            {
-                return nullptr; // Timeout
-            }
-            throw std::runtime_error("Failed to receive message part: " + std::string(zmq_strerror(errno)));
-        }
-
-        try {
-            // Add safety checks for the ZMQ message
-            size_t msg_size = zmq_msg_size(&msg);
-            void *msg_data = zmq_msg_data(&msg);
-
-            if (msg_size == 0)
-            {
-                zmq_msg_close(&msg);
-                return nullptr;
-            }
-
-            if (msg_data == nullptr)
-            {
-                zmq_msg_close(&msg);
-                return nullptr;
-            }
-
-            std::unique_ptr<MessageInterface> message = message_factory_.createFromZmqMessage(msg);
-            zmq_msg_close(&msg);
-            return message;
-        } catch (const std::exception &e) {
-            zmq_msg_close(&msg);
-            throw std::runtime_error("Failed to parse response: " + std::string(e.what()));
-        } catch (...) {
-            zmq_msg_close(&msg);
-            throw std::runtime_error("Unknown exception during message parsing");
-        }
+        return empty_frame_status;
     }
-    else
-    {
-        // Single frame message
-        try {
-            std::unique_ptr<MessageInterface> message = message_factory_.createFromZmqMessage(first_msg);
-            zmq_msg_close(&first_msg);
-            return message;
-        } catch (const std::exception &e) {
-            zmq_msg_close(&first_msg);
-            throw std::runtime_error("Failed to parse response: " + std::string(e.what()));
-        }
-    }
+    // Send the actual message (use the common base class implementation)
+    return MessagerBase::sendMessage(message, extra);
 }
 
 bool MessageDealer::isConnectedToRouter() const

@@ -53,6 +53,7 @@ MessagerBase::MessagerBase(SocketType type)
         throw std::runtime_error("Failed to create ZMQ socket");
     }
     setTimeout(timeout_ms_);
+    message_factory_ = MessageFactory();
 }
 
 MessagerBase::~MessagerBase()
@@ -68,6 +69,29 @@ MessagerBase::~MessagerBase()
     }
 }
 
+MessagerBase::RequestStatus MessagerBase::createContext()
+{
+    if (!context_)
+    {
+        context_ = zmq_ctx_new();
+        if (!context_)
+        {
+            return RequestStatus::Error;
+        }
+        context_ref_count_ = 1;
+    }
+    return RequestStatus::Success;
+}
+
+void MessagerBase::destroyContext()
+{
+    if (context_)
+    {
+        zmq_ctx_destroy(context_);
+        context_ = nullptr;
+    }
+}
+
 void MessagerBase::setTimeout(const int timeout_ms)
 {
     timeout_ms_ = timeout_ms;
@@ -79,90 +103,123 @@ int MessagerBase::getTimeout() const
     return timeout_ms_;
 }
 
-void MessagerBase::bind(const std::string &endpoint)
+MessagerBase::RequestStatus MessagerBase::bind(const std::string &endpoint)
 {
     int rc = zmq_bind(socket_, endpoint.c_str());
     if (rc != 0)
     {
-        throw std::runtime_error("Failed to bind to " + endpoint + ": " + zmq_strerror(errno));
+        return RequestStatus::Error;
     }
+    return RequestStatus::Success;
 }
 
-void MessagerBase::connect(const std::string &endpoint)
+MessagerBase::RequestStatus MessagerBase::connect(const std::string &endpoint)
 {
     int rc = zmq_connect(socket_, endpoint.c_str());
     if (rc != 0)
     {
-        throw std::runtime_error("Failed to connect to " + endpoint + ": " +
-                                 zmq_strerror(errno));
+        return RequestStatus::Error;
     }
+    return RequestStatus::Success;
 }
 
-void MessagerBase::disconnect(const std::string &endpoint)
+MessagerBase::RequestStatus MessagerBase::disconnect(const std::string &endpoint)
 {
     int rc = zmq_disconnect(socket_, endpoint.c_str());
     if (rc != 0)
     {
-        throw std::runtime_error("Failed to disconnect from " + endpoint + ": " +
-                                 zmq_strerror(errno));
+        return RequestStatus::Error;
     }
+    return RequestStatus::Success;
 }
 
-void MessagerBase::subscribe(const std::string &topic)
+MessagerBase::RequestStatus MessagerBase::sendMessage(const MessageInterface &message, const std::string &extra)
 {
-    int rc = zmq_setsockopt(socket_, ZMQ_SUBSCRIBE, topic.c_str(), topic.length());
-    if (rc != 0)
+    if(!extra.empty())
     {
-        throw std::runtime_error("Failed to subscribe to topic: " +
-                                 std::string(zmq_strerror(errno)));
-    }
-}
-
-void MessagerBase::sendMessage(const MessageInterface &message)
-{
-    // For DEALER sockets, send empty frame first to be compatible with ROUTER
-    // DEALER will automatically prepend identity: [identity][empty][message]
-    if (socket_type_ == SocketType::Dealer)
-    {
-        zmq_msg_t empty_frame;
-        zmq_msg_init(&empty_frame);
-        int rc = zmq_msg_send(&empty_frame, socket_, ZMQ_SNDMORE);
+        // Send extra frame first
+        zmq_msg_t extra_msg;
+        zmq_msg_init_size(&extra_msg, extra.size());
+        memcpy(zmq_msg_data(&extra_msg), extra.c_str(), extra.size());
+        int rc = zmq_msg_send(&extra_msg, socket_, ZMQ_SNDMORE);
         if (rc < 0)
         {
-            zmq_msg_close(&empty_frame);
-            throw std::runtime_error("Failed to send empty frame: " + std::string(zmq_strerror(errno)));
+            zmq_msg_close(&extra_msg);
+            return RequestStatus::Error;
         }
-        zmq_msg_close(&empty_frame);
+        zmq_msg_close(&extra_msg);
     }
-
-    // Send the actual message
+    // Pack the message into a ZMQ message
     zmq_msg_t msg;
     message.toZmqMessage(msg);
-
+    // Send the message
     int rc = zmq_msg_send(&msg, socket_, 0);
     if (rc < 0)
     {
         zmq_msg_close(&msg);
-        throw std::runtime_error("Failed to send message: " + std::string(zmq_strerror(errno)));
+        return RequestStatus::Error;
     }
-
     zmq_msg_close(&msg);
-
     // Allow derived classes to perform actions after successful send
     onMessageSent();
+    return RequestStatus::Success;
 }
 
-void MessagerBase::sendMessage(const MessageInterface &message, const std::string &topic)
+MessagerBase::RequestStatus MessagerBase::recvMessage(std::unique_ptr<MessageInterface> &message, int timeout_ms)
 {
-    // Send topic frame first
-    zmq_msg_t topic_msg;
-    zmq_msg_init_size(&topic_msg, topic.size());
-    memcpy(zmq_msg_data(&topic_msg), topic.c_str(), topic.size());
-    zmq_msg_send(&topic_msg, socket_, ZMQ_SNDMORE);
-    zmq_msg_close(&topic_msg);
+    // Set receive timeout
+    zmq_setsockopt(socket_, ZMQ_RCVTIMEO, &timeout_ms, sizeof(timeout_ms));
 
-    // Send message frame
-    sendMessage(message);
+    zmq_msg_t msg;
+    zmq_msg_init(&msg);
+
+    int rc = zmq_msg_recv(&msg, socket_, 0);
+    if (rc < 0)
+    {
+        zmq_msg_close(&msg);
+        if (errno == EAGAIN)
+        {
+            return RequestStatus::Timeout;
+        }
+        return RequestStatus::Error;
+    }
+
+    int more;
+    size_t more_size = sizeof(more);
+    zmq_getsockopt(socket_, ZMQ_RCVMORE, &more, &more_size);
+
+    if(more)
+    {
+        // This is a multi-part message, receive the next part
+        zmq_msg_close(&msg);
+        zmq_msg_t next_msg;
+        zmq_msg_init(&next_msg);
+        rc = zmq_msg_recv(&next_msg, socket_, 0);
+        if (rc < 0)
+        {
+            zmq_msg_close(&next_msg);
+            if (errno == EAGAIN)
+            {
+                return RequestStatus::Timeout;
+            }
+            return RequestStatus::Error;
+        }
+        message = message_factory_.createFromZmqMessage(next_msg);
+        zmq_msg_close(&next_msg);
+    }
+    else
+    {
+        // Single frame message
+        message = message_factory_.createFromZmqMessage(msg);
+        zmq_msg_close(&msg);
+    }
+
+    if(!message->isValid())
+    {
+        return RequestStatus::Error;
+    }
+
+    return RequestStatus::Success;
 }
 
 void MessagerBase::startReceiving(std::function<void(std::unique_ptr<MessageInterface>)> handler)
@@ -228,8 +285,6 @@ void MessagerBase::stop()
     }
 }
 
-MessageFactory message_factory_ = MessageFactory();
-
 void MessagerBase::receiveLoop()
 {
     while (running_.load())
@@ -240,112 +295,33 @@ void MessagerBase::receiveLoop()
             break;
         }
 
-        zmq_msg_t msg;
-        int init_rc = zmq_msg_init(&msg);
-        if (init_rc != 0)
+        std::unique_ptr<MessageInterface> message;
+        const RequestStatus status = recvMessage(message, timeout_ms_);
+        if (status == RequestStatus::Timeout)
         {
-            break;
+            continue; // No message received, loop again
         }
-
-        // Use non-blocking receive with timeout handled by socket option
-        int rc = zmq_msg_recv(&msg, socket_, ZMQ_DONTWAIT);
-
-        if (rc >= 0 && message_handler_)
+        else if (status == RequestStatus::Error)
         {
-            // Check if this is a multi-part message (DEALER receiving from
-            // ROUTER)
-            int more;
-            size_t more_size = sizeof(more);
-            zmq_getsockopt(socket_, ZMQ_RCVMORE, &more, &more_size);
-
-            std::unique_ptr<MessageInterface> message;
-
-            if (more)
-            {
-                // This was an empty frame from ROUTER, receive the actual
-                // message
-                zmq_msg_close(&msg);
-
-                zmq_msg_t actual_msg;
-                zmq_msg_init(&actual_msg);
-                int second_rc = zmq_msg_recv(&actual_msg, socket_, ZMQ_DONTWAIT);
-
-                if (second_rc >= 0)
-                {
-                    try
-                    {
-                        message = message_factory_.createFromZmqMessage(actual_msg);
-                    }
-                    catch (const std::exception &e)
-                    {
-                        zmq_msg_close(&actual_msg);
-                        continue;
-                    }
-                }
-                else
-                {
-                    zmq_msg_close(&actual_msg);
-                    continue;
-                }
-                zmq_msg_close(&actual_msg);
-            }
-            else
-            {
-                // This is a single frame message
-                try
-                {
-                    message = message_factory_.createFromZmqMessage(msg);
-                }
-                catch (const std::exception &e)
-                {
-                    zmq_msg_close(&msg);
-                    continue;
-                }
-            }
-
-            if (message)
-            {
-                message_handler_(std::move(message));
-                onMessageReceived(); // Allow derived classes to perform
-                                     // additional actions
-            }
-        }
-        else if (errno == EAGAIN)
-        {
-            // No message available, sleep briefly to avoid busy waiting
-            // But check running flag more frequently
-            for (int i = 0; i < 10 && running_.load(); ++i)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-        }
-        else if (errno == ETERM)
-        {
-            // Context was terminated
-            zmq_msg_close(&msg);
-            break;
-        }
-        else if (errno == ENOTSOCK)
-        {
-            zmq_msg_close(&msg);
-            break;
-        }
-        else if (errno == EINTR)
-        {
-            zmq_msg_close(&msg);
+            // Log error and continue
+            logger_->error("Error receiving message in receive loop");
             continue;
         }
-        else
+        else if(status == RequestStatus::Success && message)
         {
-            // Other error occurred
-            zmq_msg_close(&msg);
-            break;
-        }
-
-        int close_rc = zmq_msg_close(&msg);
-        if (close_rc != 0)
-        {
-            // Message close failed, but continue
+            // Handle the message asynchronously to avoid blocking the receive loop
+            if (message_handler_)
+            {
+                // Process message in a separate thread to keep receive loop responsive
+                std::thread([this, msg = std::move(message)]() mutable {
+                        try {
+                            message_handler_(std::move(msg));
+                        } catch (const std::exception &e) {
+                            logger_->error("Error in async message handler: %s", e.what());
+                        }
+                    }).detach();
+            }
+            onMessageReceived(); // Allow derived classes to perform additional actions
         }
     }
 }

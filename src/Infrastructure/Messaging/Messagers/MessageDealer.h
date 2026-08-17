@@ -11,6 +11,9 @@ namespace PiTrac
 class MessageDealer : public MessagerBase
 {
   public:
+    /**
+     * @brief Constructs a MessageDealer object with an optional identity.
+     */
     MessageDealer(const std::string &identity = "")
         : MessagerBase(SocketType::Dealer)
     {
@@ -20,19 +23,33 @@ class MessageDealer : public MessagerBase
         }
     }
 
+    /**
+     * @brief Destructor for the MessageDealer class.
+     */
     virtual ~MessageDealer() = default;
 
-    // Get dealer identity (if set)
+    /**
+     * @brief Sends a message with an extra frame through the DEALER socket.
+     * This method overrides the base class implementation to prepend an empty frame for ROUTER compatibility.
+     * @param[in] message The message to be sent.
+     * @param[in] extra The extra frame associated with the message.
+     */
+    RequestStatus sendMessage
+    (
+        const MessageInterface &message,
+        const std::string &extra = ""
+    ) final override;
+
+    /**
+     * @brief Gets the identity of the DEALER socket.
+     * @return The identity of the DEALER socket, if set; otherwise, std::nullopt.
+     */
     std::optional<std::string> getIdentity() const;
 
-    // Request-response pattern for dealers
-    std::unique_ptr<MessageInterface> sendRequestAndWaitForResponse
-    (
-        const MessageInterface &request,
-        int timeout_ms = 5000
-    );
-
-    // Check connection status to router
+    /**
+     * @brief Checks if the DEALER socket is connected to a ROUTER socket.
+     * @return true if connected to a ROUTER socket, false otherwise.
+     */
     bool isConnectedToRouter() const;
 
   protected:
@@ -43,6 +60,7 @@ class MessageDealer : public MessagerBase
     void onMessageSent() override;
 
   private:
+    inline RequestStatus sendEmptyFrame();
     // Set dealer identity (optional - ZMQ will auto-generate if not set)
     void setIdentity
     (
