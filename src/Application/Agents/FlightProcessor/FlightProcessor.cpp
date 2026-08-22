@@ -3,7 +3,6 @@
 #include "Common/Utils/Calibration/CalibrationUtils.h"
 #include "Common/Utils/Detection/BallDetectionUtils.h"
 #include "Common/Math/Constants.h"
-#include <libcamera/camera_manager.h>
 #include <thread>
 #include <semaphore>
 #include <future>
@@ -25,36 +24,38 @@ FlightProcessor::FlightProcessor(const std::string &process_name)
         apply_calibrations_to_viewfinder_[cam] = false; // Initialize apply calibrations to viewfinder flag
         frame_counter_[cam] = 0; // Initialize frame counter
     }
+    camera_manager_ = nullptr; // Initialize camera manager pointer to null
     distortion_calibrator_ = nullptr; // Initialize distortion calibrator pointer to null
 }
 
 FlightProcessor::~FlightProcessor()
 {
+    cleanUp();
     logInfo("FlightProcessor destroyed: " + name_);
 }
 
 bool FlightProcessor::setupProcess()
 {
     logInfo("Setting up " + name_);
-    // Instantiate the camera manager and start it
-    std::shared_ptr<libcamera::CameraManager> camera_manager = std::make_shared<libcamera::CameraManager>();
-    const int ret = camera_manager->start();
+    // Instantiate the libcamera camera manager and start it
+    camera_manager_ = std::make_shared<libcamera::CameraManager>();
+    const int ret = camera_manager_->start();
     if (ret)
     {
-        logError("Failed to start camera manager for: " + name_);
+        logError("Failed to start camera manager for: " + name_ + ". Error code: " + std::to_string(ret));
         return false;
     }
     // Instantiate the two cameras and initialize them
     for(uint32_t cam = 0; cam < static_cast<uint32_t>(LMCameras::NUM_CAMERAS); ++cam)
     {
-        if(camera_manager->cameras().size() <= cam)
+        if(camera_manager_->cameras().size() <= cam)
         {
             logError("Camera index " + std::to_string(cam) + " out of range for: " + name_);
             return false;
         }
         else
         {
-            camera_[cam] = std::make_unique<GSCameraBase>(cam, camera_manager);
+            camera_[cam] = std::make_unique<GSCameraBase>(cam, camera_manager_);
             // Instantiate the camera object
             if(camera_[cam] == nullptr)
             {

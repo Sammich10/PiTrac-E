@@ -6,6 +6,9 @@
 #include "Common/System/Endpoints.h"
 #include "Infrastructure/TaskProcess/TaskStatus.h"
 #include <string>
+#include <thread>
+#include <list>
+#include <array>
 #include <vector>
 #include <memory>
 #include <unistd.h>
@@ -159,6 +162,118 @@ class TaskBase
     }
 
   protected:
+
+    /**
+     * @brief Nested class to handle event-driven actions in a separate thread.
+     * This class encapsulates the logic for running a specified action in a separate thread,
+     * while also managing a messager and a message handler for processing messages.
+     * The action is executed in the run() method, which is called when the thread starts.
+     * The thread is joined in the destructor to ensure proper cleanup.
+     * The EventThread class is intended to be used by derived classes of TaskBase to handle
+     * specific event-driven actions related to the task's operation driven through the ZMQ middleware layer.
+     */
+    class EventThread
+    {
+    public:
+        EventThread(std::shared_ptr<MessagerBase> messager, std::function<void(const std::unique_ptr<MessageInterface> &)> message_handler)
+            : messager_(messager)
+            , message_handler_(message_handler)
+            , logger_(GSLogger::getInstance())
+        {
+        }
+
+        ~EventThread()
+        {
+            if (thread_.joinable())
+            {
+                thread_.join();
+            }
+        }
+
+        enum class ThreadStatus
+        {
+            NotStarted,
+            Running,
+            RequestStop,
+            Stopped,
+            Exited
+        };
+
+        enum class ExitStatus
+        {
+            Success,
+            Failure
+        };
+
+        ExitStatus getExitStatus() const
+        {
+            return exit_status_;
+        }
+
+        ThreadStatus getStatus() const
+        {
+            return status_;
+        }
+
+        void start()
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (status_ == ThreadStatus::NotStarted)
+            {
+                status_ = ThreadStatus::Running;
+                thread_ = std::thread(&EventThread::waitForEvent, this);
+            }
+        }
+
+        void pause()
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (status_ == ThreadStatus::Running)
+            {
+                status_ = ThreadStatus::Stopped;
+            }
+        }
+
+        void stop()
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (status_ == ThreadStatus::Running)
+            {
+                status_ = ThreadStatus::Stopped;
+            }
+        }
+
+        std::list<std::unique_ptr<EventThread>> event_threads_;
+
+    private:
+        void waitForEvent()
+        {
+            std::unique_ptr<MessageInterface> message;
+            MessagerBase::RequestStatus mstatus;
+            do
+            {
+                mstatus = messager_->recvMessage(message, messager_->getTimeout());
+                if(status_ >= ThreadStatus::RequestStop)
+                {
+                    break;
+                }
+                if (mstatus == MessagerBase::RequestStatus::Success && message)
+                {
+                    message_handler_(message);
+                }
+            } while(1);
+        }
+
+        std::mutex mutex_;
+        // std::function<void(std::shared_ptr<MessagerBase>)> action_;
+        std::shared_ptr<MessagerBase> messager_;
+        std::function<void(const std::unique_ptr<MessageInterface> &)> message_handler_;
+        std::thread thread_;
+        std::atomic<ThreadStatus> status_ = ThreadStatus::NotStarted;
+        std::atomic<ExitStatus> exit_status_ = ExitStatus::Success;
+        std::shared_ptr<GSLogger> logger_;
+    };
+
     // @brief Name of the task for identification purposes / logging output
     std::string name_;
     // @brief Unique identifier for the task instance

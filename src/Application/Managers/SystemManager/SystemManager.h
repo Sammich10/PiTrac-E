@@ -4,6 +4,10 @@
 #include "Application/Managers/ManagerBase/GSManagerBase.h"
 #include "Infrastructure/Messaging/Messagers/MessageRouter.h"
 #include "Infrastructure/Messaging/Messagers/MessagerBase.h"
+#include "Infrastructure/Messaging/Messagers/MessageReplier.h"
+#include "Infrastructure/Messaging/Messagers/MessagePusher.h"
+#include "Infrastructure/Messaging/Messagers/MessagePuller.h"
+#include "Infrastructure/Messaging/Messagers/MessagePublisher.h"
 #include "Infrastructure/Messaging/Messages/ChangeModeMsg.h"
 #include "Infrastructure/Messaging/Messages/SystemCommandMsg.h"
 #include "Infrastructure/Messaging/Messages/AckMessage.h"
@@ -22,13 +26,13 @@ class SystemManager : public GSManagerBase
     virtual ~SystemManager();
 
   protected:
+    // Messaging components for inter-agent communication
     std::unique_ptr<MessageRouter> task_control_router_;
-    std::unique_ptr<MessagerBase> system_command_listener_;
-
+    // Messaging component for receiving external commands from the host
+    std::unique_ptr<MessageReplier> system_command_listener_;
     // Frame forwarding system
-    std::unique_ptr<MessagerBase> data_collector;  // PULL socket for agent
-                                                   // frames
-    std::unique_ptr<MessagerBase> data_publisher_;  // PUB socket to Flask
+    std::unique_ptr<MessagePuller> data_collector;  
+    std::unique_ptr<MessagePublisher> data_publisher_;
 
     bool setupProcess() override;
     void cleanupProcess() override;

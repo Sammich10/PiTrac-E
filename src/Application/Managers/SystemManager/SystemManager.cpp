@@ -6,9 +6,9 @@ namespace PiTrac
 SystemManager::SystemManager()
     : GSManagerBase("SystemManager")
     , task_control_router_(std::make_unique<MessageRouter>())
-    , system_command_listener_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Reply))
-    , data_collector(std::make_unique<MessagerBase>(MessagerBase::SocketType::Pull))
-    , data_publisher_(std::make_unique<MessagerBase>(MessagerBase::SocketType::Publisher))
+    , system_command_listener_(std::make_unique<MessageReplier>())
+    , data_collector(std::make_unique<MessagePuller>())
+    , data_publisher_(std::make_unique<MessagePublisher>())
 {
 }
 

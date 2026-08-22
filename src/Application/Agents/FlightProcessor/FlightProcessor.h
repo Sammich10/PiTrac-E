@@ -12,6 +12,7 @@
 #include "Common/Camera/CameraStructs.h"
 #include "Common/System/System.h"
 #include <opencv2/opencv.hpp>
+#include <libcamera/camera_manager.h>
 #include <thread>
 #include <atomic>
 #include <memory>
@@ -145,6 +146,12 @@ class FlightProcessor : public AgentBase
         const bool enable
     );
 
+    /**
+     * @brief Loads camera settings from the calibration database and applies
+     * them to the camera.
+     * 
+     * @param[in] camera_index The index of the camera to load settings for
+     */
     void loadCameraSettings
     (
         const uint32_t camera_index
@@ -155,14 +162,22 @@ class FlightProcessor : public AgentBase
      * preparation for mode chang or shutdown.
      */
     inline void cleanUp();
-
-    std::unique_ptr<MessagerBase> data_publisher_;
-    std::unique_ptr<FrameCodec> frame_codec_;
-    std::array<std::shared_ptr<FrameBuffer>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> frame_buffer_;
-    std::array<std::unique_ptr<GSCameraInterface>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_;
+        
+    // Distortion calibration object to handle processing of calibration images and calculation of calibration parameters
     std::unique_ptr<CalibrateDistortion> distortion_calibrator_;
+    // Calibration database interface to store and retrieve calibration data and camera settings
     std::shared_ptr<CalibrationData> calibration_data_;
+    // Ball detector object to handle ball detection in viewfinder mode
     std::unique_ptr<BallDetector> ball_detector_;
+    // Messaging interfaces for publishing image frames
+    std::unique_ptr<MessagerBase> data_publisher_;
+    // Buffers for storing captured frames from the cameras for potential use in calibration and streaming
+    std::array<std::shared_ptr<FrameBuffer>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> frame_buffer_;
+
+    std::unique_ptr<FrameCodec> frame_codec_;
+    
+    std::shared_ptr<libcamera::CameraManager> camera_manager_;
+    std::array<std::unique_ptr<GSCameraInterface>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_;
     std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> pause_stream_;
     std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> valid_calibration_data_;
     std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> apply_calibrations_to_viewfinder_;
@@ -176,12 +191,12 @@ class FlightProcessor : public AgentBase
     std::array<GSCameraInterface::CameraUUIDInfo, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_uuid_info_;
     std::array<GSCameraInterface::CameraInfo, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_basic_info_;
     CalibrationModel current_calibration_model_;
+    // Calibration data containers
     std::array<CameraIntrinsics_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_matrix_;
-    std::array<cv::Mat, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> dist_coeffs_mat_;
     std::array<CalibrationEntry_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> cal_entry_;
     std::array<DistortionCoefficients_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> dist_coeffs_;
-    std::array<CameraIntrinsics_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> intrinsics_;
     std::array<CameraControlSettings_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> current_camera_settings_;
+    // Buffers for accumulating calibration data
     std::array<std::vector<cv::Point2f>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> last_corners_;
     std::array<std::vector<cv::Point3f>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> last_object_points_;
     std::array<std::vector<std::vector<cv::Point2f> >, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> calibration_corners_buffer_;

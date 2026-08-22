@@ -55,3 +55,13 @@ if [ -n "${CC}" ]; then
 else
     echo "WARNING: Cross compiler not found in SDK environment."
 fi
+if [ -f "$(pwd)/dev-env" ]; then
+    echo "Sourcing additional development environment..."
+    # shellcheck source=/dev/null
+    . "$(pwd)/dev-env"
+else
+    echo "WARNING: Additional development environment file not found."
+    echo "Creating default dev-env file..."
+    cp $(pwd)/dev-env.example $(pwd)/dev-env
+    echo "Default dev-env file created. Please customize it as needed."
+fi
