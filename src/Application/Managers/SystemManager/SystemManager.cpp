@@ -5,10 +5,10 @@ namespace PiTrac
 {
 SystemManager::SystemManager()
     : GSManagerBase("SystemManager")
-    , task_control_router_(std::make_unique<MessageRouter>())
-    , system_command_listener_(std::make_unique<MessageReplier>())
-    , data_collector(std::make_unique<MessagePuller>())
-    , data_publisher_(std::make_unique<MessagePublisher>())
+    , task_control_router_(std::make_shared<MessageRouter>())
+    , system_command_listener_(std::make_shared<MessageReplier>())
+    , data_collector(std::make_shared<MessagePuller>())
+    , data_publisher_(std::make_shared<MessagePublisher>())
 {
 }
 
@@ -20,10 +20,19 @@ SystemManager::~SystemManager()
 bool SystemManager::setupProcess()
 {
     logInfo("Setting up task control router");
-    task_control_router_->bind(Endpoints::getTaskControlEndpoint());
-    task_control_router_->startReceiving(
+
+    std::unique_ptr<EventThread> task_control_thread;
+    task_control_thread = std::make_unique<EventThread>(
+        task_control_router_,
         std::bind(&SystemManager::taskControlMessageHandler, this, std::placeholders::_1)
-        );
+    );
+    task_control_thread->bindEndpoint(Endpoints::getTaskControlEndpoint());
+    event_threads_.push_back(std::move(task_control_thread));
+
+    // task_control_router_->bind(Endpoints::getTaskControlEndpoint());
+    // task_control_router_->startReceiving(
+    //     std::bind(&SystemManager::taskControlMessageHandler, this, std::placeholders::_1)
+    //     );
     logInfo("Setting up system command listener");
     system_command_listener_->bind(Endpoints::getExternalCommandEndpoint());
     system_command_listener_->startReceiving(
@@ -77,7 +86,7 @@ void SystemManager::cleanupProcess()
     system_command_listener_.reset();
 }
 
-void SystemManager::externalMessageHandler(std::unique_ptr<MessageInterface> message)
+void SystemManager::externalMessageHandler(const std::unique_ptr<MessageInterface> &message)
 {
     logInfo("Received external command: " + message->toString());
     if(message->getMessageType() == Message_Type::SystemCommand)
@@ -307,7 +316,7 @@ bool SystemManager::handleConfigurationCommand(const SystemCommandMsg &cmd_msg)
 }
 
 // Enhanced handler for ROUTER-DEALER pattern with identity
-void SystemManager::taskControlMessageHandler(std::unique_ptr<MessageInterface> message)
+void SystemManager::taskControlMessageHandler(const std::unique_ptr<MessageInterface> &message)
 {
     const std::string &sender_identity = message->getIdentity();
 
@@ -508,7 +517,7 @@ std::vector<SystemManager::RegisteredAgent> SystemManager::getActiveAgents()
     return agents;
 }
 
-void SystemManager::dataForwardingHandler(std::unique_ptr<MessageInterface> message)
+void SystemManager::dataForwardingHandler(const std::unique_ptr<MessageInterface> &message)
 {
     // Simply forward any received frame data to Flask
     if (message)

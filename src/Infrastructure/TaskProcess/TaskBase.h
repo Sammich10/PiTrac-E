@@ -5,6 +5,8 @@
 #include "Common/System/System.h"
 #include "Common/System/Endpoints.h"
 #include "Infrastructure/TaskProcess/TaskStatus.h"
+#include "Infrastructure/Messaging/Messagers/MessagerBase.h"
+#include "Infrastructure/Messaging/MessageInterface.h"
 #include <string>
 #include <thread>
 #include <list>
@@ -215,6 +217,14 @@ class TaskBase
             return status_;
         }
 
+        void bindEndpoint(const std::string &endpoint)
+        {
+            if (messager_)
+            {
+                messager_->bind(endpoint);
+            }
+        }
+
         void start()
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -242,8 +252,6 @@ class TaskBase
                 status_ = ThreadStatus::Stopped;
             }
         }
-
-        std::list<std::unique_ptr<EventThread>> event_threads_;
 
     private:
         void waitForEvent()
@@ -274,6 +282,8 @@ class TaskBase
         std::shared_ptr<GSLogger> logger_;
     };
 
+    // @brief List of event threads managed by the task, each handling specific event-driven actions.
+    std::list<std::unique_ptr<EventThread>> event_threads_;
     // @brief Name of the task for identification purposes / logging output
     std::string name_;
     // @brief Unique identifier for the task instance

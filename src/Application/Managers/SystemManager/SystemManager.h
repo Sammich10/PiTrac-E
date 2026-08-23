@@ -27,12 +27,12 @@ class SystemManager : public GSManagerBase
 
   protected:
     // Messaging components for inter-agent communication
-    std::unique_ptr<MessageRouter> task_control_router_;
+    std::shared_ptr<MessagerBase> task_control_router_;
     // Messaging component for receiving external commands from the host
-    std::unique_ptr<MessageReplier> system_command_listener_;
+    std::shared_ptr<MessagerBase> system_command_listener_;
     // Frame forwarding system
-    std::unique_ptr<MessagePuller> data_collector;  
-    std::unique_ptr<MessagePublisher> data_publisher_;
+    std::shared_ptr<MessagerBase> data_collector;  
+    std::shared_ptr<MessagerBase> data_publisher_;
 
     bool setupProcess() override;
     void cleanupProcess() override;
@@ -67,11 +67,11 @@ class SystemManager : public GSManagerBase
     // Message handlers
     void taskControlMessageHandler
     (
-        std::unique_ptr<MessageInterface> message
+        const std::unique_ptr<MessageInterface> &message
     );
     void externalMessageHandler
     (
-        std::unique_ptr<MessageInterface> message
+        const std::unique_ptr<MessageInterface> &message
     );
 
     // Agent management
@@ -137,7 +137,7 @@ class SystemManager : public GSManagerBase
     // Frame forwarding system
     void dataForwardingHandler
     (
-        std::unique_ptr<MessageInterface> message
+        const std::unique_ptr<MessageInterface> &message
     );
 
     // Current system mode
