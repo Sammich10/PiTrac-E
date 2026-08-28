@@ -103,9 +103,12 @@ if [ $FAILED_COUNT -gt 0 ]; then
         uncrustify -c ${UNCRUST_CONFIG} --replace --no-backup "$file"
       done
       echo "Formatting fixes applied!"
+      exit 0
     fi
   fi
 else
   echo -e "\nUncrustify check completed successfully. All $TOTAL_FILES files passed."
   exit 0
 fi
+
+exit 0

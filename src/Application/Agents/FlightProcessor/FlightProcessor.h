@@ -1,7 +1,7 @@
-#ifndef CAMERA_AGENT_H
-#define CAMERA_AGENT_H
+#ifndef FLIGHT_PROCESSOR_H
+#define FLIGHT_PROCESSOR_H
 
-#include "Application/Agents/AgentBase/AgentBase.h"
+#include "Foundation/AgentBase/AgentBase.h"
 #include "Infrastructure/DataStructures/FrameBuffer.h"
 #include "Interfaces/Camera/GSCameraInterface.h"
 #include "Common/Utils/CodecUtils/CodecUtils.h"
@@ -76,14 +76,19 @@ class FlightProcessor : public AgentBase
 
   protected:
 
-    bool changeMode
+    virtual bool handleAcknowledgment
     (
-        PiTrac::SystemMode_Type new_mode
+        const AckMessage *ack_msg
     ) override;
 
-    bool handleSystemCommand
+    virtual bool handleChangeMode
     (
-        const SystemCommandMsg &command_msg
+        const ChangeModeMsg *mode_msg
+    ) override;
+
+    virtual bool handleSystemCommand
+    (
+        const SystemCommandMsg *command_msg
     ) override;
 
     virtual bool configureStandby();
@@ -149,7 +154,7 @@ class FlightProcessor : public AgentBase
     /**
      * @brief Loads camera settings from the calibration database and applies
      * them to the camera.
-     * 
+     *
      * @param[in] camera_index The index of the camera to load settings for
      */
     void loadCameraSettings
@@ -162,7 +167,7 @@ class FlightProcessor : public AgentBase
      * preparation for mode chang or shutdown.
      */
     inline void cleanUp();
-        
+
     // Distortion calibration object to handle processing of calibration images and calculation of calibration parameters
     std::unique_ptr<CalibrateDistortion> distortion_calibrator_;
     // Calibration database interface to store and retrieve calibration data and camera settings
@@ -175,7 +180,7 @@ class FlightProcessor : public AgentBase
     std::array<std::shared_ptr<FrameBuffer>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> frame_buffer_;
 
     std::unique_ptr<FrameCodec> frame_codec_;
-    
+
     std::shared_ptr<libcamera::CameraManager> camera_manager_;
     std::array<std::unique_ptr<GSCameraInterface>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_;
     std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> pause_stream_;

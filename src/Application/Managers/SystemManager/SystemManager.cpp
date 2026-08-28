@@ -25,26 +25,35 @@ bool SystemManager::setupProcess()
     task_control_thread = std::make_unique<EventThread>(
         task_control_router_,
         std::bind(&SystemManager::taskControlMessageHandler, this, std::placeholders::_1)
-    );
+        );
     task_control_thread->bindEndpoint(Endpoints::getTaskControlEndpoint());
+
+    std::unique_ptr<EventThread> system_command_thread;
+    system_command_thread = std::make_unique<EventThread>(
+        system_command_listener_,
+        std::bind(&SystemManager::externalMessageHandler, this, std::placeholders::_1)
+        );
+    system_command_thread->bindEndpoint(Endpoints::getExternalCommandEndpoint());
+
+    event_threads_.push_back(std::move(system_command_thread));
     event_threads_.push_back(std::move(task_control_thread));
 
     // task_control_router_->bind(Endpoints::getTaskControlEndpoint());
     // task_control_router_->startReceiving(
     //     std::bind(&SystemManager::taskControlMessageHandler, this, std::placeholders::_1)
     //     );
-    logInfo("Setting up system command listener");
-    system_command_listener_->bind(Endpoints::getExternalCommandEndpoint());
-    system_command_listener_->startReceiving(
-        std::bind(&SystemManager::externalMessageHandler, this, std::placeholders::_1)
-        );
+    // logInfo("Setting up system command listener");
+    // system_command_listener_->bind(Endpoints::getExternalCommandEndpoint());
+    // system_command_listener_->startReceiving(
+    //     std::bind(&SystemManager::externalMessageHandler, this, std::placeholders::_1)
+    //     );
 
-    logInfo("Setting up frame forwarding system");
-    data_collector->bind(Endpoints::getDataCollectionEndpoint());
-    data_collector->startReceiving(
-        std::bind(&SystemManager::dataForwardingHandler, this, std::placeholders::_1)
-        );
-    data_publisher_->bind(Endpoints::getOutgoingDataEndpoint());
+    // logInfo("Setting up frame forwarding system");
+    // data_collector->bind(Endpoints::getDataCollectionEndpoint());
+    // data_collector->startReceiving(
+    //     std::bind(&SystemManager::dataForwardingHandler, this, std::placeholders::_1)
+    //     );
+    // data_publisher_->bind(Endpoints::getOutgoingDataEndpoint());
 
     // For now, we can create the calibration database here to ensure the
     // database is set up before any agents try to access it
@@ -57,12 +66,11 @@ bool SystemManager::setupProcess()
         return false;
     }
 
-    return true;
+    return TaskBase::setupProcess();
 }
 
 bool SystemManager::execute()
 {
-    changeStatus(TaskStatus::Running);
     logInfo("SystemManager is running");
     while(!should_stop_)
     {   // TODO: Publish system status updates here as well, including active
@@ -74,16 +82,15 @@ bool SystemManager::execute()
 
 void SystemManager::cleanupProcess()
 {
+    TaskBase::cleanupProcess();
     logInfo("Stopping task registration and command listeners");
-    task_control_router_->stop();
     task_control_router_.reset();
     logInfo("Stopping system command listener");
-    system_command_listener_->stop();
-
-    logInfo("Stopping frame forwarding system");
-    data_collector->stop();
-    data_publisher_->stop();
     system_command_listener_.reset();
+
+    // logInfo("Stopping frame forwarding system");
+    // data_collector->stop();
+    // data_publisher_->stop();
 }
 
 void SystemManager::externalMessageHandler(const std::unique_ptr<MessageInterface> &message)
@@ -374,13 +381,9 @@ void SystemManager::handleAgentRegistration(const std::string &identity, const R
 
     logInfo("Acknowledging registration to agent: " + reg_msg.getTaskName());
     // Send acknowledgment back to agent
-    try {
-        // Create a simple ack message (without embedding the original message)
-        sendAcknowledgmentToAgent(identity, reg_msg, true);
-        logInfo("Ack message sent successfully to: " + identity);
-    } catch (const std::exception &e) {
-        logError("Failed to send registration ack to " + identity + ": " + std::string(e.what()));
-    }
+    // Create a simple ack message (without embedding the original message)
+    sendAcknowledgmentToAgent(identity, reg_msg, true);
+    logInfo("Ack message sent successfully to: " + identity);
 
     logInfo("Registration complete for agent: " + reg_msg.getTaskName());
 }
@@ -411,16 +414,9 @@ void SystemManager::sendAcknowledgmentToAgent(const std::string &identity, const
         static_cast<int32_t>(original_message.getMessageType()),
         original_message.getTimestamp().time_since_epoch().count()
         );
-    try
-    {
-        std::lock_guard<std::mutex> router_lock(router_mutex_);
-        task_control_router_->sendMessage(ack, identity);
-        logInfo("Sent acknowledgment to agent: " + identity);
-    }
-    catch (const std::exception &e)
-    {
-        logError("Failed to send acknowledgment to " + identity + ": " + std::string(e.what()));
-    }
+    std::lock_guard<std::mutex> router_lock(router_mutex_);
+    task_control_router_->sendMessage(ack, identity);
+    logInfo("Sent acknowledgment to agent: " + identity);
 }
 
 void SystemManager::sendAcknowledgementToHost(const MessageInterface &original_message, const bool success)
@@ -473,6 +469,7 @@ bool SystemManager::broadcastModeChange(SystemMode_Type new_mode)
         ChangeModeMsg mode_msg((int32_t)new_mode);
         try {
             std::lock_guard<std::mutex> router_lock(router_mutex_);
+            logInfo("Broadcasting mode change to " + agent.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
             task_control_router_->sendMessage(mode_msg, identity);
             registered_agents_[identity].current_mode = new_mode;
             logInfo("Broadcasted mode change to " + agent.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));

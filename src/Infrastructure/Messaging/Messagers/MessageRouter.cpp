@@ -43,15 +43,12 @@ MessagerBase::RequestStatus MessageRouter::sendMessage(const MessageInterface &m
     return RequestStatus::Success;
 }
 
-MessagerBase::RequestStatus MessageRouter::recvMessage(std::unique_ptr<MessageInterface> &message, int timeout_ms)
+MessagerBase::RequestStatus MessageRouter::recvMessage(void *socket, std::unique_ptr<MessageInterface> &message)
 {
-    // Set timeout
-    zmq_setsockopt(socket_, ZMQ_RCVTIMEO, &timeout_ms, sizeof(timeout_ms));
-
     // Receive identity frame
     zmq_msg_t id_msg;
     zmq_msg_init(&id_msg);
-    int rc = zmq_msg_recv(&id_msg, socket_, 0);
+    int rc = zmq_msg_recv(&id_msg, socket, 0);
     if (rc < 0)
     {
         zmq_msg_close(&id_msg);
@@ -68,7 +65,7 @@ MessagerBase::RequestStatus MessageRouter::recvMessage(std::unique_ptr<MessageIn
     // Receive delimiter frame (and discard it)
     zmq_msg_t delimiter;
     zmq_msg_init(&delimiter);
-    rc = zmq_msg_recv(&delimiter, socket_, 0);
+    rc = zmq_msg_recv(&delimiter, socket, 0);
     zmq_msg_close(&delimiter);
     if (rc < 0)
     {
@@ -78,7 +75,7 @@ MessagerBase::RequestStatus MessageRouter::recvMessage(std::unique_ptr<MessageIn
     // Receive message frame
     zmq_msg_t msg;
     zmq_msg_init(&msg);
-    rc = zmq_msg_recv(&msg, socket_, 0);
+    rc = zmq_msg_recv(&msg, socket, 0);
     if (rc < 0)
     {
         zmq_msg_close(&msg);

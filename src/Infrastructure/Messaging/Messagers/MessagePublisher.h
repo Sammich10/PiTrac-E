@@ -5,18 +5,16 @@
 
 namespace PiTrac
 {
-
-    class MessagePublisher : public MessagerBase
+class MessagePublisher : public MessagerBase
+{
+  public:
+    MessagePublisher()
+        : MessagerBase(SocketType::Publisher)
     {
-      public:
-        MessagePublisher()
-            : MessagerBase(SocketType::Publisher)
-        {
-        }
+    }
 
-        virtual ~MessagePublisher() = default;
-    };
-
+    virtual ~MessagePublisher() = default;
+};
 }; // namespace PiTrac
 
 #endif // __MESSAGE_PUBLISHER_H

@@ -5,18 +5,16 @@
 
 namespace PiTrac
 {
-
-    class MessageReplier : public MessagerBase
+class MessageReplier : public MessagerBase
+{
+  public:
+    MessageReplier()
+        : MessagerBase(SocketType::Reply)
     {
-      public:
-        MessageReplier()
-            : MessagerBase(SocketType::Reply)
-        {
-        }
+    }
 
-        virtual ~MessageReplier() = default;
-    };
-
+    virtual ~MessageReplier() = default;
+};
 }; // namespace PiTrac
 
 #endif // MESSAGE_REPLIER_H

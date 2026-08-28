@@ -5,18 +5,16 @@
 
 namespace PiTrac
 {
-
-    class MessageRequester : public MessagerBase
+class MessageRequester : public MessagerBase
+{
+  public:
+    MessageRequester()
+        : MessagerBase(SocketType::Request)
     {
-      public:
-        MessageRequester()
-            : MessagerBase(SocketType::Request)
-        {
-        }
+    }
 
-        virtual ~MessageRequester() = default;
-    };
-
+    virtual ~MessageRequester() = default;
+};
 }; // namespace PiTrac
 
 #endif // __MESSAGE_REQUESTER_H

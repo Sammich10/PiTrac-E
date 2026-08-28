@@ -114,10 +114,11 @@ if(GENERATED_MSG_SOURCES)
 endif()
 
 # Add subdirectories
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Calibration)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Foundation)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Common)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Interfaces)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Infrastructure)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Interfaces)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Calibration)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Application)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Startup)
 

@@ -16,6 +16,8 @@ target_link_libraries(
     ${OpenCV_LIBS}
     ${LIBCAMERA_LIBS}
     ${SQLite3_LIBRARIES}
+    TaskProcess
+    AgentBase
     Calibration
     FileUtils
     Detection

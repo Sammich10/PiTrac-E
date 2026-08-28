@@ -3,7 +3,7 @@
 
 #include "Infrastructure/Messaging/Messagers/MessagerBase.h"
 #include "Infrastructure/Messaging/Messages/ChangeModeMsg.h"
-#include "Infrastructure/TaskProcess/TaskBase.h"
+#include "Foundation/TaskProcess/TaskBase.h"
 #include "Common/Utils/Logging/GSLogger.h"
 #include <string>
 #include <thread>

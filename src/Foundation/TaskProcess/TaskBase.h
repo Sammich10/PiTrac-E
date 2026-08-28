@@ -4,7 +4,7 @@
 #include "Common/Utils/Logging/GSLogger.h"
 #include "Common/System/System.h"
 #include "Common/System/Endpoints.h"
-#include "Infrastructure/TaskProcess/TaskStatus.h"
+#include "Foundation/TaskProcess/TaskStatus.h"
 #include "Infrastructure/Messaging/Messagers/MessagerBase.h"
 #include "Infrastructure/Messaging/MessageInterface.h"
 #include <string>
@@ -37,29 +37,15 @@ class TaskBase
      *
      * @param name The name of the task for identification and logging purposes.
      */
-    TaskBase(const std::string &name)
-        : name_(name)
-        , task_id_(generateTaskId())
-        , logger_(GSLogger::getInstance())
-        , status_(TaskStatus::NotStarted)
-        , should_stop_(false)
-    {
-        logInfo("Task created: " + name_ + " [" + task_id_ + "]");
-        MessagerBase::createContext();
-    }
+    TaskBase
+    (
+        const std::string &name
+    );
 
     /**
      * @brief Destructor for the TaskBase class.
      */
-    ~TaskBase()
-    {
-        if (isRunning())
-        {
-            end();
-        }
-        MessagerBase::destroyContext();
-        logInfo("Task destroyed: " + name_);
-    }
+    ~TaskBase();
 
     /**
      * @brief Primary task entry point, starts the task execution in the current process.
@@ -68,60 +54,21 @@ class TaskBase
      *
      * @return true upon successful task exit, false if the task failed to start.
      */
-    bool run()
-    {
-        // Guard against running the task if it's already running
-        if (getStatus() == TaskStatus::Running)
-        {
-            logWarning("Task already running: " + name_);
-            return false;
-        }
-        changeStatus(TaskStatus::Starting);
-        start_time_ = std::chrono::steady_clock::now();
-        // Setup process environment
-        if (!setupProcess())
-        {
-            throw std::runtime_error("Failed to setup process for task: " + name_);
-            exit(1);
-        }
+    bool run();
 
-        // Run main loop
-        processMain();
+    /**
+     * @brief Signals the task to end its execution gracefully.
+     * If the task is not running, a warning is logged.
+     * Changes the task status to Stopping and sets the should_stop_ flag.
+     * Logs the total runtime of the task upon completion.
+     */
+    void end();
 
-        // Cleanup the task process environment and resources
-        cleanupProcess();
-
-        logInfo("Process exiting for task: " + name_);
-        exit(0);
-
-        return true;
-    }
-
-    void end()
-    {
-        logInfo("Signal ending task: " + name_);
-
-        if (!isRunning())
-        {
-            logWarning("Task not running, cannot end: " + name_);
-            return;
-        }
-
-        changeStatus(TaskStatus::Stopping);
-
-        should_stop_ = true;
-
-        auto runtime = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time_);
-
-        logInfo("Task " + name_ + " execution completed. Runtime: " +
-                std::to_string(runtime.count()) + "s, ");
-    }
-
-    void forceKill()
-    {
-        logInfo("Force killing task: " + name_);
-        exit(1);
-    }
+    /**
+     * @brief Forces the task to terminate immediately.
+     * Logs the force kill action and exits the process with a failure status.
+     */
+    void forceKill();
 
     /**
      * @brief Returns the current status of the task.
@@ -176,7 +123,7 @@ class TaskBase
      */
     class EventThread
     {
-    public:
+      public:
         EventThread(std::shared_ptr<MessagerBase> messager, std::function<void(const std::unique_ptr<MessageInterface> &)> message_handler)
             : messager_(messager)
             , message_handler_(message_handler)
@@ -225,6 +172,14 @@ class TaskBase
             }
         }
 
+        void connectEndpoint(const std::string &endpoint)
+        {
+            if (messager_)
+            {
+                messager_->connect(endpoint);
+            }
+        }
+
         void start()
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -253,14 +208,14 @@ class TaskBase
             }
         }
 
-    private:
+      private:
         void waitForEvent()
         {
             std::unique_ptr<MessageInterface> message;
             MessagerBase::RequestStatus mstatus;
             do
             {
-                mstatus = messager_->recvMessage(message, messager_->getTimeout());
+                mstatus = messager_->pollMessage(message);
                 if(status_ >= ThreadStatus::RequestStop)
                 {
                     break;
@@ -269,7 +224,8 @@ class TaskBase
                 {
                     message_handler_(message);
                 }
-            } while(1);
+            }
+            while(1);
         }
 
         std::mutex mutex_;
@@ -283,7 +239,7 @@ class TaskBase
     };
 
     // @brief List of event threads managed by the task, each handling specific event-driven actions.
-    std::list<std::unique_ptr<EventThread>> event_threads_;
+    std::list<std::unique_ptr<EventThread> > event_threads_;
     // @brief Name of the task for identification purposes / logging output
     std::string name_;
     // @brief Unique identifier for the task instance

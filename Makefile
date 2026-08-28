@@ -135,6 +135,9 @@ run_tests: build_tests
 		echo ""; \
 	done
 
+.PHONY: format
+format: uncrustify
+
 .PHONY: uncrustify
 uncrustify:
 	./tools/Formatting/uncrustify.sh --all --yes

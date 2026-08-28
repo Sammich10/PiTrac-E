@@ -9,12 +9,16 @@ MessagerBase::MessagerBase(SocketType type)
     : socket_(nullptr)
     , socket_type_(type)
     , running_(false)
-    , timeout_ms_(1000)  // Default 1000ms timeout
+    , poll_timeout_(1000)
     , logger_(GSLogger::getInstance())
 {
     if (!context_)
     {
-        throw std::runtime_error("Failed to create ZMQ context");
+        if (createContext() != RequestStatus::Success)
+        {
+            logger_->error("Failed to create ZMQ context");
+            return;
+        }
     }
 
     int socket_type;
@@ -44,16 +48,35 @@ MessagerBase::MessagerBase(SocketType type)
         case SocketType::Dealer:
             socket_type = ZMQ_DEALER;
             break;
-        default: throw std::invalid_argument("Invalid socket type");
+        default:
+            logger_->error("Invalid socket type specified");
+            // Exit constructor early if socket type is invalid.
+            // Initialized flag will remain false, indicating that the object is not properly initialized.
+            return;
     }
 
     socket_ = zmq_socket(context_, socket_type);
-    if (!socket_)
-    {
-        throw std::runtime_error("Failed to create ZMQ socket");
-    }
-    setTimeout(timeout_ms_);
     message_factory_ = MessageFactory();
+
+    if(!socket_ )
+    {
+        logger_->error("Failed to initialize ZMQ socket for MessagerBase");
+        return;
+    }
+    // Default receive timeout is 0 (non-blocking). Rely on polling to manage message reception.
+    int timeout = 0;
+    // Set socket receive timeout to 0 (non-blocking) to allow for polling
+    zmq_setsockopt(socket_, ZMQ_RCVTIMEO, &timeout, sizeof(timeout));
+    // Set socket send timeout to 0 (non-blocking)
+    zmq_setsockopt(socket_, ZMQ_SNDTIMEO, &timeout, sizeof(timeout));
+    // Set socket linger to 0 to avoid blocking on close
+    zmq_setsockopt(socket_, ZMQ_LINGER, &timeout, sizeof(timeout));
+    poll_item_[0].socket = socket_;
+    poll_item_[0].fd = 0;
+    poll_item_[0].events = ZMQ_POLLIN;
+    poll_item_[0].revents = 0;
+
+    initialized_ = true;
 }
 
 MessagerBase::~MessagerBase()
@@ -90,17 +113,6 @@ void MessagerBase::destroyContext()
         zmq_ctx_destroy(context_);
         context_ = nullptr;
     }
-}
-
-void MessagerBase::setTimeout(const int timeout_ms)
-{
-    timeout_ms_ = timeout_ms;
-    zmq_setsockopt(socket_, ZMQ_RCVTIMEO, &timeout_ms_, sizeof(timeout_ms_));
-}
-
-int MessagerBase::getTimeout() const
-{
-    return timeout_ms_;
 }
 
 MessagerBase::RequestStatus MessagerBase::bind(const std::string &endpoint)
@@ -142,12 +154,11 @@ MessagerBase::RequestStatus MessagerBase::sendMessage(const MessageInterface &me
         zmq_msg_init_size(&extra_msg, extra.size());
         memcpy(zmq_msg_data(&extra_msg), extra.c_str(), extra.size());
         int rc = zmq_msg_send(&extra_msg, socket_, ZMQ_SNDMORE);
+        zmq_msg_close(&extra_msg);
         if (rc < 0)
         {
-            zmq_msg_close(&extra_msg);
             return RequestStatus::Error;
         }
-        zmq_msg_close(&extra_msg);
     }
     // Pack the message into a ZMQ message
     zmq_msg_t msg;
@@ -165,15 +176,13 @@ MessagerBase::RequestStatus MessagerBase::sendMessage(const MessageInterface &me
     return RequestStatus::Success;
 }
 
-MessagerBase::RequestStatus MessagerBase::recvMessage(std::unique_ptr<MessageInterface> &message, int timeout_ms)
+MessagerBase::RequestStatus MessagerBase::recvMessage(void *socket, std::unique_ptr<MessageInterface> &message)
 {
-    // Set receive timeout
-    zmq_setsockopt(socket_, ZMQ_RCVTIMEO, &timeout_ms, sizeof(timeout_ms));
-
+    // No timeout, non-blocking receive
     zmq_msg_t msg;
     zmq_msg_init(&msg);
 
-    int rc = zmq_msg_recv(&msg, socket_, 0);
+    int rc = zmq_msg_recv(&msg, socket, 0);
     if (rc < 0)
     {
         zmq_msg_close(&msg);
@@ -186,7 +195,7 @@ MessagerBase::RequestStatus MessagerBase::recvMessage(std::unique_ptr<MessageInt
 
     int more;
     size_t more_size = sizeof(more);
-    zmq_getsockopt(socket_, ZMQ_RCVMORE, &more, &more_size);
+    zmq_getsockopt(socket, ZMQ_RCVMORE, &more, &more_size);
 
     if(more)
     {
@@ -194,7 +203,7 @@ MessagerBase::RequestStatus MessagerBase::recvMessage(std::unique_ptr<MessageInt
         zmq_msg_close(&msg);
         zmq_msg_t next_msg;
         zmq_msg_init(&next_msg);
-        rc = zmq_msg_recv(&next_msg, socket_, 0);
+        rc = zmq_msg_recv(&next_msg, socket, 0);
         if (rc < 0)
         {
             zmq_msg_close(&next_msg);
@@ -220,6 +229,20 @@ MessagerBase::RequestStatus MessagerBase::recvMessage(std::unique_ptr<MessageInt
     }
 
     return RequestStatus::Success;
+}
+
+MessagerBase::RequestStatus MessagerBase::pollMessage(std::unique_ptr<MessageInterface> &message)
+{
+    int rc = zmq_poll(poll_item_, 1, poll_timeout_);
+    if (rc < 0)
+    {
+        return RequestStatus::Error;
+    }
+    if (rc == 0)
+    {
+        return RequestStatus::Timeout;
+    }
+    return recvMessage(poll_item_[0].socket, message);
 }
 
 void MessagerBase::startReceiving(std::function<void(std::unique_ptr<MessageInterface>)> handler)
@@ -296,7 +319,7 @@ void MessagerBase::receiveLoop()
         }
 
         std::unique_ptr<MessageInterface> message;
-        const RequestStatus status = recvMessage(message, timeout_ms_);
+        const RequestStatus status = pollMessage(message);
         if (status == RequestStatus::Timeout)
         {
             continue; // No message received, loop again

@@ -31,7 +31,7 @@ class SystemManager : public GSManagerBase
     // Messaging component for receiving external commands from the host
     std::shared_ptr<MessagerBase> system_command_listener_;
     // Frame forwarding system
-    std::shared_ptr<MessagerBase> data_collector;  
+    std::shared_ptr<MessagerBase> data_collector;
     std::shared_ptr<MessagerBase> data_publisher_;
 
     bool setupProcess() override;

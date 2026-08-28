@@ -5,18 +5,16 @@
 
 namespace PiTrac
 {
-
-    class MessagePuller : public MessagerBase
+class MessagePuller : public MessagerBase
+{
+  public:
+    MessagePuller()
+        : MessagerBase(SocketType::Pull)
     {
-      public:
-        MessagePuller()
-            : MessagerBase(SocketType::Pull)
-        {
-        }
+    }
 
-        virtual ~MessagePuller() = default;
-    };
-
+    virtual ~MessagePuller() = default;
+};
 }; // namespace PiTrac
 
 #endif // __MESSAGE_PULLER_H

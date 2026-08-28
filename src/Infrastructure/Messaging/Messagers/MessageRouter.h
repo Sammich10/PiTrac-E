@@ -24,13 +24,6 @@ class MessageRouter : public MessagerBase
         const std::string &extra = ""
     ) final override;
 
-    // Override base receive method to return message with identity
-    RequestStatus recvMessage
-    (
-        std::unique_ptr<MessageInterface> &message,
-        int timeout_ms = 1000
-    ) override;
-
     // Broadcast message to all known dealer identities
     void broadcastMessage
     (
@@ -45,6 +38,15 @@ class MessageRouter : public MessagerBase
     (
         const std::string &identity
     ) const;
+
+  protected:
+
+    RequestStatus recvMessage
+    (
+        void *socket,
+        std::unique_ptr<MessageInterface> &message
+    ) override final;
+
 
   private:
 

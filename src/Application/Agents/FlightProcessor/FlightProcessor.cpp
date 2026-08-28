@@ -53,38 +53,37 @@ bool FlightProcessor::setupProcess()
             logError("Camera index " + std::to_string(cam) + " out of range for: " + name_);
             return false;
         }
-        else
+
+        camera_[cam] = std::make_unique<GSCameraBase>(cam, camera_manager_);
+        // Instantiate the camera object
+        if(camera_[cam] == nullptr)
         {
-            camera_[cam] = std::make_unique<GSCameraBase>(cam, camera_manager_);
-            // Instantiate the camera object
-            if(camera_[cam] == nullptr)
-            {
-                logError("Failed to create camera interface for: " + name_);
-                return false;
-            }
-            // Initialize the camera
-            if(!camera_[cam]->initialize())
-            {
-                logError("Failed to initialize camera interface for: " + name_);
-                return false;
-            }
-            // Load camera settings that will not change or are not configurable at runtime (like resolution) and apply.
-            // Again these are currently hard-coded but should be loaded from config file in the future
-            camera_[cam]->setResolution(1456, 1088); // Full resolution
-            camera_[cam]->setSensorSize(3.674f, 2.760f); // IMX219 sensor size in mm
-            camera_[cam]->setFocalLength(2.8f); // Focal length in mm (estimated for IMX219)
-            camera_[cam]->setFrameRate(10.0f); // 10 FPS max for to reduce CPU load, can be
-            // increased if needed
-            camera_[cam]->setTriggerMode(TriggerMode::FREE_RUNNING);
-            // Retrieve & validate camera UUID and basic info
-            camera_uuid_info_[cam] = camera_[cam]->getUUIDInfo();
-            if(!camera_uuid_info_[cam].isValid())
-            {
-                logError("Invalid camera UUID info for: " + name_);
-                return false;
-            }
-            camera_basic_info_[cam] = camera_[cam]->getInfo();
+            logError("Failed to create camera interface for: " + name_);
+            return false;
         }
+        // Initialize the camera
+        if(!camera_[cam]->initialize())
+        {
+            logError("Failed to initialize camera interface for: " + name_);
+            return false;
+        }
+        // Load camera settings that will not change or are not configurable at runtime (like resolution) and apply.
+        // Again these are currently hard-coded but should be loaded from config file in the future
+        camera_[cam]->setResolution(1456, 1088); // Full resolution
+        camera_[cam]->setSensorSize(3.674f, 2.760f); // IMX219 sensor size in mm
+        camera_[cam]->setFocalLength(2.8f); // Focal length in mm (estimated for IMX219)
+        camera_[cam]->setFrameRate(10.0f); // 10 FPS max for to reduce CPU load, can be
+        // increased if needed
+        camera_[cam]->setTriggerMode(TriggerMode::FREE_RUNNING);
+        // Retrieve & validate camera UUID and basic info
+        camera_uuid_info_[cam] = camera_[cam]->getUUIDInfo();
+        if(!camera_uuid_info_[cam].isValid())
+        {
+            logError("Invalid camera UUID info for: " + name_);
+            return false;
+        }
+        camera_basic_info_[cam] = camera_[cam]->getInfo();
+
         // Load dynamic camera settings from the calibration database (like exposure time, gain, etc) and apply
         loadCameraSettings(cam);
     }
@@ -111,13 +110,31 @@ bool FlightProcessor::setupProcess()
     }
     // TODO: Load codec params from config later
     frame_codec_params_ = { { {"quality", "90"} } };
+    return AgentBase::setupProcess();
+}
+
+bool FlightProcessor::handleAcknowledgment(const AckMessage *ack_msg)
+{
+    const bool ack_success = ack_msg->isSuccess();
+    Message_Type original_message_type = static_cast<Message_Type>(ack_msg->getOriginal_message_type());
+    switch(original_message_type)
+    {
+        case Message_Type::RegisterTask:
+            logInfo("Received acknowledgment for registration message: " + std::string(ack_success ? "Success" : "Failure"));
+            registered_.store(ack_success);
+            break;
+        default:
+            logWarning("Received acknowledgment for unknown message type: " + std::to_string(static_cast<int>(original_message_type)) + " for: " + name_);
+            break;
+    }
+    // Implement acknowledgment handling logic here
     return true;
 }
 
-bool FlightProcessor::changeMode(PiTrac::SystemMode_Type new_mode)
+bool FlightProcessor::handleChangeMode(const ChangeModeMsg *mode_msg)
 {
     cleanUp(); // Ensure previous mode is cleaned up
-    switch(new_mode)
+    switch(static_cast<SystemMode_Type>(mode_msg->getNewMode()))
     {
         case SystemMode_Type::STANDBY:
             logInfo("Entering standby mode for: " + name_);
@@ -134,17 +151,17 @@ bool FlightProcessor::changeMode(PiTrac::SystemMode_Type new_mode)
             }
             return true;
         default:
-            logInfo("Unimplemented mode for FlightProcessor: " + std::to_string(static_cast<int>(new_mode)));
+            logInfo("Unimplemented mode for FlightProcessor: " + std::to_string(static_cast<int>(mode_msg->getNewMode())));
             return false;
     }
-    logInfo("Mode change complete to " + std::to_string(static_cast<int>(lm_mode_)) + " for: " + name_);
+    logInfo("Mode change complete to " + std::to_string(static_cast<int>(mode_msg->getNewMode())) + " for: " + name_);
     return true;
 }
 
-bool FlightProcessor::handleSystemCommand(const SystemCommandMsg &command_msg)
+bool FlightProcessor::handleSystemCommand(const SystemCommandMsg *command_msg)
 {
     // Check the command type
-    const SystemCommandMsg::CommandID cmd = static_cast<SystemCommandMsg::CommandID>(command_msg.getCommand_id());
+    const SystemCommandMsg::CommandID cmd = static_cast<SystemCommandMsg::CommandID>(command_msg->getCommand_id());
     // Check if this is a calibration command
     switch(cmd)
     {
@@ -156,12 +173,12 @@ bool FlightProcessor::handleSystemCommand(const SystemCommandMsg &command_msg)
                 return false;
             }
             logInfo("Processing calibration command for: " + name_);
-            return processCalibrationCommand(command_msg.getCommand_params());
+            return processCalibrationCommand(command_msg->getCommand_params());
         }
         case SystemCommandMsg::CommandID::Configure:
         {
             logInfo("Processing configure command for: " + name_);
-            return processConfigurationCommand(command_msg.getCommand_params());
+            return processConfigurationCommand(command_msg->getCommand_params());
         }
         default:
             logWarning("Unknown or unimplemented SystemCommandMsg command ID: " + std::to_string(static_cast<int>(cmd)) + " for: " + name_);
@@ -705,8 +722,6 @@ void FlightProcessor::cleanUp()
 {
     logInfo("Cleaning up: " + name_);
     // Stop current operations
-    run_.store(false);
-
     // Close all cameras if open to release resources and prepare for new mode
     for(uint32_t cam = 0; cam < static_cast<uint32_t>(LMCameras::NUM_CAMERAS); ++cam)
     {
@@ -751,6 +766,7 @@ void FlightProcessor::cleanUp()
 
 void FlightProcessor::cleanupProcess()
 {
+    TaskBase::cleanupProcess();
     // Call the internal cleanup function
     cleanUp();
     // Disconnect the frame publisher
