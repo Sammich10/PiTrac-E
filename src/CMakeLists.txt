@@ -98,6 +98,9 @@ else()
     set(SQLITE3_LIBS ${SQLite3_LIBRARIES})
 endif()
 
+# Add the output directory for generated build files to the include path
+include_directories(${CMAKE_BINARY_DIR})
+
 # Message generation setup - simplified (actual generation happens in Makefile)
 set(GENERATED_MSG_DIR "${CMAKE_SOURCE_DIR}/src/Infrastructure/Messaging/Messages/Generated")
 

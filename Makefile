@@ -10,12 +10,12 @@ BUILD_TYPE ?= Debug
 
 default: pitrac_src
 
-.PHONY: pitrac
-pitrac: cpp-messages pitrac_src
-
-.PHONY: pitrac_src
-pitrac_src:
+.PHONY: build
+build:
 	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
+
+.PHONY: pitrac
+pitrac:
 	cmake --build $(BUILD_DIR)
 
 .PHONY: pitrac_debug
@@ -77,7 +77,7 @@ help:
 	@echo "  help             - Show this help message"
 # Message generation variables
 SCHEMAS_DIR = src/Infrastructure/Messaging/Messages/Schemas
-GENERATED_MSG_DIR = src/Infrastructure/Messaging/Messages
+GENERATED_MSG_DIR = $(BUILD_DIR)/Infrastructure/Messaging/Messages
 CPP_MESSAGE_GENERATOR = tools/MessageGenerator/GenerateCppMessages.py
 PYTHON_MESSAGE_GENERATOR = tools/MessageGenerator/GeneratePythonMessages.py
 MESSAGE_TYPES_GENERATOR = tools/MessageGenerator/GenerateMessageTypes.py
@@ -117,7 +117,7 @@ clean-messages:
 	rm -rf $(FLASK_MESSAGES_DIR)/message_types.py
 	touch $(FLASK_MESSAGES_DIR)/external/.gitkeep
 	touch $(FLASK_MESSAGES_DIR)/common/.gitkeep
-	
+	touch $(FLASK_MESSAGES_DIR)/message_types/.gitkeep
 .PHONY: regen-messages
 regen-messages: clean-messages all-messages
 
