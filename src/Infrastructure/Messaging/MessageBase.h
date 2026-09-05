@@ -10,7 +10,9 @@ namespace PiTrac
 class MessageBase : public MessageInterface
 {
   public:
-    MessageBase() = default;
+    MessageBase()
+    {
+    }
 
     virtual ~MessageBase() = default;
 
@@ -20,32 +22,40 @@ class MessageBase : public MessageInterface
         return timestamp_;
     }
 
-    void setTimestamp
-    (
-        const std::chrono::system_clock::time_point &timestamp
-    ) override
-    {
-        timestamp_ = timestamp;
-    }
-
     // ZMQ message operations implementation
-    void toZmqMessage
+    bool toZmqMessage
     (
         zmq_msg_t &msg
     ) const override
     {
-        msgpack::sbuffer buffer;
-        serialize(buffer);
-        zmq_msg_init_size(&msg, buffer.size());
-        memcpy(zmq_msg_data(&msg), buffer.data(), buffer.size());
+        try
+        {
+            msgpack::sbuffer buffer;
+            serialize(buffer);
+            zmq_msg_init_size(&msg, buffer.size());
+            memcpy(zmq_msg_data(&msg), buffer.data(), buffer.size());
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
     }
 
-    void fromZmqMessage
+    bool fromZmqMessage
     (
         zmq_msg_t &msg
     ) override
     {
-        deserialize(static_cast<const char *>(zmq_msg_data(&msg)), zmq_msg_size(&msg));
+        try
+        {
+            deserialize(static_cast<const char *>(zmq_msg_data(&msg)), zmq_msg_size(&msg));
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
     }
 
     // Utility methods
@@ -64,8 +74,10 @@ class MessageBase : public MessageInterface
     template<typename Packer>
     void packCommonFields(Packer &packer) const
     {
+        // Outgoing message timestamp will reflect the current system time at the time of serialization
+        auto pack_timestamp_ = std::chrono::system_clock::now();
         auto timestamp_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-            timestamp_.time_since_epoch()).count();
+            pack_timestamp_.time_since_epoch()).count();
         packer.pack(static_cast<int>(getMessageType()));
         packer.pack(timestamp_ms);
     }

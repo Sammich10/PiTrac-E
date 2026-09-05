@@ -84,13 +84,19 @@ MessagerBase::RequestStatus MessageRouter::recvMessage(void *socket, std::unique
 
     // Create message from ZMQ message
     message = message_factory_.createFromZmqMessage(msg);
-    message->setIdentity(identity); // Store the sender's identity in the message
     zmq_msg_close(&msg);
 
+    if(nullptr == message)
+    {
+        return RequestStatus::Error;
+    }
+    
     if(!message->isValid())
     {
         return RequestStatus::Error;
     }
+
+    message->setIdentity(identity); // Store the sender's identity in the message
     return RequestStatus::Success;
 }
 

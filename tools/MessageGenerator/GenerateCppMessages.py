@@ -89,6 +89,9 @@ private:
     {{ get_cpp_type(field_def) }} {{ field_name }}_;  ///< {{ field_def.description }}
 {%- endfor %}
 
+    void serialize(msgpack::sbuffer& buffer) const override;
+    void deserialize(const char* data, size_t size) override;
+
 public:
     // Constructors
     {{ message_name }}() = default;
@@ -98,6 +101,7 @@ public:
         : {% for field_name, field_def in fields.items() %}{{ field_name }}_({{ field_name }}){{ ", " if not loop.last else "" }}{% endfor %}
 {%- endif %}
     {
+        is_valid_ = false;
     }
 
     virtual ~{{ message_name }}() = default;
@@ -107,8 +111,6 @@ public:
         return Message_Type::{{ message_type }};
     }
 
-    void serialize(msgpack::sbuffer& buffer) const override;
-    void deserialize(const char* data, size_t size) override;
     std::unique_ptr<MessageInterface> clone() const override;
     std::string toString() const override;
 
@@ -208,6 +210,7 @@ void {{ message_name }}::deserialize(const char* data, size_t size)
 {%- for field_name, field_def in fields.items() %}
     obj.via.array.ptr[{{ loop.index + 1 }}].convert({{ field_name }}_);
 {%- endfor %}
+    is_valid_ = true;
 }
 
 std::unique_ptr<MessageInterface> {{ message_name }}::clone() const
@@ -468,12 +471,14 @@ inline std::unique_ptr<MessageInterface> MessageFactory::createFromZmqMessage(zm
 
     if (size == 0)
     {
-        throw std::runtime_error("Empty message received");
+        logger_->error("Empty message received");
+        return nullptr;
     }
 
     if (data == nullptr)
     {
-        throw std::runtime_error("Message data is null");
+        logger_->error("Message data is null");
+        return nullptr;
     }
 
     // Unpack just the first element to get message type
@@ -481,28 +486,33 @@ inline std::unique_ptr<MessageInterface> MessageFactory::createFromZmqMessage(zm
     try {
         oh = msgpack::unpack(data, size);
     } catch (const std::exception &e) {
-        throw std::runtime_error("Failed to unpack MessagePack data: " + std::string(e.what()));
+        logger_->error("Failed to unpack MessagePack data: " + std::string(e.what()));
+        return nullptr;
     } catch (...) {
-        throw std::runtime_error("Failed to unpack MessagePack data: unknown exception");
+        logger_->error("Failed to unpack MessagePack data: unknown exception");
+        return nullptr;
     }
     msgpack::object obj = oh.get();
 
     if (obj.type != msgpack::type::ARRAY || obj.via.array.size == 0)
     {
-        throw std::runtime_error("Invalid message format");
+        logger_->error("Invalid message format");
+        return nullptr;
     }
 
     int message_type;
     try {
         obj.via.array.ptr[0].convert(message_type);
     } catch (const std::exception &e) {
-        throw std::runtime_error("Failed to extract message type: " + std::string(e.what()));
+        logger_->error("Failed to extract message type: " + std::string(e.what()));
+        return nullptr;
     }
 
     auto it = creators_.find(static_cast<Message_Type>(message_type));
     if (it == creators_.end())
     {
-        throw std::runtime_error("Unknown message type: " + std::to_string(static_cast<int>(message_type)));
+        logger_->error("Unknown message type: " + std::to_string(static_cast<int>(message_type)));
+        return nullptr;
     }
 
     auto message = it->second();
@@ -510,8 +520,9 @@ inline std::unique_ptr<MessageInterface> MessageFactory::createFromZmqMessage(zm
         message->fromZmqMessage(msg);
     } catch (const std::exception &e) {
         logger_->error("Failed to deserialize message for type %d: %s", static_cast<int>(message_type), e.what());
-        throw std::runtime_error("Failed to deserialize message: " + std::string(e.what()));
+        return nullptr;
     }
+    
     return message;
 }
 

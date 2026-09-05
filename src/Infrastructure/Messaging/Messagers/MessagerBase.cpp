@@ -223,6 +223,11 @@ MessagerBase::RequestStatus MessagerBase::recvMessage(void *socket, std::unique_
         zmq_msg_close(&msg);
     }
 
+    if(nullptr == message)
+    {
+        return RequestStatus::Error;
+    }
+
     if(!message->isValid())
     {
         return RequestStatus::Error;

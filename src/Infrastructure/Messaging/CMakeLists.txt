@@ -1,8 +1,6 @@
 project(Messaging)
 
 file(GLOB MESSAGING_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/*.h
     ${CMAKE_CURRENT_BINARY_DIR}/Messages/*.cpp
     ${CMAKE_CURRENT_BINARY_DIR}/Messages/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/Messagers/*.cpp
@@ -17,6 +15,5 @@ target_link_libraries(
     Logging
     zmq
     msgpack-cxx
-    ${OpenCV_LIBS}
     ${BOOST_LIBS}
 )

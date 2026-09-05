@@ -8,7 +8,7 @@ CMAKEFLAGS=-DCMAKE_TOOLCHAIN_FILE=$(OECORE_NATIVE_SYSROOT)/usr/share/cmake/OEToo
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 BUILD_TYPE ?= Debug
 
-default: pitrac_src
+default: pitrac
 
 .PHONY: build
 build:
@@ -20,7 +20,7 @@ pitrac:
 
 .PHONY: pitrac_debug
 pitrac_debug: BUILD_TYPE=Debug
-pitrac_debug: pitrac_src
+pitrac_debug: pitrac
 	@echo "Extracting debug symbols..."
 	@mkdir -p $(DEBUG_DIR)
 	@echo "Processing executables in $(BUILD_DIR)/bin..."
@@ -54,14 +54,13 @@ help:
 	@echo ""
 	@echo "Message generation:"
 	@echo "  message-types    - Generate message type enumerations"
-	@echo "  cpp-messages         - Generate C++ message classes from schemas"
+	@echo "  cpp-messages     - Generate C++ message classes from schemas"
 	@echo "  python-messages  - Generate Python message classes for Flask"
 	@echo "  all-messages     - Generate message types and all message classes"
 	@echo "  clean-messages   - Remove all generated message files"
-	@echo "  regen-messages   - Clean and regenerate all messages"
 	@echo ""
 	@echo "Testing:"
-	@echo "  build_tests      - Build unit tests"
+	@echo "  tests      - Build unit tests"
 	@echo "  run_tests        - Run all unit tests"
 	@echo ""
 	@echo "Code Quality:"
@@ -75,8 +74,9 @@ help:
 	@echo "Utilities:"
 	@echo "  clean            - Clean build directory"
 	@echo "  help             - Show this help message"
+
 # Message generation variables
-SCHEMAS_DIR = src/Infrastructure/Messaging/Messages/Schemas
+SCHEMAS_DIR = src/Infrastructure/Messaging/Messages
 GENERATED_MSG_DIR = $(BUILD_DIR)/Infrastructure/Messaging/Messages
 CPP_MESSAGE_GENERATOR = tools/MessageGenerator/GenerateCppMessages.py
 PYTHON_MESSAGE_GENERATOR = tools/MessageGenerator/GeneratePythonMessages.py
@@ -118,16 +118,14 @@ clean-messages:
 	touch $(FLASK_MESSAGES_DIR)/external/.gitkeep
 	touch $(FLASK_MESSAGES_DIR)/common/.gitkeep
 	touch $(FLASK_MESSAGES_DIR)/message_types/.gitkeep
-.PHONY: regen-messages
-regen-messages: clean-messages all-messages
 
-.PHONY: build_tests
-build_tests: pitrac
+.PHONY: tests
+tests: pitrac
 	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS) -DBUILD_TESTS=ON
 	cmake --build $(BUILD_DIR)
 
 .PHONY: run_tests
-run_tests: build_tests
+run_tests: tests
 	@echo "Running individual tests with QEMU..."
 	@find $(BUILD_DIR)/testbin/unit -name "test_*" -type f -executable | while read test; do \
 		echo "=== Running $$test ==="; \
@@ -212,17 +210,7 @@ code-metrics: cppcheck complexity dependency-graphs
 	@echo ""
 
 .PHONY: all
-all: pitrac build_tests
-
-.PHONY: clean
-clean:
-	cmake -E remove_directory $(BUILD_DIR)
-eck: $(BUILD_DIR)/cppcheck_output.txt"
-	@echo "Complexity: $(BUILD_DIR)/complexity_report.txt"
-	@echo ""
-
-.PHONY: all
-all: pitrac build_tests
+all: build cpp-messages pitrac
 
 .PHONY: clean
 clean:
