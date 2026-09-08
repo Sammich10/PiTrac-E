@@ -7,7 +7,6 @@ add_executable(test_gslogger
 target_link_libraries(test_gslogger
     PUBLIC
     Logging
-    CVUtils
     GTest::gtest_main
     ${OpenCV_LIBS}
     ${BOOST_LIBS}

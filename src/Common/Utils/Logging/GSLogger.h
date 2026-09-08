@@ -1,8 +1,3 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
- * Copyright (C) 2022-2025, Verdant Consultants, LLC.
- */
-
 #ifndef GSLOGGER_H
 #define GSLOGGER_H
 
@@ -22,11 +17,6 @@
 #include <boost/log/sources/record_ostream.hpp>
 #include <boost/log/support/date_time.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
-// OpenCV includes
-#include <opencv4/opencv2/core.hpp>
-#include <opencv4/opencv2/imgcodecs.hpp>
-#include <opencv4/opencv2/highgui.hpp>
-// Standard includes
 #include <iostream>
 #include <vector>
 #include <memory>
