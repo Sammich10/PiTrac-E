@@ -1,29 +1,131 @@
 SRC_DIR=src
 TEST_DIR=${SRC_DIR}/tests
 BUILD_DIR=build
+DOCS_DIR=$(BUILD_DIR)/docs
+DEBUG_DIR=$(BUILD_DIR)/debug
 CMAKEFLAGS=-DCMAKE_TOOLCHAIN_FILE=$(OECORE_NATIVE_SYSROOT)/usr/share/cmake/OEToolchainConfig.cmake \
 		-G "Ninja" \
 		-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+BUILD_TYPE ?= Debug
 
 default: pitrac
 
+.PHONY: build
+build:
+	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
+
 .PHONY: pitrac
-pitrac: 
-	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS)
+pitrac:
 	cmake --build $(BUILD_DIR)
 
 .PHONY: pitrac_debug
-pitrac_debug: 
-	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS)
-	cmake --build $(BUILD_DIR)
+pitrac_debug: BUILD_TYPE=Debug
+pitrac_debug: pitrac
+	@echo "Extracting debug symbols..."
+	@mkdir -p $(DEBUG_DIR)
+	@echo "Processing executables in $(BUILD_DIR)/bin..."
+	@for binary in $(BUILD_DIR)/bin/*; do \
+		if [ -f "$$binary" ] && [ -x "$$binary" ]; then \
+			echo "  Extracting debug symbols from $$(basename $$binary)"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --only-keep-debug "$$binary" "$(DEBUG_DIR)/$$(basename $$binary).debug"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --strip-debug "$$binary"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --add-gnu-debuglink="$(DEBUG_DIR)/$$(basename $$binary).debug" "$$binary"; \
+		fi; \
+	done
+	@echo "Processing shared libraries in $(BUILD_DIR)/lib..."
+	@for library in $(BUILD_DIR)/lib/*.so*; do \
+		if [ -f "$$library" ] && [ ! -L "$$library" ]; then \
+			echo "  Extracting debug symbols from $$(basename $$library)"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --only-keep-debug "$$library" "$(DEBUG_DIR)/$$(basename $$library).debug"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --strip-debug "$$library"; \
+			$(OECORE_NATIVE_SYSROOT)/usr/bin/aarch64-pitrac-linux/aarch64-pitrac-linux-objcopy --add-gnu-debuglink="$(DEBUG_DIR)/$$(basename $$library).debug" "$$library"; \
+		fi; \
+	done
+	@echo "Debug symbols extracted to $(DEBUG_DIR)"
+	@echo "Stripped binaries in $(BUILD_DIR)/bin and $(BUILD_DIR)/lib"
 
-.PHONY: build_tests
-build_tests: pitrac
+.PHONY: help
+help:
+	@echo "PiTrac Build System"
+	@echo "==================="
+	@echo "Main targets:"
+	@echo "  pitrac           - Build the main application (default)"
+	@echo "  pitrac_debug     - Build with debug configuration"
+	@echo ""
+	@echo "Message generation:"
+	@echo "  message-types    - Generate message type enumerations"
+	@echo "  cpp-messages     - Generate C++ message classes from schemas"
+	@echo "  python-messages  - Generate Python message classes for Flask"
+	@echo "  all-messages     - Generate message types and all message classes"
+	@echo "  clean-messages   - Remove all generated message files"
+	@echo ""
+	@echo "Testing:"
+	@echo "  tests      - Build unit tests"
+	@echo "  run_tests        - Run all unit tests"
+	@echo ""
+	@echo "Code Quality:"
+	@echo "  format           - Run all formatters (uncrustify)"
+	@echo "  uncrustify       - Format code with uncrustify"
+	@echo "  cppcheck         - Static analysis (cross-compilation safe)"
+	@echo "  complexity       - Analyze code complexity with lizard"
+	@echo "  dead-code        - Find potentially unused functions"
+	@echo "  code-metrics     - Full code quality report"
+	@echo ""
+	@echo "Utilities:"
+	@echo "  clean            - Clean build directory"
+	@echo "  help             - Show this help message"
+
+# Message generation variables
+SCHEMAS_DIR = src/Infrastructure/Messaging/Messages
+GENERATED_MSG_DIR = $(BUILD_DIR)/Infrastructure/Messaging/Messages
+CPP_MESSAGE_GENERATOR = tools/MessageGenerator/GenerateCppMessages.py
+PYTHON_MESSAGE_GENERATOR = tools/MessageGenerator/GeneratePythonMessages.py
+MESSAGE_TYPES_GENERATOR = tools/MessageGenerator/GenerateMessageTypes.py
+FLASK_MESSAGES_DIR = PiTrac-Flask/app/messages
+
+.PHONY: message-types
+message-types:
+	@echo "Generating message types from schemas..."
+	/usr/bin/python3 $(MESSAGE_TYPES_GENERATOR) $(SCHEMAS_DIR) $(FLASK_MESSAGES_DIR)
+	@echo "Message types generation complete!"
+
+.PHONY: cpp-messages
+cpp-messages:
+	@echo "Generating unified message classes from all schemas..."
+	@mkdir -p $(GENERATED_MSG_DIR)
+	/usr/bin/python3 $(CPP_MESSAGE_GENERATOR) $(SCHEMAS_DIR) $(GENERATED_MSG_DIR)
+	@echo "Unified message generation complete!"
+
+.PHONY: python-messages
+python-messages: message-types
+	@echo "Generating Python message classes for External schemas only..."
+	@mkdir -p $(FLASK_MESSAGES_DIR)
+	/usr/bin/python3 $(PYTHON_MESSAGE_GENERATOR) $(SCHEMAS_DIR)/External $(FLASK_MESSAGES_DIR)/external
+	/usr/bin/python3 $(PYTHON_MESSAGE_GENERATOR) $(SCHEMAS_DIR)/Common $(FLASK_MESSAGES_DIR)/common
+	@echo "External and Common Python message generation complete!"
+
+.PHONY: all-messages
+all-messages: message-types cpp-messages python-messages
+
+.PHONY: clean-messages
+clean-messages:
+	rm -rf $(GENERATED_MSG_DIR)/*.h
+	rm -rf $(GENERATED_MSG_DIR)/*.cpp
+	touch $(GENERATED_MSG_DIR)/.gitkeep
+	rm -rf $(FLASK_MESSAGES_DIR)/external/*.py
+	rm -rf $(FLASK_MESSAGES_DIR)/common/*.py
+	rm -rf $(FLASK_MESSAGES_DIR)/message_types.py
+	touch $(FLASK_MESSAGES_DIR)/external/.gitkeep
+	touch $(FLASK_MESSAGES_DIR)/common/.gitkeep
+	touch $(FLASK_MESSAGES_DIR)/message_types/.gitkeep
+
+.PHONY: tests
+tests: pitrac
 	cmake -S $(SRC_DIR) -B $(BUILD_DIR) $(CMAKEFLAGS) -DBUILD_TESTS=ON
 	cmake --build $(BUILD_DIR)
 
 .PHONY: run_tests
-run_tests: build_tests
+run_tests: tests
 	@echo "Running individual tests with QEMU..."
 	@find $(BUILD_DIR)/testbin/unit -name "test_*" -type f -executable | while read test; do \
 		echo "=== Running $$test ==="; \
@@ -31,21 +133,85 @@ run_tests: build_tests
 		echo ""; \
 	done
 
+.PHONY: format
+format: uncrustify
+
+.PHONY: uncrustify
+uncrustify:
+	./tools/Formatting/uncrustify.sh --all --yes
+
+.PHONY: cppcheck
+cppcheck:
+	@echo "Running cppcheck static analysis..."
+	@mkdir -p $(DOCS_DIR)
+	@cppcheck --enable=warning,performance,portability \
+		--suppress=missingIncludeSystem \
+		--suppress=unmatchedSuppression \
+		--inline-suppr \
+		--project=$(BUILD_DIR)/compile_commands.json \
+		--output-file=$(DOCS_DIR)/cppcheck_output.txt \
+		-j 4 2>&1 || true
+	@echo "Cppcheck complete. Results saved to $(DOCS_DIR)/cppcheck_output.txt"
+
+.PHONY: complexity
+complexity:
+	@mkdir -p $(DOCS_DIR)
+	@lizard $(SRC_DIR) -l cpp -w -o $(DOCS_DIR)/complexity_report.txt || true
+	@echo ""
+	@echo "===== High Complexity Functions (CCN > 15) ====="
+	@lizard $(SRC_DIR) -l cpp -C 15 -w 2>&1 || true
+	@echo ""
+	@echo "Complexity report: $(DOCS_DIR)/complexity_report.txt"
+	@echo ""
+	@echo "Refactoring Guide:"
+	@echo "  CCN 1-10:  Simple (good)"
+	@echo "  CCN 11-20: Moderate (acceptable)"
+	@echo "  CCN 21-50: Complex (consider refactoring)"
+	@echo "  CCN 50+:   Very complex (refactor required!)"
+
+.PHONY: dead-code
+dead-code: pitrac
+	@echo "Analyzing for potentially unused code..."
+	@mkdir -p $(DOCS_DIR)
+	@# Extract defined symbols (functions)
+	@nm -C -g $(BUILD_DIR)/lib/*.so $(BUILD_DIR)/bin/* 2>/dev/null | \
+		grep " T " | awk '{print $$3}' | sort -u > $(DOCS_DIR)/defined_symbols.txt || true
+	@# Extract referenced symbols
+	@nm -C -u $(BUILD_DIR)/lib/*.so $(BUILD_DIR)/bin/* 2>/dev/null | \
+		awk '{print $$2}' | sort -u > $(DOCS_DIR)/used_symbols.txt || true
+	@# Find symbols defined but never used
+	@comm -23 $(DOCS_DIR)/defined_symbols.txt $(DOCS_DIR)/used_symbols.txt > $(DOCS_DIR)/potentially_unused.txt || true
+	@echo "Found $$(wc -l < $(DOCS_DIR)/potentially_unused.txt) potentially unused symbols"
+	@echo "Review $(DOCS_DIR)/potentially_unused.txt for details"
+
+.PHONY: dependency-graphs
+dependency-graphs:
+	@echo "Generating dependency graph..."
+	cmake -E make_directory $(BUILD_DIR)/dot
+	cmake -E make_directory $(DOCS_DIR)/graphs
+	cmake -S $(SRC_DIR) -B $(BUILD_DIR) --graphviz=$(BUILD_DIR)/dot/dependency_graph.dot
+	dot -Tpng $(BUILD_DIR)/dot/dependency_graph.dot -o $(DOCS_DIR)/graphs/dependency_graph.png
+	@echo "Dependency graph generated at $(DOCS_DIR)/graphs/dependency_graph.png"
+
+.PHONY: code-metrics
+code-metrics: cppcheck complexity dependency-graphs
+	@echo ""
+	@echo "===== Code Quality Summary ====="
+	@echo ""
+	@echo "Lines of Code:"
+	@find $(SRC_DIR) -name "*.cpp" -o -name "*.h" | xargs wc -l | tail -1
+	@echo ""
+	@echo "File Counts:"
+	@echo "  C++ sources: $$(find $(SRC_DIR) -name "*.cpp" | wc -l)"
+	@echo "  Headers:     $$(find $(SRC_DIR) -name "*.h" | wc -l)"
+	@echo ""
+	@echo "Cppcheck: $(BUILD_DIR)/cppcheck_output.txt"
+	@echo "Complexity: $(BUILD_DIR)/complexity_report.txt"
+	@echo ""
+
 .PHONY: all
-all: pitrac build_tests
+all: build cpp-messages pitrac
 
 .PHONY: clean
 clean:
 	cmake -E remove_directory $(BUILD_DIR)
-
-.PHONY: help
-help:
-	@echo "Available targets:"
-	@echo "  pitrac       - Build the main application"
-	@echo "  pitrac_debug - Build the main application in debug mode"
-	@echo "  build_tests  - Build all unit tests"
-	@echo "  run_tests    - Build and run all tests"
-	@echo "  test_colorsys- Build and run only colorsys tests"
-	@echo "  all          - Build application and tests"
-	@echo "  clean        - Clean build directory"
-	@echo "  help         - Show this help message"

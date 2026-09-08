@@ -1,0 +1,5 @@
+{
+    "SchemaVersion": "1.0",
+    "SchemaFile": "/var/lib/pitrac/schemas/CalibrationDataSchema.sql",
+    "DatabaseFile": "/var/lib/pitrac/data/calibration_data.db"
+}

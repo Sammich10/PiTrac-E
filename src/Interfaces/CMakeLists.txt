@@ -4,4 +4,3 @@ project(Interfaces)
 
 # Add subdirectories for each interface
 add_subdirectory(Camera)
-add_subdirectory(ImageAnalysis)

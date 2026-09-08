@@ -5,6 +5,8 @@
             "height": 1088
         },
         "frame_rate": 60,
+        "exposure_time_us": 20000,
+        "analog_gain": 2.0,
         "focal_length_mm": 2.8,
         "fov":{
             "horizontal": 118.0,

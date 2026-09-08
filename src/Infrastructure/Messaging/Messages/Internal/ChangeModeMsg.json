@@ -1,0 +1,39 @@
+{
+  "message_name": "ChangeModeMsg",
+  "description": "Internal message to request system mode changes",
+  "message_type": "ChangeMode",
+  "fields": {
+    "new_mode": {
+      "type": "int32",
+      "description": "Target system mode (0=STARTING_UP, 1=STANDBY, 2=VIEWFINDER, 3=CALIBRATION, 4=LAUNCH_MONITOR, 5=DIAGNOSTIC)"
+    }
+  },
+  "custom_methods": [
+    {
+      "name": "getNewMode",
+      "return_type": "int32_t",
+      "body": "return new_mode_;"
+    },
+    {
+      "name": "setNewMode",
+      "return_type": "void",
+      "parameters": [{"name": "mode", "type": "int32_t"}],
+      "body": "new_mode_ = mode;"
+    },
+    {
+      "name": "isValidMode",
+      "return_type": "bool",
+      "body": "return new_mode_ >= 0 && new_mode_ <= 5;"
+    },
+    {
+      "name": "getModeString",
+      "return_type": "std::string",
+      "body": "const char* modes[] = {\"STARTING_UP\", \"STANDBY\", \"VIEWFINDER\", \"CALIBRATION\", \"LAUNCH_MONITOR\", \"DIAGNOSTIC\"}; return (new_mode_ >= 0 && new_mode_ <= 5) ? modes[new_mode_] : \"UNKNOWN\";"
+    }
+  ],
+  "notes": [
+    "Enhanced version of original ChangeModeMsg with additional context fields",
+    "Includes reason and requesting agent for better traceability",
+    "Compatible with existing SystemMode_Type enum values"
+  ]
+}

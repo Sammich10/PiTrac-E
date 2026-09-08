@@ -88,7 +88,8 @@ class FileUtils
  */
     static bool copyFile
     (
-        const std::string &sourcePath, const std::string &destPath
+        const std::string &sourcePath,
+        const std::string &destPath
     );
 
 
@@ -101,7 +102,78 @@ class FileUtils
  */
     static bool moveFile
     (
-        const std::string &sourcePath, const std::string &destPath
+        const std::string &sourcePath,
+        const std::string &destPath
+    );
+
+/**
+ * @brief Finds an executable in the system PATH.
+ *
+ * @param executableName The name of the executable to find (e.g., "ls", "gcc").
+ * @return The full path to the executable if found, empty string otherwise.
+ */
+    static std::string findExecutableInPath
+    (
+        const std::string &executableName
+    );
+
+/**
+ * @brief Checks if an executable exists, with PATH resolution.
+ *
+ * If the executable name contains a path separator, checks that specific path.
+ * Otherwise, searches in the system PATH.
+ *
+ * @param executable The executable name or path to check.
+ * @return true if the executable exists and is executable, false otherwise.
+ */
+    static bool executableExists
+    (
+        const std::string &executable
+    );
+
+/**
+ * @brief Resolves an executable to its full path.
+ *
+ * If the executable is already an absolute path, returns it as-is (if it
+ * exists).
+ * If it's a relative path or just a name, searches in PATH.
+ *
+ * @param executable The executable name or path to resolve.
+ * @return The full path to the executable if found, empty string otherwise.
+ */
+    static std::string resolveExecutablePath
+    (
+        const std::string &executable
+    );
+
+/**
+ * @brief Gets all directories in the system PATH environment variable.
+ *
+ * @return Vector of directory paths from the PATH environment variable.
+ */
+    static std::vector<std::string> getPathDirectories();
+
+    static std::string getDirectoryFromPath
+    (
+        const std::string &filePath
+    );
+
+    static bool readFileToString
+    (
+        const std::string &filePath,
+        std::string &outContent
+    );
+
+  private:
+/**
+ * @brief Checks if a file is executable.
+ *
+ * @param filePath The path to the file to check.
+ * @return true if the file exists and is executable, false otherwise.
+ */
+    static bool isExecutable
+    (
+        const std::string &filePath
     );
 };
 } // namespace PiTrac

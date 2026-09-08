@@ -1,10 +1,27 @@
 {
-    "ProcessDefs": {
-        "AppMain": {
-            "Executable": "AppMain.exe",
-            "Arguments": [
-                
-            ]
+    "Executables": {
+        "SystemManager": {
+            "Enable": true,
+            "Executable": "SystemManager",
+            "Arguments": [],
+            "ProcessOptions": {
+                "processName": "SysMgr",
+                "cpuAffinity": [0, 1],
+                "priority": -5
+            }
+        },
+        "FlightProcessor": {
+            "Enable": true,
+            "Executable": "FlightProcessor",
+            "Arguments": [],
+            "ProcessOptions": {
+                "processName": "FlightProcessor",
+                "cpuAffinity": [3],
+                "priority": -15,
+                "schedPolicy": "SCHED_FIFO",
+                "schedPriority": 50,
+                "dumpable": true
+            }
         }
     }
 }

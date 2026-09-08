@@ -1,0 +1,69 @@
+{
+  "message_name": "RegisterTaskMsg",
+  "description": "Internal message for registering tasks with the system manager",
+  "message_type": "RegisterTask",
+  "fields": {
+    "task_pid": {
+      "type": "uint64",
+      "description": "Process ID of the task being registered"
+    },
+    "task_name": {
+      "type": "string",
+      "description": "Human-readable name of the task"
+    }
+  },
+  "enums": {
+    "TaskPriority": {
+      "description": "Task priority levels",
+      "values": {
+        "Critical": 100,
+        "High": 75,
+        "Normal": 50,
+        "Low": 25,
+        "Background": 0
+      }
+    },
+    "TaskType": {
+      "description": "Task categories", 
+      "values": {
+        "SystemManager": 0,
+        "CameraAgent": 1,
+        "ProcessingAgent": 2,
+        "NetworkService": 3,
+        "CalibrationService": 4,
+        "DiagnosticService": 5,
+        "UserInterface": 6
+      }
+    }
+  },
+  "custom_methods": [
+    {
+      "name": "getTaskPid",
+      "return_type": "uint64_t",
+      "body": "return task_pid_;"
+    },
+    {
+      "name": "setTaskPid",
+      "return_type": "void",
+      "parameters": [{"name": "pid", "type": "uint64_t"}],
+      "body": "task_pid_ = pid;"
+    },
+    {
+      "name": "getTaskName",
+      "return_type": "const std::string&",
+      "body": "return task_name_;"
+    },
+    {
+      "name": "setTaskName",
+      "return_type": "void",
+      "parameters": [{"name": "name", "type": "const std::string&"}],
+      "body": "task_name_ = name;"
+    }
+  ],
+  "notes": [
+    "Enhanced task registration with comprehensive task metadata",
+    "Supports dependency tracking and capability advertisement",
+    "Includes resource management and auto-restart configuration",
+    "Backward compatible with existing task PID and name fields"
+  ]
+}

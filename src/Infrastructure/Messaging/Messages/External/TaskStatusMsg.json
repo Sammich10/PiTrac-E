@@ -1,0 +1,47 @@
+{
+  "message_name": "TaskStatusMsg",
+  "description": "Status update for a running task",
+  "message_type": "TaskStatus",
+  "fields": {
+    "task_id": {
+      "type": "string",
+      "description": "Unique task identifier"
+    },
+    "status": {
+      "type": "string", 
+      "description": "Current task status (running, completed, failed, etc)"
+    },
+    "progress": {
+      "type": "float64",
+      "description": "Task completion percentage (0.0 to 1.0)"
+    },
+    "details": {
+      "type": "map",
+      "key_type": "string",
+      "value_type": "string",
+      "description": "Additional status details and parameters"
+    },
+    "error_log": {
+      "type": "array",
+      "element_type": "string",
+      "description": "List of error messages if task failed"
+    }
+  },
+  "custom_methods": [
+    {
+      "name": "isCompleted",
+      "return_type": "bool",
+      "body": "return status_ == \"completed\";"
+    },
+    {
+      "name": "isFailed",
+      "return_type": "bool",
+      "body": "return status_ == \"failed\";"
+    },
+    {
+      "name": "hasErrors",
+      "return_type": "bool",
+      "body": "return !error_log_.empty();"
+    }
+  ]
+}

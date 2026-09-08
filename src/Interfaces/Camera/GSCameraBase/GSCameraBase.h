@@ -2,6 +2,7 @@
 #define GS_CAMERA_BASE_H
 
 #include "Interfaces/Camera/GSCameraInterface.h"
+#include "Common/Utils/Logging/GSLogger.h"
 namespace PiTrac
 {
 class GSCameraBase : public GSCameraInterface
@@ -17,17 +18,14 @@ class GSCameraBase : public GSCameraInterface
      * configured or capturing
      * upon construction.
      *
-     * @param[in] width         Image width in pixels.
-     * @param[in] height        Image height in pixels.
-     * @param[in] focalLength   Focal length of the lens in millimeters.
-     * @param[in] mode          Trigger mode for image acquisition (default:
-     * FREE_RUNNING).
+     * @param[in] cameraIndex Index of the camera to be used.
+     * @param[in] cameraManager Shared pointer to the libcamera::CameraManager
+     * instance.
+     *
      */
-    GSCameraBase(int width,
-                 int height,
-                 float focalLength,
-                 TriggerMode mode = TriggerMode::FREE_RUNNING)
-        : GSCameraInterface(width, height, focalLength, mode)
+    GSCameraBase(const uint32_t &cameraIndex, std::shared_ptr<libcamera::CameraManager> const &cameraManager)
+        : GSCameraInterface(cameraIndex, cameraManager),
+        logger_(GSLogger::getInstance())
     {
     }
 
@@ -40,23 +38,24 @@ class GSCameraBase : public GSCameraInterface
     ~GSCameraBase();
 
     /**
-     * @brief Opens the camera for capturing.
+     * @brief Initializes the camera by acquiring it and retrieving camera
+     * information.
      *
-     * Initializes the camera and prepares it for capturing frames.
+     * This method must be called before attempting to open the camera or
+     * capture frames.
      *
-     * @param[in] cameraIndex Index of the camera to open.
-     * @return True if the camera was opened successfully, false otherwise.
+     * @return true if initialization was successful, false otherwise.
      */
-    bool openCamera(int cameraIndex) override;
+    bool initialize() override;
 
     /**
-     * @brief Initializes the camera after it has been opened.
+     * @brief Opens the camera for capturing.
      *
-     * Configures the camera settings and prepares it for capturing frames.
+     * Attempts to acquire and open the camera at the specified index.
      *
-     * @return True if the camera was initialized successfully, false otherwise.
+     * @return True if the camera was opened successfully, false otherwise.
      */
-    bool initializeCamera() override;
+    bool openCamera() override;
 
     /**
      * @brief Closes the camera.
@@ -66,19 +65,34 @@ class GSCameraBase : public GSCameraInterface
     void closeCamera() override;
 
     /**
+     * @brief Allocates memory buffers required for the specified camera stream,
+     * and starts the camera.
+     *
+     * If successful, the camera will be ready to process capture requests.
+     */
+    bool start();
+
+    /**
+     * @brief Stops the camera from capturing.
+     *
+     * Halts frame capture, stops the camera, and releases allocated memory.
+     *
+     * @return True if the camera was stopped successfully, false otherwise.
+     */
+    bool stop();
+
+    /**
      * @brief Captures a single frame from the camera.
+     *
+     * When running in continuous capture mode, this function returns the latest
+     * frame captured.
      *
      * @return The captured frame as a cv::Mat, or an empty Mat on failure.
      */
-    cv::Mat captureFrame() override;
-
-    /**
-     * @brief Gets the next available frame from the camera.
-     *
-     * @return The next frame as a cv::Mat, or an empty Mat if no frame is
-     * available.
-     */
-    cv::Mat getNextFrame() override;
+    cv::Mat captureFrame
+    (
+        uint32_t timeout_ms = 2000
+    ) override;
 
     /**
      * @brief Gets the type of the camera.
@@ -87,7 +101,7 @@ class GSCameraBase : public GSCameraInterface
      */
     CAMERA_TYPE getCameraType() const override
     {
-        return CAMERA_INNOMAKER_IMX296GS;
+        return CAMERA_GENERIC_RASPBERRY_PI;
     }
 
     /**
@@ -97,7 +111,10 @@ class GSCameraBase : public GSCameraInterface
      * EXTERNAL_TRIGGER).
      * @return True if the trigger mode was set successfully, false otherwise.
      */
-    bool setTriggerMode(TriggerMode mode) override;
+    bool setTriggerMode
+    (
+        TriggerMode mode
+    ) override;
 
     /**
      * @brief Starts continuous image capture.
@@ -106,9 +123,19 @@ class GSCameraBase : public GSCameraInterface
      * In EXTERNAL_TRIGGER mode, frames are captured upon receiving an external
      * trigger signal.
      *
+     * @param[in] callback Optional callback function to handle each captured
+     * frame,
+     * used to process frames as they are captured in an event-driven manner. If
+     * the
+     * callback is nullptr, frames will be stored in an internal buffer for
+     * later retrieval.
+     *
      * @return True if continuous capture started successfully, false otherwise.
      */
-    bool startContinuousCapture() override;
+    bool startContinuousCapture
+    (
+        requestCompleteCallback callback
+    ) override;
 
     /**
      * @brief Stops continuous image capture.
@@ -125,6 +152,36 @@ class GSCameraBase : public GSCameraInterface
      */
     std::string toString() const override;
 
+    /**
+     * @brief Update the camera's internal state and settings based on the
+     * current stream configuration.
+     *
+     * Apply the updated settings to the current camera request if the camera is
+     * currently capturing.
+     *
+     * @param[in] exposureUs The desired exposure time in microseconds.
+     * @return True if the exposure time was set successfully, false otherwise.
+     */
+    bool setExposureTime
+    (
+        uint32_t exposureUs
+    ) override;
+
+    /**
+     * @brief Update the camera's internal state and settings based on the
+     * current stream configuration.
+     *
+     * Apply the updated settings to the current camera request if the camera is
+     * currently capturing.
+     *
+     * @param[in] gain The desired analog gain value.
+     * @return True if the analog gain was set successfully, false otherwise.
+     */
+    bool setAnalogGain
+    (
+        float gain
+    ) override;
+
   private:
 
     // @brief Frame buffer for external trigger mode
@@ -134,14 +191,13 @@ class GSCameraBase : public GSCameraInterface
     std::queue<cv::Mat> frameBuffer_;
 
     // @brief Maximum number of frames to buffer.
-    size_t maxFrameBuffer_ = 100;
+    size_t maxFrameBuffer_ = 10;
 
-    /**
-     * @brief Configures the camera with the required settings.
-     *
-     * @return true if the camera was successfully configured, false otherwise.
-     */
-    bool configureCamera() override;
+    // @brief Synchronization for single frame capture
+    std::mutex singleFrameMutex_;
+    std::condition_variable singleFrameCondition_;
+    bool singleFrameReady_ = false;
+    cv::Mat singleFrameResult_;
 
     /**
      * @brief Allocates memory buffers required for the specified camera stream.
@@ -151,7 +207,10 @@ class GSCameraBase : public GSCameraInterface
      *
      * @return true if buffer allocation was successful, false otherwise.
      */
-    bool allocateBuffersForStream(libcamera::Stream *stream) override;
+    bool allocateBuffersForStream
+    (
+        libcamera::Stream *stream
+    ) override;
 
     /**
      * @brief Configures the camera to operate in trigger mode.
@@ -159,30 +218,30 @@ class GSCameraBase : public GSCameraInterface
      * @return true if the trigger mode was successfully configured; false
      * otherwise.
      */
-    bool configureTriggerMode(const TriggerMode &mode) override;
-
-    /**
-     * @brief Converts a libcamera::FrameBuffer to an OpenCV cv::Mat object.
-     *
-     * @param buffer Pointer to the libcamera::FrameBuffer containing the image
-     * data.
-     * @return cv::Mat The resulting OpenCV matrix containing the image.
-     */
-    cv::Mat convertBufferToMat(libcamera::FrameBuffer *buffer) override;
+    bool configureTriggerMode
+    (
+        const TriggerMode &mode
+    ) override;
 
     /**
      * @brief Handles the completion of a camera request.
      *
      * @param request Pointer to the completed libcamera::Request object.
      */
-    void requestComplete(libcamera::Request *request) override;
+    void requestComplete
+    (
+        libcamera::Request *request
+    ) override;
 
     /**
      * @brief Adds a frame to the internal buffer.
      *
      * @param frame The image frame to be added to the buffer.
      */
-    void addFrameToBuffer(const cv::Mat &frame) override;
+    void addFrameToBuffer
+    (
+        const cv::Mat &frame
+    ) override;
 
     /**
      * @brief Switches the camera stream to the specified stream type.
@@ -191,36 +250,48 @@ class GSCameraBase : public GSCameraInterface
      *
      * @return true if the stream was successfully switched; false otherwise.
      */
-    bool switchStream(StreamType streamType) override;
+    bool configureStream
+    (
+        const libcamera::StreamRole &streamRole
+    ) override;
+
     /**
      * @brief Reconfigures the camera settings for an active streaming session.
      *
      * @return true if the reconfiguration was successful, false otherwise.
      */
-    bool reconfigureForActiveStream();
+    bool reconfigureForActiveStream
+    (
+        const libcamera::StreamRole &streamRole
+    );
 
     /**
-     * @brief Get the latest captured frame
+     * @brief Allocates memory buffers for all active streams.
      *
-     * In EXTERNAL_TRIGGER mode, this returns the most recent frame captured.
-     * In FREE_RUNNING mode, this returns the latest frame in the continuous
-     * stream.
-     *
-     * @return The latest frame as a cv::Mat, or an empty Mat if no frame is
-     * available.
+     * @return true if buffer allocation was successful, false otherwise.
      */
-    cv::Mat getLatestFrame();
+    bool allocateBuffers();
 
     /**
-     * @brief Get all available frames in the buffer (EXTERNAL_TRIGGER mode
-     * only)
+     * @brief Frees all allocated memory buffers for all active streams.
      *
-     * Returns all frames currently stored in the internal buffer.
-     * Clears the buffer after retrieval.
-     *
-     * @return A vector of cv::Mat containing all available frames.
+     * @return true if buffers were freed successfully, false otherwise.
      */
-    std::vector<cv::Mat> getAllAvailableFrames();
+    bool freeBuffers();
+
+    /**
+     * @brief Creates libcamera::Request objects for capturing frames.
+     *
+     * @return true if requests were created successfully, false otherwise.
+     */
+    bool createRequests();
+
+    /**
+     * @brief Destroys all created libcamera::Request objects.
+     *
+     * @return true if requests were destroyed successfully, false otherwise.
+     */
+    bool destroyRequests();
 
     /**
      * @brief Check if there are frames available in the buffer
@@ -237,6 +308,19 @@ class GSCameraBase : public GSCameraInterface
      * @return The number of frames in the buffer.
      */
     size_t getFrameQueueSize() const;
+
+    /**
+     * @brief Retrieves the latest frame from the buffer
+     *
+     * @return The latest captured frame as a cv::Mat. If no frames are
+     * available, returns an empty Mat.
+     */
+    cv::Mat getLatestFrame();
+
+    /**
+     * @brief Clears all frames from the buffer (EXTERNAL_TRIGGER mode only)
+     */
+    void clearFrameBuffer();
 
     /**
      * @brief Set the maximum number of frames to buffer (EXTERNAL_TRIGGER mode
@@ -263,21 +347,23 @@ class GSCameraBase : public GSCameraInterface
     }
 
     /**
-     * @brief Clears all frames from the buffer (EXTERNAL_TRIGGER mode only)
+     * @brief Retrieves camera information such as model, location, ID, and
+     * sensor
+     * details.
      */
-    void clearFrameBuffer();
+    CameraI2CInfo getCameraI2CInfo
+    (
+        const std::string &deviceTreePath
+    ) const;
 
     /**
-     * @brief Unpacks 10-bit Bayer formatted image data into a cv::Mat object.
-     *
-     * @param data Pointer to the raw 10-bit Bayer image data.
-     * @param width Width of the image in pixels.
-     * @param height Height of the image in pixels.
-     * @param stride Number of bytes per row in the input data.
-     *
-     * @return cv::Mat The unpacked image as an OpenCV matrix.
+     * @brief Retrieves camera information such as model, location, ID, and
+     * sensor
+     * details.
      */
-    cv::Mat unpack10BitBayer(void *data, int width, int height, size_t stride);
+    CameraInfo getCameraInfo() const;
+
+    std::shared_ptr<GSLogger> logger_;
 }; // class GSCameraBase
 } // namespace PiTrac
 

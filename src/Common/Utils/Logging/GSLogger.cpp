@@ -18,6 +18,24 @@
 #include <climits>
 namespace PiTrac
 {
+std::shared_ptr<GSLogger> GSLogger::instance_ = nullptr;
+std::mutex GSLogger::instance_mutex_;
+
+std::shared_ptr<GSLogger> GSLogger::getInstance()
+{
+    std::lock_guard<std::mutex> lock(instance_mutex_);
+
+    if (instance_ == nullptr)
+    {
+        // Create instance using private constructor
+        // Note: We need to use a workaround since make_shared can't access
+        // private constructor
+        instance_ = std::shared_ptr<GSLogger>(new GSLogger(logger_level::info));
+    }
+
+    return instance_;
+}
+
 GSLogger::GSLogger(const logger_level logLevel)
     : logLevel_(logLevel)
 {
@@ -46,13 +64,12 @@ void GSLogger::Init()
     // Add common attributes
     boost::log::add_common_attributes();
 
-    // Add process ID and process name attributes
-    boost::log::core::get()->add_global_attribute("ProcessID",
-                                                  boost::log::attributes::current_process_id());
     boost::log::core::get()->add_global_attribute("ProcessName",
                                                   boost::log::attributes::current_process_name());
     boost::log::core::get()->add_global_attribute("Scope",
                                                   boost::log::attributes::named_scope());
+
+    int current_pid = static_cast<int>(getpid());
 
     // Set global filter based on log level
     boost::log::core::get()->set_filter(
@@ -73,15 +90,8 @@ void GSLogger::Init()
     boost::log::formatter logFmt =
         boost::log::expressions::stream
             << "[" << fmtTimeStamp << "] "
-            << "[PID:"
-            << boost::log::expressions::attr<boost::log::attributes::current_process_id::value_type>
-            ("ProcessID")
-            << "] "
+            << "[PID:" << current_pid << "] "
             << "[" << fmtProcessName << "] "
-            << "[TID:"
-            << boost::log::expressions::attr<boost::log::attributes::current_thread_id::value_type>(
-            "ThreadID")
-            << "] "
             << "[" << fmtSeverity << "] "
             << boost::log::expressions::smessage;
 

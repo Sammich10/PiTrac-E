@@ -9,17 +9,16 @@ class GSLoggerTest : public ::testing::Test
     void SetUp() override
     {
         // Initialize logger with INFO level
-        logger = new GSLogger(PiTrac::logger_level::info);
+        std::shared_ptr<GSLogger> logger = GSLogger::getInstance();
     }
 
     void TearDown() override
     {
-        delete logger;
-        // Optionally, remove the test log file after tests
+        logger.reset();
         std::remove("test_log.log");
     }
 
-    GSLogger *logger;
+    std::shared_ptr<GSLogger> logger;
 };
 
 // Test logging at different levels

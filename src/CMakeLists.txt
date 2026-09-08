@@ -24,6 +24,16 @@ find_package(Boost REQUIRED
     log_setup
 )
 
+set(BOOST_LIBS
+    Boost::system
+    Boost::filesystem
+    Boost::thread
+    Boost::chrono
+    Boost::atomic
+    Boost::log
+    Boost::log_setup
+)
+
 # Define LIBAV_PRESENT if libav libraries are found
 find_library(LIBAV avcodec QUIET)
 if(LIBAV)
@@ -45,7 +55,7 @@ else()
 endif()
 
 # Find OpenCV
-find_package(OpenCV REQUIRED core imgproc highgui videoio)
+find_package(OpenCV REQUIRED core imgproc highgui videoio calib3d aruco features2d objdetect video)
 if(NOT OpenCV_FOUND)
     # If OpenCV is not found, print an error message
     message(FATAL_ERROR "OpenCV not found. Please install OpenCV or set the OpenCV_DIR environment variable.")
@@ -68,19 +78,50 @@ else()
     set(LIBCAMERA_LIBS ${LIBCAMERA_LIBRARIES})
 endif()
 
-# Find rpicam-apps
-
-
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/startapp)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Calibration)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Common)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Interfaces)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Infrastructure)
-
-option(BUILD_TESTS "Build unit tests" ON)
-
-if(BUILD_TESTS)
-    message(STATUS "Building unit tests")
-    enable_testing()
-    add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)
+# Find msgpack headers
+find_package(msgpack-cxx REQUIRED)
+if(NOT msgpack-cxx_FOUND)
+    message(FATAL_ERROR "msgpack-cxx not found. Please install msgpack-cxx or set the MSGPACK_CXX_DIR environment variable.")
+    return()
+else()
+    include_directories(${msgpack-cxx_INCLUDE_DIRS})
+    set(MSGPACK_CXX_LIBS ${msgpack-cxx_LIBRARIES})
 endif()
+
+# Find SQLite3
+find_package(SQLite3 REQUIRED)
+if(NOT SQLite3_FOUND)
+    message(FATAL_ERROR "SQLite3 not found. Please install SQLite3 or set the SQLite3_DIR environment variable.")
+    return()
+else()
+    include_directories(${SQLite3_INCLUDE_DIRS})
+    set(SQLITE3_LIBS ${SQLite3_LIBRARIES})
+endif()
+
+# Add the output directory for generated build files to the include path
+include_directories(${CMAKE_BINARY_DIR})
+
+# Message generation setup - simplified (actual generation happens in Makefile)
+set(GENERATED_MSG_DIR "${CMAKE_SOURCE_DIR}/src/Infrastructure/Messaging/Messages/Generated")
+
+# Ensure generated directory exists
+file(MAKE_DIRECTORY ${GENERATED_MSG_DIR})
+
+# Find generated source files (may be empty initially)
+file(GLOB_RECURSE GENERATED_MSG_SOURCES "${GENERATED_MSG_DIR}/*.cpp")
+file(GLOB_RECURSE GENERATED_MSG_HEADERS "${GENERATED_MSG_DIR}/*.h")
+
+# Store generated sources for later use
+if(GENERATED_MSG_SOURCES)
+    set(PITRAC_GENERATED_SOURCES ${GENERATED_MSG_SOURCES})
+endif()
+
+# Add subdirectories
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Foundation)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Common)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Infrastructure)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Interfaces)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Calibration)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Application)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/Startup)
+

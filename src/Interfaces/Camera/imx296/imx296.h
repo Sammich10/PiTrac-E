@@ -25,11 +25,8 @@ class IMX296Camera : public GSCameraBase
      * @param[in] mode          Trigger mode for image acquisition (default:
      * FREE_RUNNING).
      */
-    IMX296Camera(int width,
-                 int height,
-                 float focalLength,
-                 TriggerMode mode = TriggerMode::FREE_RUNNING)
-        : GSCameraBase(width, height, focalLength, mode)
+    IMX296Camera(const uint32_t &cameraIndex, std::shared_ptr<libcamera::CameraManager> const &cameraManager)
+        : GSCameraBase(cameraIndex, cameraManager)
     {
     }
 
@@ -48,7 +45,10 @@ class IMX296Camera : public GSCameraBase
      *
      * @return True if the trigger mode was set successfully, false otherwise.
      */
-    bool configureTriggerMode(const TriggerMode &mode) final;
+    bool configureTriggerMode
+    (
+        const TriggerMode &mode
+    ) final;
 
     /**
      * @brief Provides a string representation of the camera and its current

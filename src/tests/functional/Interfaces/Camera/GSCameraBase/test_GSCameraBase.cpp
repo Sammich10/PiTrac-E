@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     // Instantiate the IMX296 camera interface with specific parameters for
     // testing
     const std::unique_ptr<PiTrac::GSCameraInterface> camera =
-        std::make_unique<PiTrac::GSCameraBase>(1456, 1088, 2.8f, PiTrac::TriggerMode::FREE_RUNNING);
+        std::make_unique<PiTrac::GSCameraBase>(0);
     // Test opening the camera
     if (test_open_camera(camera.get(), cameraIndex) != 0)
     {
@@ -59,7 +59,7 @@ int main(int argc, char *argv[])
     for(size_t i = 0; i < static_cast<size_t>(PiTrac::StreamType::STREAM_TYPE_MAX); ++i)
     {
         // Test switching streams
-        camera->switchStream(static_cast<PiTrac::StreamType>(i));
+        camera->configureStream(static_cast<PiTrac::StreamType>(i));
         std::string fname = "/tmp/imx296/stream_" + std::to_string(i) + ".jpg";
         if(test_camera_capture(camera.get(), fname) != 0)
         {

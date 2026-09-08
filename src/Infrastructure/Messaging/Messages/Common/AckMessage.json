@@ -1,0 +1,56 @@
+{
+  "message_name": "AckMessage",
+  "description": "Acknowledgment message that contains the original message data for confirmation",
+  "message_type": "AckMessage",
+  "fields": {
+    "ack_status": {
+      "type": "int32",
+      "description": "Acknowledgment status (0=Success, 1=Failure, 2=Invalid, 3=Timeout)"
+    },
+    "original_message_type": {
+      "type": "int32", 
+      "description": "Type of the original message being acknowledged"
+    },
+    "original_timestamp": {
+      "type": "uint64",
+      "description": "Timestamp of the original message in microseconds since epoch"
+    }
+  },
+  "enums": {
+    "AckStatus": {
+      "description": "Acknowledgment status codes",
+      "values": {
+        "Success": 0,
+        "Failure": 1,
+        "Invalid": 2,
+        "Timeout": 3,
+        "Retry": 4,
+        "Partial": 5
+      }
+    }
+  },
+  "custom_methods": [
+    {
+      "name": "isSuccess",
+      "return_type": "bool",
+      "body": "return ack_status_ == 0;"
+    },
+    {
+      "name": "isFailure",
+      "return_type": "bool",
+      "body": "return ack_status_ == 1;"
+    },
+    {
+      "name": "isValid",
+      "return_type": "bool",
+      "body": "return ack_status_ != 2;"
+    }
+  ],
+  "notes": [
+    "This version includes the complete original message data for full confirmation",
+    "The original_message_data field contains the serialized msgpack of the original message",
+    "This allows the sender to verify exactly what was received and processed",
+    "Includes processing time tracking for performance monitoring",
+    "Extensible metadata field for additional ack information"
+  ]
+}

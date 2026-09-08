@@ -1,0 +1,3 @@
+[submodule "PiTrac-Flask"]
+	path = PiTrac-Flask
+	url = https://github.com/Sammich10/PiTrac-Flask.git
