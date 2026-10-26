@@ -205,12 +205,12 @@ code-metrics: cppcheck complexity dependency-graphs
 	@echo "  C++ sources: $$(find $(SRC_DIR) -name "*.cpp" | wc -l)"
 	@echo "  Headers:     $$(find $(SRC_DIR) -name "*.h" | wc -l)"
 	@echo ""
-	@echo "Cppcheck: $(BUILD_DIR)/cppcheck_output.txt"
-	@echo "Complexity: $(BUILD_DIR)/complexity_report.txt"
+	@echo "Cppcheck: $(DOCS_DIR)/cppcheck_output.txt"
+	@echo "Complexity: $(DOCS_DIR)/complexity_report.txt"
 	@echo ""
 
 .PHONY: all
-all: build cpp-messages pitrac
+all: cpp-messages build pitrac
 
 .PHONY: clean
 clean:

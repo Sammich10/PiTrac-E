@@ -13,7 +13,7 @@ namespace PiTrac
 class MessageInterface
 {
   public:
-  
+
     /**
      * @brief Virtual destructor for the message interface. Ensures proper cleanup of derived classes.
      */
@@ -25,7 +25,7 @@ class MessageInterface
      * @return The message type as an enum value of Message_Type.
      */
     virtual Message_Type getMessageType() const = 0;
-    
+
     /**
      * @brief Get the timestamp of the message.
      *
@@ -37,7 +37,7 @@ class MessageInterface
      * @brief Convert the message to a ZMQ message.
      *
      * @param[out] msg The ZMQ message to populate with the serialized data.
-     * 
+     *
      * @return true if the message was successfully converted to a ZMQ message, false otherwise.
      * @throws none
      * @note The method should not throw exceptions; any serialization errors should result in a false return value.
@@ -51,7 +51,7 @@ class MessageInterface
      * @brief Populate the message class from a ZMQ message.
      *
      * @param[in] msg The ZMQ message containing the serialized data.
-     * 
+     *
      * @return true if the message was successfully populated from the ZMQ message, false otherwise.
      * @throws none
      * @note The method should not throw exceptions; any deserialization errors should result in a false return value.
@@ -87,7 +87,7 @@ class MessageInterface
 
     /**
      * @brief Check if the message has an identity set.
-     * 
+     *
      * @return true if the message has an identity, false otherwise.
      * @note The identity must be set using setIdentity() before this method returns true. This method is used for ROUTER/DEALER socket communication patterns.
      */
@@ -123,13 +123,13 @@ class MessageInterface
      * @brief Default constructor for the message interface. Allows derived classes to be instantiated.
      */
     MessageInterface() = default;
-  
+
     /**
      * @brief Serialize the message into a MsgPack buffer.
      *
      * @param[in,out] buffer The MsgPack buffer to serialize the message into.
      * @note This method must be implemented by derived classes to provide message-specific serialization logic.
-     * 
+     *
      * @throws runtime_error if serialization fails.
      */
     virtual void serialize
@@ -168,17 +168,17 @@ class MessageInterface
      * @brief Flag to indicate if the message is valid (e.g., after deserialization)
      */
     bool is_valid_ = true;
-    
+
     /**
      * @brief Error message associated with the message validity
      */
     std::string error_message_ = "";
-    
+
     /**
      * @brief Flag to indicate if the message has an identity
      */
     bool has_identity_ = false;
-    
+
     /**
      * @brief Identity string of the message
      */

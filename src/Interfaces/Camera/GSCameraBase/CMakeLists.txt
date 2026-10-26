@@ -9,7 +9,8 @@ file(GLOB GSCAMERA_BASE_SOURCES
 add_library(${PROJECT_NAME} STATIC ${GSCAMERA_BASE_SOURCES})
 
 # Link the necessary libraries
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_link_libraries(${PROJECT_NAME} 
+    PRIVATE
     ${OpenCV_LIBS}
     ${LIBCAMERA_LIBS}
     GSCameraInterface

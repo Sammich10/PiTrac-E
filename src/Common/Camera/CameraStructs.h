@@ -56,6 +56,16 @@ typedef struct CameraConfiguration
     uint32_t sensorHeight_mm;
     float focalLength_mm;
 } CameraConfiguration_Type;
+
+
+typedef struct CameraControlSettings
+{
+    uint32_t exposure_time_us;
+    // Optional parameter to adjust exposure when applying calibration (e.g. 0.8 to reduce exposure, 1.0 for no change)
+    float analog_gain;
+    // Optional parameter to adjust field of view when applying calibration (e.g. 0.8 to preserve more FOV, 1.0 for no change)
+    float fov_scale;
+} CameraControlSettings_Type;
 }
 
 #endif // CAMERA_STRUCTS_H

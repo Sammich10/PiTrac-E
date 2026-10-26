@@ -9,5 +9,7 @@ file(GLOB FILE_UTILS_SOURCES
 )
 
 # Add the shared library
-add_library(${PROJECT_NAME} SHARED ${FILE_UTILS_SOURCES})
+add_library(${PROJECT_NAME} SHARED 
+    ${FILE_UTILS_SOURCES}
+)
 

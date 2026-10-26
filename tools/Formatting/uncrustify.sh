@@ -93,7 +93,7 @@ if [ $FAILED_COUNT -gt 0 ]; then
       uncrustify -c ${UNCRUST_CONFIG} --replace --no-backup "$file"
     done
     echo "Formatting fixes applied!"
-    exit 1
+    exit 0
   else
     echo "Would you like to run uncrustify to fix these issues? (y/n)"
     read -r response

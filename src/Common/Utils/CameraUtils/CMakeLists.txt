@@ -13,7 +13,8 @@ add_library(CameraUtils SHARED ${CAMERA_UTILS_SOURCES})
 
 # Link OpenCV libraries
 target_link_libraries(
-    ${PROJECT_NAME} 
+    ${PROJECT_NAME}
+    PRIVATE
     ${OpenCV_LIBS} 
     ${LIBCAMERA_LIBS}
 )

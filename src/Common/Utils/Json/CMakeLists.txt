@@ -7,6 +7,7 @@ file(GLOB JSON_SOURCES
 
 add_library(Json SHARED ${JSON_SOURCES})
 
-target_link_libraries(Json
+target_link_libraries(${PROJECT_NAME} 
+    PRIVATE
     jsoncpp
 )

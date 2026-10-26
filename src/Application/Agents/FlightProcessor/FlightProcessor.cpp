@@ -45,17 +45,16 @@ bool FlightProcessor::setupProcess()
         logError("Failed to start camera manager for: " + name_ + ". Error code: " + std::to_string(ret));
         return false;
     }
-    // Instantiate the two cameras and initialize them
+    else if(camera_manager_->cameras().empty() || camera_manager_->cameras().size() < static_cast<uint32_t>(LMCameras::NUM_CAMERAS))
+    {
+        logError("Not enough cameras available for: " + name_);
+        return false;
+    }
+
     for(uint32_t cam = 0; cam < static_cast<uint32_t>(LMCameras::NUM_CAMERAS); ++cam)
     {
-        if(camera_manager_->cameras().size() <= cam)
-        {
-            logError("Camera index " + std::to_string(cam) + " out of range for: " + name_);
-            return false;
-        }
-
-        camera_[cam] = std::make_unique<GSCameraBase>(cam, camera_manager_);
         // Instantiate the camera object
+        camera_[cam] = std::make_unique<GSCameraBase>(cam, camera_manager_);
         if(camera_[cam] == nullptr)
         {
             logError("Failed to create camera interface for: " + name_);
@@ -295,19 +294,6 @@ void FlightProcessor::viewfinderCallback(cv::Mat &frame, const uint32_t camera_i
     {
         return; // Skip streaming if paused
     }
-    // if(enable_ball_detection_)
-    // {
-    //     const bool ball_detected = ball_detector_->processFrame(frame);
-    //     if(ball_detected)
-    //     {
-    //         ball_detector_->drawDebugInfo(frame, true); // Draw debug info for validated detections
-    //     }
-    //     else
-    //     {
-    //         cv::putText(frame, "No Ball Detected", cv::Point(10, 30),
-    //                     cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 0, 255), 2);
-    //     }
-    // }
     // Stream the captured frame with the camera index so we know which camera it came from
     streamFrame(frame, camera_index, apply_calibrations_to_viewfinder_[camera_index].load());
     frame_counter_[camera_index]++;

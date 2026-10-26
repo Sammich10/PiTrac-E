@@ -1,5 +1,6 @@
 #include "Application/Managers/SystemManager/SystemManager.h"
 #include "Common/Utils/Calibration/CalibrationData.h"
+#include "Common/Utils/SharedMemory/CircularFrameBuffer.h"
 
 namespace PiTrac
 {
@@ -37,16 +38,6 @@ bool SystemManager::setupProcess()
 
     event_threads_.push_back(std::move(system_command_thread));
     event_threads_.push_back(std::move(task_control_thread));
-
-    // task_control_router_->bind(Endpoints::getTaskControlEndpoint());
-    // task_control_router_->startReceiving(
-    //     std::bind(&SystemManager::taskControlMessageHandler, this, std::placeholders::_1)
-    //     );
-    // logInfo("Setting up system command listener");
-    // system_command_listener_->bind(Endpoints::getExternalCommandEndpoint());
-    // system_command_listener_->startReceiving(
-    //     std::bind(&SystemManager::externalMessageHandler, this, std::placeholders::_1)
-    //     );
 
     // logInfo("Setting up frame forwarding system");
     // data_collector->bind(Endpoints::getDataCollectionEndpoint());

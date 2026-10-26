@@ -20,6 +20,7 @@ namespace PiTrac
 {
 // Callback type for request completion, e.g., for handling captured frames
 using requestCompleteCallback = std::function<void (cv::Mat &frame)>;
+using requestCompleteCallbackRaw = std::function<void (libcamera::FrameBuffer &frame)>;
 class GSCameraInterface
 {
 /**

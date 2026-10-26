@@ -9,4 +9,8 @@ file(GLOB I2CUTILS_SOURCES
 find_package(OpenSSL REQUIRED)
 
 add_library(${PROJECT_NAME} STATIC ${I2CUTILS_SOURCES})
-target_link_libraries(${PROJECT_NAME} PUBLIC OpenSSL::Crypto)
+
+target_link_libraries(${PROJECT_NAME} 
+    PRIVATE 
+    OpenSSL::Crypto
+)

@@ -90,7 +90,7 @@ MessagerBase::RequestStatus MessageRouter::recvMessage(void *socket, std::unique
     {
         return RequestStatus::Error;
     }
-    
+
     if(!message->isValid())
     {
         return RequestStatus::Error;
