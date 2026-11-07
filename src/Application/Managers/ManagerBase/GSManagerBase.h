@@ -34,32 +34,6 @@ class GSManagerBase : public TaskBase
     }
 
   protected:
-
-
-    // Override processMain, calls execute in a new thread. This will be
-    // the main entry point for the manager.
-    void processMain() override
-    {
-        if (getStatus() == TaskStatus::Running)
-        {
-            logWarning("Manager already running: " + name_);
-            return;
-        }
-
-        if (getStatus() == TaskStatus::Paused)
-        {
-            changeStatus(TaskStatus::Running);
-            logInfo("Resuming manager: " + name_);
-            return;
-        }
-
-        execute();
-    }
-
-    virtual bool execute
-    (
-        void
-    ) = 0;
 };
 } // namespace PiTrac
 

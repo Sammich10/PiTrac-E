@@ -50,7 +50,7 @@ bool FlightProcessor::setupProcess()
         logError("Not enough cameras available for: " + name_);
         return false;
     }
-
+    // Setup the camera objects
     for(uint32_t cam = 0; cam < static_cast<uint32_t>(LMCameras::NUM_CAMERAS); ++cam)
     {
         // Instantiate the camera object
@@ -66,39 +66,18 @@ bool FlightProcessor::setupProcess()
             logError("Failed to initialize camera interface for: " + name_);
             return false;
         }
-        // Load camera settings that will not change or are not configurable at runtime (like resolution) and apply.
-        // Again these are currently hard-coded but should be loaded from config file in the future
-        camera_[cam]->setResolution(1456, 1088); // Full resolution
-        camera_[cam]->setSensorSize(3.674f, 2.760f); // IMX219 sensor size in mm
-        camera_[cam]->setFocalLength(2.8f); // Focal length in mm (estimated for IMX219)
-        camera_[cam]->setFrameRate(10.0f); // 10 FPS max for to reduce CPU load, can be
-        // increased if needed
-        camera_[cam]->setTriggerMode(TriggerMode::FREE_RUNNING);
-        // Retrieve & validate camera UUID and basic info
-        camera_uuid_info_[cam] = camera_[cam]->getUUIDInfo();
-        if(!camera_uuid_info_[cam].isValid())
+        // Validate camera UUID and basic info
+        if(!camera_[cam]->getUUIDInfo().isValid();)
         {
             logError("Invalid camera UUID info for: " + name_);
             return false;
         }
-        camera_basic_info_[cam] = camera_[cam]->getInfo();
-
+        // Configure the camera stream with resolution, frame rate, and trigger mode
+        configureCameraStream(camera_[cam], 1456, 1088, 10.0f, TriggerMode::FREE_RUNNING);
+        // Configure camera constants such as focal length and sensor size. This should eventually come from a config file
+        configureCameraConstants(camera_[cam], 2.8f, 3.674f, 2.760f);
         // Load dynamic camera settings from the calibration database (like exposure time, gain, etc) and apply
         loadCameraSettings(cam);
-    }
-    // Instantiate the frame publisher
-    data_publisher_ = std::make_unique<MessagerBase>(MessagerBase::SocketType::Push);
-    if(data_publisher_ == nullptr)
-    {
-        logError("Failed to create frame publisher for: " + name_);
-        return false;
-    }
-    try{
-        // Create a PUSH messager to send frames to the frame collection endpoint
-        data_publisher_->connect(Endpoints::getDataCollectionEndpoint());
-    } catch (const std::exception &e) {
-        logError("Exception connecting frame publisher for: " + name_ + " - " + std::string(e.what()));
-        return false;
     }
     // Initialize frame codec (JPEG for viewfinder) TODO: make this dynamic later
     frame_codec_ = std::make_unique<JpegCodec>();
@@ -110,24 +89,6 @@ bool FlightProcessor::setupProcess()
     // TODO: Load codec params from config later
     frame_codec_params_ = { { {"quality", "90"} } };
     return AgentBase::setupProcess();
-}
-
-bool FlightProcessor::handleAcknowledgment(const AckMessage *ack_msg)
-{
-    const bool ack_success = ack_msg->isSuccess();
-    Message_Type original_message_type = static_cast<Message_Type>(ack_msg->getOriginal_message_type());
-    switch(original_message_type)
-    {
-        case Message_Type::RegisterTask:
-            logInfo("Received acknowledgment for registration message: " + std::string(ack_success ? "Success" : "Failure"));
-            registered_.store(ack_success);
-            break;
-        default:
-            logWarning("Received acknowledgment for unknown message type: " + std::to_string(static_cast<int>(original_message_type)) + " for: " + name_);
-            break;
-    }
-    // Implement acknowledgment handling logic here
-    return true;
 }
 
 bool FlightProcessor::handleChangeMode(const ChangeModeMsg *mode_msg)
@@ -148,7 +109,7 @@ bool FlightProcessor::handleChangeMode(const ChangeModeMsg *mode_msg)
                 cleanUp();
                 return false;
             }
-            return true;
+            break;
         default:
             logInfo("Unimplemented mode for FlightProcessor: " + std::to_string(static_cast<int>(mode_msg->getNewMode())));
             return false;
@@ -761,4 +722,24 @@ void FlightProcessor::cleanupProcess()
         data_publisher_->disconnect(Endpoints::getDataCollectionEndpoint());
     }
 }
+
+void FlightProcessor::configureCameraConstants(std::unique_ptr<GSCameraInterface> &camera,  const float focal_length,  const float sensor_width,  const float sensor_height)
+{
+    if(camera)
+    {
+        camera->setFocalLength(focal_length);
+        camera->setSensorSize(sensor_width, sensor_height);
+    }
+}
+
+inline void configureCameraStream(std::unique_ptr<GSCameraInterface> &camera, const uint32_t res_x, const uint32_t res_y, const float frame_rate, const TriggerMode trigger_mode)
+{
+    if(camera)
+    {
+        camera->setResolution(res_x, res_y);
+        camera->setFrameRate(frame_rate);
+        camera->setTriggerMode(trigger_mode);
+    }
+}
+
 } // namespace PiTrac

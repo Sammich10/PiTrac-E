@@ -78,10 +78,7 @@ class AgentBase : public TaskBase
     virtual bool handleAcknowledgment
     (
         const AckMessage *ack_msg
-    )
-    {
-        return true;
-    };
+    );
 
     /**
      * @brief Handles change mode messages received by the agent through the agent control socket.

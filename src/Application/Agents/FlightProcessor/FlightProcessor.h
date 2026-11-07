@@ -75,12 +75,7 @@ class FlightProcessor : public AgentBase
     void cleanupProcess() override;
 
   protected:
-
-    virtual bool handleAcknowledgment
-    (
-        const AckMessage *ack_msg
-    ) override;
-
+  
     virtual bool handleChangeMode
     (
         const ChangeModeMsg *mode_msg
@@ -167,6 +162,23 @@ class FlightProcessor : public AgentBase
      * preparation for mode chang or shutdown.
      */
     inline void cleanUp();
+
+    inline void configureCameraConstants
+    (
+        std::unique_ptr<GSCameraInterface> &camera, 
+        const float focal_length, 
+        const float sensor_width, 
+        const float sensor_height
+    );
+
+    inline void configureCameraStream
+    (
+        std::unique_ptr<GSCameraInterface> &camera,
+        const uint32_t res_x,
+        const uint32_t res_y,
+        const float frame_rate,
+        const TriggerMode trigger_mode
+    );
 
     // Distortion calibration object to handle processing of calibration images and calculation of calibration parameters
     std::unique_ptr<CalibrateDistortion> distortion_calibrator_;

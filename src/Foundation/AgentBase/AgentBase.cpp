@@ -103,6 +103,24 @@ void AgentBase::messageHandler(const std::unique_ptr<MessageInterface> &message)
     }
 }
 
+bool AgentBase::handleAcknowledgment(const AckMessage *ack_msg)
+{
+    const bool ack_success = ack_msg->isSuccess();
+    Message_Type original_message_type = static_cast<Message_Type>(ack_msg->getOriginal_message_type());
+    switch(original_message_type)
+    {
+        case Message_Type::RegisterTask:
+            logInfo("Received acknowledgment for registration message: " + std::string(ack_success ? "Success" : "Failure"));
+            registered_.store(ack_success);
+            break;
+        default:
+            logWarning("Received acknowledgment for unknown message type: " + std::to_string(static_cast<int>(original_message_type)) + " for: " + name_);
+            break;
+    }
+    // Implement acknowledgment handling logic here
+    return true;
+}
+
 void AgentBase::sendHeartbeat()
 {
     HeartbeatMsg heartbeat(getpid(), name_, (int32_t)getStatus(), (int32_t)lm_mode_);

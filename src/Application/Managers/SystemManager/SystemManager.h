@@ -34,9 +34,9 @@ class SystemManager : public GSManagerBase
     std::shared_ptr<MessagerBase> data_collector;
     std::shared_ptr<MessagerBase> data_publisher_;
 
-    bool setupProcess() override;
-    void cleanupProcess() override;
-    bool execute() override;
+    virtual bool setupProcess() override;
+    virtual void processMain() override;
+    virtual void cleanupProcess() override;
 
   private:
     struct RegisteredAgent

@@ -57,10 +57,12 @@ bool SystemManager::setupProcess()
         return false;
     }
 
+    should_stop_ = false;
+
     return TaskBase::setupProcess();
 }
 
-bool SystemManager::execute()
+void SystemManager::processMain()
 {
     logInfo("SystemManager is running");
     while(!should_stop_)
@@ -68,7 +70,6 @@ bool SystemManager::execute()
         // agents and their modes
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    return true;
 }
 
 void SystemManager::cleanupProcess()
