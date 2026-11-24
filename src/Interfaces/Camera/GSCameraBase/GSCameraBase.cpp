@@ -50,9 +50,9 @@ bool GSCameraBase::initialize()
             return false;
         }
         // Retrieve and log camera information
-        camInfo_ = getCameraInfo();
-        i2cInfo_ = getCameraI2CInfo(camInfo_.id);
-        logger_->info("Camera Info - Model: " + camInfo_.model + ", ID: " + camInfo_.id);
+        cameraIDInfo_ = getCameraInfo();
+        i2cInfo_ = getCameraI2CInfo(cameraIDInfo_.id);
+        logger_->info("Camera Info - Model: " + cameraIDInfo_.model + ", ID: " + cameraIDInfo_.id);
         logger_->info("Camera I2C Info - Bus: " + std::to_string(i2cInfo_.busNumber) +
                       ", Address: " + std::to_string(i2cInfo_.deviceAddress) +
                       ", Device Path: " + i2cInfo_.devicePath);
@@ -69,7 +69,7 @@ bool GSCameraBase::initialize()
         else
         {
             logger_->info("No valid UUID found in EEPROM, generating new UUID");
-            uuidInfo_.uuid = I2CUtils::generateAndStoreCameraUID(i2cInfo_.busNumber, EEPROM_I2C_ADDRESS, camInfo_.id);
+            uuidInfo_.uuid = I2CUtils::generateAndStoreCameraUID(i2cInfo_.busNumber, EEPROM_I2C_ADDRESS, cameraIDInfo_.id);
             uuidInfo_.uuid_length = uuidInfo_.uuid.length();
             if (uuidInfo_.isValid())
             {
@@ -511,9 +511,9 @@ std::string GSCameraBase::toString() const
            ", FL:" + std::to_string(focalLength_mm_) + "mm]";
 }
 
-GSCameraInterface::CameraInfo GSCameraBase::getCameraInfo() const
+GSCameraInterface::CameraIDInfo GSCameraBase::getCameraInfo() const
 {
-    CameraInfo info;
+    CameraIDInfo info;
     if (camera_)
     {
         const ::libcamera::ControlList &properties = camera_->properties();

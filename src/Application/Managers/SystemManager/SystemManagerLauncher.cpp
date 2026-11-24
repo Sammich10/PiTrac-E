@@ -20,7 +20,7 @@ void signalHandler(int signal)
         g_shutdown_requested.store(true);
         if (g_system_manager_task)
         {
-            g_system_manager_task->end();
+            g_system_manager_task->terminate();
         }
     }
 }

@@ -57,8 +57,6 @@ bool SystemManager::setupProcess()
         return false;
     }
 
-    should_stop_ = false;
-
     return TaskBase::setupProcess();
 }
 
@@ -94,13 +92,13 @@ void SystemManager::externalMessageHandler(const std::unique_ptr<MessageInterfac
         auto cmd_msg = dynamic_cast<SystemCommandMsg *>(message.get());
         if(cmd_msg)
         {
-            SystemCommandMsg::CommandID command_id = static_cast<SystemCommandMsg::CommandID>(cmd_msg->getCommand_id());
+            SystemCommandMsg::CommandID command_id = static_cast<SystemCommandMsg::CommandID>(cmd_msg->getCommandid());
             switch(command_id)
             {
                 case SystemCommandMsg::CommandID::SetMode:
                 {
                     logInfo("Handling SetMode command");
-                    const bool modeChangeSuccess = handleModeChangeCommand(*cmd_msg);
+                    const bool modeChangeSuccess = broadcastSystemCommand(*cmd_msg);
                     sendAcknowledgementToHost(*message, modeChangeSuccess);
                     break;
                 }
@@ -138,7 +136,7 @@ void SystemManager::externalMessageHandler(const std::unique_ptr<MessageInterfac
                     break;
                 }
                 default:
-                    logWarning("Received unknown command ID in SystemCommandMsg: " + std::to_string(static_cast<int>(cmd_msg->getCommand_id())));
+                    logWarning("Received unknown command ID in SystemCommandMsg: " + std::to_string(static_cast<int>(cmd_msg->getCommandid())));
                     sendAcknowledgementToHost(*message, false);
                     break;
             }
@@ -155,166 +153,82 @@ void SystemManager::externalMessageHandler(const std::unique_ptr<MessageInterfac
     }
 }
 
-bool SystemManager::handleModeChangeCommand(const SystemCommandMsg &cmd_msg)
+bool SystemManager::broadcastSystemCommand(const SystemCommandMsg &cmd_msg)
 {
-    std::map<std::string, std::string> params = cmd_msg.getCommand_params();
-    std::string mode_str = "";
-    auto it = params.find("mode");
-    if(it == params.end())
+    std::lock_guard<std::mutex> lock(agents_mutex_);
+    bool success = true;
+    for(const auto &pair : registered_agents_)
     {
-        logError("SetMode command missing 'mode' parameter");
-        logError("Received message: " + cmd_msg.toString());
+        const RegisteredAgent &agent = pair.second;
+        logInfo("Forwarding system command to agent: " + agent.task_name);
+        success &= sendSystemCommandToAgent(agent.zmq_identity, cmd_msg);
+    }
+    return success;
+}
+
+bool SystemManager::sendSystemCommandToAgent(const std::string &identity, const SystemCommandMsg &cmd_msg)
+{
+    try
+    {
+        return (task_control_router_->sendMessage(cmd_msg, identity)) == MessagerBase::RequestStatus::Success;
+    }
+    catch(const std::exception &e)
+    {
+        logError("Failed to send system command to agent " + identity + ": " + std::string(e.what()));
         return false;
     }
-    else
-    {
-        mode_str = it->second;
-    }
-    // Convert to uppercase
-    std::transform(mode_str.begin(), mode_str.end(), mode_str.begin(),
-                   [](unsigned char c) {
-            return std::toupper(c);
-        });
-    SystemMode_Type new_mode = System::stringToSystemMode(mode_str);
-    if(new_mode == SystemMode_Type::MAX_MODE)
-    {
-        logError("SetMode command received invalid mode string: " + mode_str);
-        return false;
-    }
-    {
-        if(new_mode != mode_)
-        {
-            logInfo("Changing system mode from " + System::systemModeToString(mode_) +
-                    " to " + System::systemModeToString(new_mode));
-            mode_ = new_mode;
-            broadcastModeChange(new_mode);
-        }
-        else
-        {
-            logInfo("System already in requested mode: " + System::systemModeToString(new_mode));
-        }
-    }
-    return true;
 }
 
 bool SystemManager::handleCalibrationCommand(const SystemCommandMsg &cmd_msg)
 {
-    logInfo("Forwarding calibration command to registered agents in CALIBRATION mode");
-    std::map<std::string, std::string> params = cmd_msg.getCommand_params();
-
     std::lock_guard<std::mutex> lock(agents_mutex_);
-    if(params.find("task_name") == params.end())
+
+    // Broadcast to all agents in CALIBRATION mode
+    for(const auto &pair : registered_agents_)
     {
-        // Broadcast to all agents in CALIBRATION mode
-        for(const auto &pair : registered_agents_)
+        const RegisteredAgent &agent = pair.second;
+        if(agent.current_mode == SystemMode_Type::CALIBRATION)
         {
-            const RegisteredAgent &agent = pair.second;
-            if(agent.current_mode == SystemMode_Type::CALIBRATION)
-            {
-                logInfo("Sending calibration command to agent: " + agent.task_name);
-                try
-                {
-                    SystemCommandMsg calib_msg;
-                    calib_msg.setCommand_id(static_cast<int32_t>(SystemCommandMsg::CommandID::Calibrate));
-                    calib_msg.setCommand_params(params);
-                    task_control_router_->sendMessage(calib_msg, agent.zmq_identity);
-                }
-                catch(const std::exception &e)
-                {
-                    logError("Failed to send calibration command to agent " + agent.task_name + ": " + std::string(e.what()));
-                }
-            }
-        }
-    }
-    else
-    {
-        // Send to specific agent
-        std::string target_agent_name = params["task_name"];
-        auto it = agent_name_to_identity_.find(target_agent_name);
-        if(it != agent_name_to_identity_.end())
-        {
-            std::string identity = it->second;
-            logInfo("Sending calibration command to specified agent: " + target_agent_name);
+            logInfo("Sending calibration command to agent: " + agent.task_name);
             try
             {
-                // Remove the task_name parameter before forwarding
-                params.erase("task_name");
-                SystemCommandMsg calib_msg;
-                calib_msg.setCommand_id(static_cast<int32_t>(SystemCommandMsg::CommandID::Calibrate));
-                calib_msg.setCommand_params(params);
-                task_control_router_->sendMessage(calib_msg, identity);
+                task_control_router_->sendMessage(cmd_msg, agent.zmq_identity);
             }
             catch(const std::exception &e)
             {
-                logError("Failed to send calibration command to agent " + target_agent_name + ": " + std::string(e.what()));
+                logError("Failed to send calibration command to agent " + agent.task_name + ": " + std::string(e.what()));
             }
         }
-        else
-        {
-            logError("Specified agent for calibration command not found: " + target_agent_name);
-            return false;
-        }
     }
+
     return true;
 }
 
 bool SystemManager::handleConfigurationCommand(const SystemCommandMsg &cmd_msg)
 {
-    std::map<std::string, std::string> params = cmd_msg.getCommand_params();
-
     std::lock_guard<std::mutex> lock(agents_mutex_);
-    if(params.find("task_name") == params.end())
-    {   // For now assume a configuration command must have a target agent,
-        // but in the future we could allow for some system-level configuration
-        // commands that don't require a target
-        logError("Configure command missing 'task_name' parameter");
-        return false;
-    }
-    std::string target_agent_name = params["task_name"];
-    // Remove task_name from params before forwarding, as it's only used for routing and not needed by the agent itself
-    params.erase("task_name");
-    if(target_agent_name.empty())
+
+    // Broadcast to all agents in CALIBRATION mode
+    for(const auto &pair : registered_agents_)
     {
-        logError("Configure command has empty 'task_name' parameter");
-        return false;
-    }
-    if(target_agent_name == "system")
-    {
-        logInfo("Received configuration command targeting the system itself");
-        // Handle any system-level configuration commands here based on other parameters
-        // For now, we don't have any specific system-level configurations, so just log and return success
-        logInfo("No specific system-level configuration handling implemented yet");
-        return true;
-    }
-    auto it = agent_name_to_identity_.find(target_agent_name);
-    if(it != agent_name_to_identity_.end())
-    {
-        std::string identity = it->second;
-        logInfo("Sending configuration command to specified agent: " + target_agent_name);
-        try
+        const RegisteredAgent &agent = pair.second;
+        if(agent.current_mode == SystemMode_Type::CALIBRATION)
         {
-            // Remove the task_name parameter before forwarding
-            params.erase("task_name");
-            SystemCommandMsg config_msg;
-            config_msg.setCommand_id(static_cast<int32_t>(SystemCommandMsg::CommandID::Configure));
-            config_msg.setCommand_params(params);
-            task_control_router_->sendMessage(config_msg, identity);
-        }
-        catch(const std::exception &e)
-        {
-            logError("Failed to send configuration command to agent " + target_agent_name + ": " + std::string(e.what()));
-            return false;
+            logInfo("Sending configuration command to agent: " + agent.task_name);
+            try
+            {
+                task_control_router_->sendMessage(cmd_msg, agent.zmq_identity);
+            }
+            catch(const std::exception &e)
+            {
+                logError("Failed to send configuration command to agent " + agent.task_name + ": " + std::string(e.what()));
+            }
         }
     }
-    else
-    {
-        logError("Specified agent for configuration command not found: " + target_agent_name);
-        return false;
-    }
+
     return true;
 }
 
-// Enhanced handler for ROUTER-DEALER pattern with identity
 void SystemManager::taskControlMessageHandler(const std::unique_ptr<MessageInterface> &message)
 {
     const std::string &sender_identity = message->getIdentity();
@@ -327,7 +241,13 @@ void SystemManager::taskControlMessageHandler(const std::unique_ptr<MessageInter
             handleAgentRegistration(sender_identity, *dynamic_cast<RegisterTaskMsg *>(message.get()));
             // Send initial mode to the newly registered agent to synchronize
             // its state with the system
-            sendModeChangeToAgent(sender_identity, mode_);
+            SystemCommandMsg cmd_msg(
+                (int32_t)SystemCommandMsg::CommandID::SetMode,
+                (int32_t)SystemCommandMsg::SetModeAction::EnterStandbyMode,
+                std::map<std::string, std::string>()
+                );
+            sendSystemCommandToAgent(sender_identity, cmd_msg);
+            // sendModeChangeToAgent(sender_identity, mode_);
             break;
         }
         case Message_Type::Heartbeat:
@@ -391,7 +311,7 @@ void SystemManager::handleAgentHeartbeat(const std::string &identity, const Hear
         logInfo("Heartbeat received from: [" + it->second.task_name + "] " +
                 "PID: [" + std::to_string(heartbeat.getPid()) + "]" +
                 ", Status: [" + taskStatusToString(static_cast<TaskStatus>(heartbeat.getTask_status())) + "]" +
-                ", Mode: [" + System::systemModeToString(static_cast<SystemMode_Type>(heartbeat.getSystem_mode())) + "]");
+                ", Mode: [" + SystemStatus::systemModeToString(static_cast<SystemMode_Type>(heartbeat.getSystem_mode())) + "]");
     }
     else
     {
@@ -427,50 +347,6 @@ void SystemManager::sendAcknowledgementToHost(const MessageInterface &original_m
     {
         logError("Failed to send acknowledgment to host: " + std::string(e.what()));
     }
-}
-
-void SystemManager::sendModeChangeToAgent(const std::string &identity, SystemMode_Type new_mode)
-{
-    std::lock_guard<std::mutex> lock(agents_mutex_);
-
-    auto agent_it = registered_agents_.find(identity);
-    if(agent_it != registered_agents_.end())
-    {
-        ChangeModeMsg mode_msg((int32_t)new_mode);
-        try {
-            std::lock_guard<std::mutex> router_lock(router_mutex_);
-            task_control_router_->sendMessage(mode_msg, identity);
-            agent_it->second.current_mode = new_mode;
-            logInfo("Sent mode change to " + agent_it->second.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
-        } catch (const std::exception &e) {
-            logError("Failed to send mode change to " + agent_it->second.task_name + ": " + std::string(e.what()));
-        }
-    }
-    else
-    {
-        logWarning("Agent identity not found in registered agents: " + identity);
-    }
-}
-
-bool SystemManager::broadcastModeChange(SystemMode_Type new_mode)
-{
-    std::lock_guard<std::mutex> lock(agents_mutex_);
-    // Send the mode change to all registered agents
-    for(const auto & [identity, agent] : registered_agents_)
-    {
-        ChangeModeMsg mode_msg((int32_t)new_mode);
-        try {
-            std::lock_guard<std::mutex> router_lock(router_mutex_);
-            logInfo("Broadcasting mode change to " + agent.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
-            task_control_router_->sendMessage(mode_msg, identity);
-            registered_agents_[identity].current_mode = new_mode;
-            logInfo("Broadcasted mode change to " + agent.task_name + " (Identity: " + identity + ") to mode " + std::to_string(static_cast<int>(new_mode)));
-        } catch (const std::exception &e) {
-            logError("Failed to broadcast mode change to " + agent.task_name + ": " + std::string(e.what()));
-            return false;
-        }
-    }
-    return true;
 }
 
 void SystemManager::checkAgentTimeouts()

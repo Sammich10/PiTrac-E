@@ -23,7 +23,7 @@ void signalHandler(int signal)
         g_shutdown_requested.store(true);
         if (g_camera_task)
         {
-            g_camera_task->end();
+            g_camera_task->terminate();
         }
     }
 }
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     signal(SIGTERM, signalHandler);
     // No arguments expected for the FlightProcessor, but we can add argument parsing here if needed in the future (e.g., for debug mode, config file path, etc)
     try {
-        printf("Starting Camera Agent Task Launcher\n");
+        printf("Starting Flight Processor Task Launcher\n");
         std::string procname = "FlightProcessor";
         prctl(PR_SET_NAME, procname.c_str(), 0, 0, 0);
         // Create and start the camera agent task
@@ -44,15 +44,15 @@ int main(int argc, char *argv[])
 
         if (!camera_agent.run())
         {
-            printf("Failed to start camera agent task\n");
+            printf("Failed to start Flight Processor task\n");
             return EXIT_FAILURE;
         }
 
-        printf("Camera Agent Task started successfully\n");
+        printf("Flight Processor Task started successfully\n");
     } catch (const std::exception &e) {
-        printf("Exception occurred in Camera Agent Task Launcher: %s\n", e.what());
+        printf("Exception occurred in Flight Processor Task Launcher: %s\n", e.what());
         return EXIT_FAILURE;
     }
-    printf("Camera Agent Task Launcher exiting normally\n");
+    printf("Flight Processor Task Launcher exiting normally\n");
     return EXIT_SUCCESS;
 }

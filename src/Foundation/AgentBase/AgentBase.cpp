@@ -89,10 +89,6 @@ void AgentBase::messageHandler(const std::unique_ptr<MessageInterface> &message)
             // Handle acknowledgment message
             handleAcknowledgment(dynamic_cast<const AckMessage *>(message.get()));
             break;
-        case Message_Type::ChangeMode:
-            // Handle change mode message
-            handleChangeMode(dynamic_cast<const ChangeModeMsg *>(message.get()));
-            break;
         case Message_Type::SystemCommand:
             // Handle system command message
             handleSystemCommand(dynamic_cast<const SystemCommandMsg *>(message.get()));

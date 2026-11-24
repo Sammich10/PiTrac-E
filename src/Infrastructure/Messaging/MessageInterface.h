@@ -160,8 +160,8 @@ class MessageInterface
      */
     const std::string incorrectMessageTypeString(const Message_Type incorrectMessageType) const
     {
-        return "Message type mismatch: expected " + std::to_string(static_cast<int>(getMessageType())) +
-               ", got " + std::to_string(static_cast<int>(incorrectMessageType));
+        return "Message type mismatch: expected " + std::to_string(static_cast<int>(getMessageType())) + " (" + messageTypeToString(getMessageType()) + ")"
+               ", got " + std::to_string(static_cast<int>(incorrectMessageType)) + " (" + messageTypeToString(incorrectMessageType) + ")";
     }
 
     /**

@@ -7,6 +7,7 @@
 #include "Foundation/TaskProcess/TaskStatus.h"
 #include "Infrastructure/Messaging/Messagers/MessagerBase.h"
 #include "Infrastructure/Messaging/MessageInterface.h"
+#include "Infrastructure/Messaging/Messages/SystemCommandMsg.h"
 #include <string>
 #include <thread>
 #include <list>
@@ -62,7 +63,7 @@ class TaskBase
      * Changes the task status to Stopping and sets the should_stop_ flag.
      * Logs the total runtime of the task upon completion.
      */
-    void end();
+    void terminate();
 
     /**
      * @brief Forces the task to terminate immediately.
@@ -281,33 +282,6 @@ class TaskBase
         void
     ) = 0;
 
-    /**
-     * @brief Virtual method to end the task process. This method can be overridden by derived classes to implement custom behavior when ending the task.
-     * After any overriding behavior, the derived class should call the base class implementation to ensure proper cleanup and logging.
-     */
-    virtual void endProcess
-    (
-        void
-    )
-    {
-        logInfo("Ending task: " + name_);
-
-        if (!isRunning())
-        {
-            logWarning("Task not running, cannot end: " + name_);
-            return;
-        }
-
-        changeStatus(TaskStatus::Stopping);
-
-        should_stop_ = true;
-
-        auto runtime = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - start_time_);
-
-        logInfo("Task " + name_ + " execution completed. Runtime: " +
-                std::to_string(runtime.count()) + "s, ");
-    }
-
     void logInfo(const std::string &message) const
     {
         if (logger_)
@@ -399,6 +373,23 @@ class TaskBase
                 return "Crashed";
             default:
                 return "Unknown";
+        }
+    }
+
+    static const SystemMode_Type setModeActionToSystemMode(const SystemCommandMsg::SetModeAction action)
+    {
+        switch(action)
+        {
+            case SystemCommandMsg::SetModeAction::EnterStandbyMode:
+                return SystemMode_Type::STANDBY;
+            case SystemCommandMsg::SetModeAction::EnterCalibrationMode:
+                return SystemMode_Type::CALIBRATION;
+            case SystemCommandMsg::SetModeAction::EnterLaunchMonitorMode:
+                return SystemMode_Type::LAUNCH_MONITOR;
+            case SystemCommandMsg::SetModeAction::EnterDiagnosticMode:
+                return SystemMode_Type::DIAGNOSTIC;
+            default:
+                return SystemMode_Type::INVALID_MODE;
         }
     }
 };

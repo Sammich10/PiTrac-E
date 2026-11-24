@@ -3,11 +3,15 @@
   "description": "System command message for controlling application modes and operations",
   "message_type": "SystemCommand",
   "fields": {
-    "command_id": {
+    "CommandID": {
       "type": "int32",
       "description": "Command identifier (0=SetMode, 1=Calibrate, 2=Configure)"
     },
-    "command_params": {
+    "Action": {
+      "type": "int32",
+      "description": "Action identifier corresponding to the command (e.g., CalibrationAction or ConfigurationAction)"
+    },
+    "CommandParams": {
       "type": "map",
       "key_type": "string",
       "value_type": "string",
@@ -22,6 +26,38 @@
         "Calibrate": 1,
         "Configure": 2,
         "GetData": 3
+      }
+    },
+    "SetModeAction": {
+      "description": "Available set mode actions",
+      "values": {
+        "EnterStandbyMode": 0,
+        "EnterCalibrationMode": 1,
+        "EnterLaunchMonitorMode": 2,
+        "EnterDiagnosticMode": 3
+      }
+    },
+    "CalibrationAction": {
+      "description": "Available calibration actions",
+      "values": {
+        "SelectModel": 0,
+        "SetBoardDimensions": 1,
+        "CaptureFrame": 2,
+        "AcceptFrame": 3,
+        "RejectFrame": 4,
+        "PerformDistortionCalibration": 5,
+        "SaveDistortionCalibration": 6,
+        "PerformStereoCalibration": 7
+      }
+    },
+    "ConfigurationAction" : {
+      "description": "Available configuration actions",
+      "values": {
+        "SetExposure": 0,
+        "SetGain": 1,
+        "SetFOV": 2,
+        "SetCameraParams": 3,
+        "ToggleViewfinder": 4
       }
     }
   },

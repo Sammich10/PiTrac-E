@@ -3,7 +3,6 @@
 
 #include "Infrastructure/Messaging/Messagers/MessageDealer.h"
 #include "Infrastructure/Messaging/Messages/MessageTypes.h"
-#include "Infrastructure/Messaging/Messages/ChangeModeMsg.h"
 #include "Infrastructure/Messaging/Messages/RegisterTaskMsg.h"
 #include "Infrastructure/Messaging/Messages/HeartbeatMsg.h"
 #include "Infrastructure/Messaging/Messages/AckMessage.h"
@@ -81,18 +80,6 @@ class AgentBase : public TaskBase
     );
 
     /**
-     * @brief Handles change mode messages received by the agent through the agent control socket.
-     *
-     * @param[in] mode_msg The change mode message to be processed.
-     *
-     * @return true if the mode change was handled successfully, false otherwise.
-     */
-    virtual bool handleChangeMode
-    (
-        const ChangeModeMsg *mode_msg
-    ) = 0;
-
-    /**
      * @brief Handles system command messages received by the agent through the agent control socket.
      *
      * @param[in] command_msg The system command message to be processed.
@@ -104,9 +91,40 @@ class AgentBase : public TaskBase
         const SystemCommandMsg *command_msg
     ) = 0;
 
-    // ROUTER-DEALER pattern helper methods
+    /**
+     * @brief Configures the agent for standby mode.
+     * @return true if the agent was successfully configured for standby mode, false otherwise.
+     */
+    virtual bool configureStandby() = 0;
+
+    /**
+     * @brief Configures the agent for calibration mode.
+     * @return true if the agent was successfully configured for calibration mode, false otherwise.
+     */
+    virtual bool configureCalibration() = 0;
+
+    /**
+     * @brief Configures the agent for launch monitor mode.
+     * @return true if the agent was successfully configured for launch monitor mode, false otherwise.
+     */
+    virtual bool configureLaunchMonitor() = 0;
+
+    /**
+     * @brief Configures the agent for diagnostic mode.
+     * @return true if the agent was successfully configured for diagnostic mode, false otherwise.
+     */
+    virtual bool configureDiagnostic() = 0;
+
+    /**
+     * @brief Sends a heartbeat message to the System Manager to inform if of the task's operational status and indicate the agent is still active.
+     */
     inline void sendHeartbeat();
 
+    /**
+     * @brief Registers the agent with the System Manager.
+     *
+     * @return true if registration was successful, false otherwise.
+     */
     inline bool registerAgent();
 
     std::atomic<bool> registered_ = false;

@@ -7,6 +7,7 @@
 #include "Common/Utils/CodecUtils/CodecUtils.h"
 #include "Common/Utils/Calibration/CalibrationData.h"
 #include "Common/Utils/Calibration/CalibrateDistortion.h"
+#include "Common/Utils/Calibration/CalibrationUtils.h"
 #include "Common/Utils/Calibration/CalibrationStruct.h"
 #include "Common/Utils/Detection/BallDetector.h"
 #include "Common/Camera/CameraStructs.h"
@@ -75,23 +76,73 @@ class FlightProcessor : public AgentBase
     void cleanupProcess() override;
 
   protected:
-  
-    virtual bool handleChangeMode
-    (
-        const ChangeModeMsg *mode_msg
-    ) override;
 
+    /**
+     * @brief Handles a system command received from SystemManager.
+     *
+     * @param[in] command_msg The system command message to handle
+     * @return true if the command was handled successfully, false otherwise
+     */
     virtual bool handleSystemCommand
     (
         const SystemCommandMsg *command_msg
     ) override;
 
-    virtual bool configureStandby();
+    /**
+     * @brief Handles a change in the system mode.
+     *
+     * @param[in] command_msg The system command message containing the mode change request
+     * @return true if the mode change was handled successfully, false otherwise
+     */
+    bool handleChangeMode
+    (
+        const SystemCommandMsg *command_msg
+    );
 
     /**
-     * @brief Configures the camera for viewfinder mode.
+     * @brief Processes a calibration command received from SystemManager.
+     *
+     * @param[in] command The calibration command to process
+     * @return true if the calibration command was processed successfully, false otherwise
      */
-    virtual bool configureViewfinder();
+    bool processCalibrationCommand
+    (
+        const SystemCommandMsg *command
+    );
+
+    /**
+     * @brief Processes a configuration command received from SystemManager.
+     *
+     * @param[in] command The configuration command to process
+     * @return true if the configuration command was processed successfully, false otherwise
+     */
+    bool processConfigurationCommand
+    (
+        const SystemCommandMsg *command
+    );
+
+    /**
+     * @brief Configure the flight processor for standby mode.
+     */
+    bool configureStandby() override;
+
+    /**
+     * @brief Configures the flight processor for calibration mode.
+     * @return true if the flight processor was successfully configured for calibration mode, false otherwise.
+     */
+    virtual bool configureCalibration() override;
+
+    /**
+     * @brief Configures the flight processor for launch monitor mode.
+     * @return true if the flight processor was successfully configured for launch monitor mode, false otherwise.
+     */
+    virtual bool configureLaunchMonitor() override;
+
+    /**
+     * @brief Configures the flight processor for diagnostic mode.
+     * @return true if the flight processor was successfully configured for diagnostic mode, false otherwise.
+     */
+    virtual bool configureDiagnostic() override;
 
     /**
      * @brief Starts the viewfinder mode operation in a separate thread.
@@ -101,25 +152,10 @@ class FlightProcessor : public AgentBase
      * @param frame The captured frame from the camera
      * @param camera_index The index of the camera that captured this frame
      */
-    virtual void viewfinderCallback
+    void viewfinderCallback
     (
         cv::Mat &frame,
         const uint32_t camera_index
-    );
-
-    /**
-     * @brief Processes a calibration command received from SystemManager.
-     *
-     * @param command The calibration command to process
-     */
-    virtual bool processCalibrationCommand
-    (
-        const std::map<std::string, std::string> &commandParams
-    );
-
-    virtual bool processConfigurationCommand
-    (
-        const std::map<std::string, std::string> &commandParams
     );
 
   private:
@@ -127,6 +163,8 @@ class FlightProcessor : public AgentBase
     /**
      * @brief Streams a frame to the messaging system.
      * @param frame The frame to stream
+     * @param camera_index The index of the camera that captured this frame
+     * @param apply_calibration Whether to apply calibration to the frame before streaming
      */
     inline void streamFrame
     (
@@ -137,9 +175,15 @@ class FlightProcessor : public AgentBase
 
     inline void configureCamera
     (
-        const CameraControlSettings_Type &settings,
-        const LMCameras camera_index
+        std::unique_ptr<GSCameraInterface> &camera,
+        const CameraControlSettings_Type &settings
     );
+
+    inline const bool loadCameraInfo
+    (
+        std::unique_ptr<GSCameraInterface> &camera
+    );
+
 
     void enableBallDetection
     (
@@ -154,7 +198,7 @@ class FlightProcessor : public AgentBase
      */
     void loadCameraSettings
     (
-        const uint32_t camera_index
+        std::unique_ptr<GSCameraInterface> &camera
     );
 
     /**
@@ -165,9 +209,9 @@ class FlightProcessor : public AgentBase
 
     inline void configureCameraConstants
     (
-        std::unique_ptr<GSCameraInterface> &camera, 
-        const float focal_length, 
-        const float sensor_width, 
+        std::unique_ptr<GSCameraInterface> &camera,
+        const float focal_length,
+        const float sensor_width,
         const float sensor_height
     );
 
@@ -182,6 +226,8 @@ class FlightProcessor : public AgentBase
 
     // Distortion calibration object to handle processing of calibration images and calculation of calibration parameters
     std::unique_ptr<CalibrateDistortion> distortion_calibrator_;
+    //
+    std::array<CalUtils, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> cal_utils_;
     // Calibration database interface to store and retrieve calibration data and camera settings
     std::shared_ptr<CalibrationData> calibration_data_;
     // Ball detector object to handle ball detection in viewfinder mode
@@ -196,17 +242,12 @@ class FlightProcessor : public AgentBase
     std::shared_ptr<libcamera::CameraManager> camera_manager_;
     std::array<std::unique_ptr<GSCameraInterface>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_;
     std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> pause_stream_;
-    std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> valid_calibration_data_;
     std::array<std::atomic<bool>, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> apply_calibrations_to_viewfinder_;
-    std::atomic<bool> use_best_calibration_;
     std::atomic<bool> enable_ball_detection_;
     std::array<uint64_t, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> frame_counter_;
     CodecParams frame_codec_params_;
     // Calibration command handling
     std::mutex calibration_queue_mutex_;
-    std::array<CameraInfo_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_info_;
-    std::array<GSCameraInterface::CameraUUIDInfo, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_uuid_info_;
-    std::array<GSCameraInterface::CameraInfo, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_basic_info_;
     CalibrationModel current_calibration_model_;
     // Calibration data containers
     std::array<CameraIntrinsics_Type, static_cast<size_t>(PiTrac::LMCameras::NUM_CAMERAS)> camera_matrix_;

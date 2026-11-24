@@ -8,7 +8,6 @@
 #include "Infrastructure/Messaging/Messagers/MessagePusher.h"
 #include "Infrastructure/Messaging/Messagers/MessagePuller.h"
 #include "Infrastructure/Messaging/Messagers/MessagePublisher.h"
-#include "Infrastructure/Messaging/Messages/ChangeModeMsg.h"
 #include "Infrastructure/Messaging/Messages/SystemCommandMsg.h"
 #include "Infrastructure/Messaging/Messages/AckMessage.h"
 #include "Infrastructure/Messaging/Messages/RegisterTaskMsg.h"
@@ -80,11 +79,13 @@ class SystemManager : public GSManagerBase
         const std::string &identity,
         const RegisterTaskMsg &reg_msg
     );
+
     void handleAgentHeartbeat
     (
         const std::string &identity,
         const HeartbeatMsg &heartbeat
     );
+
     void sendAcknowledgmentToAgent
     (
         const std::string &identity,
@@ -98,26 +99,20 @@ class SystemManager : public GSManagerBase
         const bool success = true
     );
 
-    // Command distribution
-    void sendModeChangeToAgent
+    bool sendSystemCommandToAgent
     (
         const std::string &identity,
-        SystemMode_Type new_mode
+        const SystemCommandMsg &cmd_msg
     );
-    bool broadcastModeChange
+
+    bool broadcastSystemCommand
     (
-        SystemMode_Type new_mode
+        const SystemCommandMsg &cmd_msg
     );
 
     // Agent monitoring
     void checkAgentTimeouts();
     std::vector<RegisteredAgent> getActiveAgents();
-
-    // External command handling
-    bool handleModeChangeCommand
-    (
-        const SystemCommandMsg &cmd_msg
-    );
 
     bool handleCalibrationCommand
     (

@@ -89,6 +89,16 @@ class {{ enum_name }}:
             {% endfor %}
         }
         return mapping.get(value, f"Unknown({value})")
+        
+    @classmethod
+    def get_value(cls, name: str) -> int:
+        """Get enum value from name"""
+        mapping = {
+            {% for value_name, value in values.items() %}
+            "{{ value_name }}": {{ value }},
+            {% endfor %}
+        }
+        return mapping.get(name, -1)
 ''')
         
         return template.render(

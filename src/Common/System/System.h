@@ -2,62 +2,47 @@
 #define SYSTEM_MODES_H
 
 #include <string>
+#include <boost/interprocess/sync/interprocess_mutex.hpp>
+#include <boost/interprocess/sync/interprocess_condition.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
+#include <boost/interprocess/sync/interprocess_semaphore.hpp>
+#include <boost/interprocess/managed_shared_memory.hpp>
+
 
 namespace PiTrac
 {
-enum class SystemStatus_Type
+enum SystemMode_Type
 {
-    INITIALIZING = 0,
-    IDLE,
-    VIEWFINDING,
-    CALIBRATING,
-    WAITING,
-    CAPTURING,
-    PROCESSING,
-    ERROR_HANDLING,
-    MAX_STATUS
-};
-
-enum class SystemMode_Type
-{
-    STARTING_UP = 0,
-    STANDBY,
+    STANDBY = 0,
     CALIBRATION,
     LAUNCH_MONITOR,
     DIAGNOSTIC,
-    MAX_MODE
+    MAX_MODE,
+    INVALID_MODE = MAX_MODE
 };
 
-enum class EventID_Type
+enum EventID_Type
 {
+    None = 0,
     AwaitingStrike,
     StrikeDetected,
     DataProcessed,
     ErrorOccurred,
     MAX_EVENT_ID
 };
-
-enum class LaunchMonitorState_Type
-{
-    ACQUIRING_BALL = 0,
-    AWAITING_STRIKE,
-    PROCESSING_STRIKE,
-    ERROR,
-    MAX_STATE
-};
-
-class System
+/**
+ * @brief SystemStatus class encapsulates the current mode, state, and events of the system. It
+ * exists in shared memory for all processes to access and synchronize system status.
+ */
+class SystemStatus
 {
   public:
-    System() = delete;
-    ~System() = delete;
+    static SystemStatus *getInstance();
 
     static const std::string systemModeToString(SystemMode_Type mode)
     {
         switch (mode)
         {
-            case SystemMode_Type::STARTING_UP:
-                return "STARTING_UP";
             case SystemMode_Type::STANDBY:
                 return "STANDBY";
             case SystemMode_Type::CALIBRATION:
@@ -73,11 +58,7 @@ class System
 
     static const SystemMode_Type stringToSystemMode(const std::string &mode_str)
     {
-        if (mode_str == "STARTING_UP")
-        {
-            return SystemMode_Type::STARTING_UP;
-        }
-        else if (mode_str == "STANDBY")
+        if (mode_str == "STANDBY")
         {
             return SystemMode_Type::STANDBY;
         }
@@ -98,6 +79,17 @@ class System
             return SystemMode_Type::MAX_MODE; // Unknown mode
         }
     }
+
+    SystemStatus();
+
+    ~SystemStatus();
+  protected:
+
+
+    SystemMode_Type currentMode_;
+    EventID_Type currentEvent_;
+
+    static SystemStatus *instance_;
 };
 } // namespace PiTrac
 

@@ -5,3 +5,4 @@ project(Common)
 # Add subdirectories for each utility
 # add_subdirectory(ImageProcessing)
 add_subdirectory(Utils)
+add_subdirectory(System)

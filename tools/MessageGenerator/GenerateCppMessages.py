@@ -67,7 +67,8 @@ class MessageGenerator:
     def generate_header(self, schema: Dict[str, Any]) -> str:
         """Generate C++ header file"""
         template = Template('''
-#pragma once
+#ifndef __{{ message_name }}_H__
+#define __{{ message_name }}_H__
 
 #include "Infrastructure/Messaging/MessageBase.h"
 #include <msgpack.hpp>
@@ -130,7 +131,10 @@ public:
 {%- endif %}
 };
 
+
 } // namespace PiTrac
+
+#endif // __{{ message_name }}_H__
         '''.strip())
 
         # Generate enum code separately
@@ -314,8 +318,13 @@ std::string {{ message_name }}::toString() const
 #ifndef GS_MESSAGE_TYPES_H
 #define GS_MESSAGE_TYPES_H
 
+#include <string>
+
 namespace PiTrac
 {
+/**
+ * @brief Enum class for message types used in PiTrac system
+ */
 enum class Message_Type
 {
     // Common Messages (0-99) - Shared between internal and external systems
@@ -335,6 +344,23 @@ enum class Message_Type
     
     // Add new message types in the appropriate range above...
 };
+
+
+/**
+* @brief Check if a given message type is valid
+* @param type The message type to check
+* @return true if the message type is valid, false otherwise
+*/
+bool isValidMessageType(const Message_Type type);
+
+/**
+* @brief Convert a message type to its string representation
+* @param type The message type to convert
+* @return The string representation of the message type
+*/
+std::string messageTypeToString(const Message_Type type);
+
+    
 } // namespace PiTrac
 
 #endif // GS_MESSAGE_TYPES_H
@@ -353,6 +379,67 @@ enum class Message_Type
             f.write(content)
         
         print(f"Generated unified MessageTypes.h: {output_path}")
+        
+        template = Template('''
+#include "Infrastructure/Messaging/Messages/MessageTypes.h"
+namespace PiTrac
+{
+std::string messageTypeToString(const Message_Type type)
+{
+    switch(type)
+    {
+        {%- for msg_type in common_messages %}
+        case Message_Type::{{ msg_type }}:
+            return "{{ msg_type }}";
+        {%- endfor %}
+        {%- for msg_type in internal_messages %}
+        case Message_Type::{{ msg_type }}:
+            return "{{ msg_type }}";
+        {%- endfor %}
+        {%- for msg_type in external_messages %}
+        case Message_Type::{{ msg_type }}:
+            return "{{ msg_type }}";
+        {%- endfor %}
+        default:
+            return "Unknown";
+    }
+}
+
+bool isValidMessageType(const Message_Type type)
+{
+    switch(type)
+    {
+        {%- for msg_type in common_messages %}
+        case Message_Type::{{ msg_type }}:
+        {%- endfor %}
+        {%- for msg_type in internal_messages %}
+        case Message_Type::{{ msg_type }}:
+        {%- endfor %}
+        {%- for msg_type in external_messages %}
+        case Message_Type::{{ msg_type }}:
+        {%- endfor %}
+            return true;
+        default:
+            return false;
+    }
+}
+} // namespace PiTrac
+        '''.strip())
+        
+        content = template.render(
+                    common_messages=common_messages,
+                    internal_messages=internal_messages,
+                    external_messages=external_messages
+                )
+                
+        output_path = os.path.join(output_dir, "MessageTypes.cpp")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        with open(output_path, 'w') as f:
+            f.write(content)
+        
+        print(f"Generated unified MessageTypes.h: {output_path}")
+
         print(f"  Common messages ({len(common_messages)}): {', '.join(common_messages)}")
         print(f"  Internal messages ({len(internal_messages)}): {', '.join(internal_messages)}")
         print(f"  External messages ({len(external_messages)}): {', '.join(external_messages)}")

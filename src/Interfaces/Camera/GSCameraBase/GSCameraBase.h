@@ -348,8 +348,7 @@ class GSCameraBase : public GSCameraInterface
 
     /**
      * @brief Retrieves camera information such as model, location, ID, and
-     * sensor
-     * details.
+     * sensor details.
      */
     CameraI2CInfo getCameraI2CInfo
     (
@@ -361,7 +360,7 @@ class GSCameraBase : public GSCameraInterface
      * sensor
      * details.
      */
-    CameraInfo getCameraInfo() const;
+    CameraIDInfo getCameraInfo() const;
 
     std::shared_ptr<GSLogger> logger_;
 }; // class GSCameraBase

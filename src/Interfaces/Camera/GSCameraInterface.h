@@ -15,6 +15,7 @@
 #include <memory>
 #include <functional>
 #include "Common/Camera/CameraStructs.h"
+#include "Common/Utils/Calibration/CalibrationStruct.h"
 
 namespace PiTrac
 {
@@ -44,13 +45,13 @@ class GSCameraInterface
  *
  */
   public:
-    struct CameraInfo
+    typedef struct CameraIDInfo
     {
         std::string model;
         std::string id;
-    };
+    } CameraIDInfo_Type;
 
-    struct CameraUUIDInfo
+    typedef struct CameraUUIDInfo
     {
         std::string uuid;
         uint32_t uuid_length;
@@ -58,7 +59,7 @@ class GSCameraInterface
         {
             return !uuid.empty() && uuid_length > 0;
         }
-    };
+    } CameraUUIDInfo_Type;
 
     // You can also provide a protected constructor with common parameters
     GSCameraInterface(const uint32_t &cameraIndex, std::shared_ptr<libcamera::CameraManager> const &cameraManager)
@@ -230,6 +231,16 @@ class GSCameraInterface
         return camInfo_;
     }
 
+    void storeInfo(const CameraInfo_Type info)
+    {
+        camInfo_ = info;
+    }
+
+    CameraIDInfo getIDInfo() const
+    {
+        return cameraIDInfo_;
+    }
+
     CameraUUIDInfo getUUIDInfo() const
     {
         return uuidInfo_;
@@ -332,14 +343,18 @@ class GSCameraInterface
     )
     {
         calibrationMatrix_ = calibMatrix;
+        calMatrixLoaded_ = true;
     }
 
     void setDistortionCoefficients
     (
+        const CalibrationModel &model,
         const cv::Mat &distCoeffs
     )
     {
+        distortionModel_ = model;
         distortionCoefficients_ = distCoeffs;
+        distCoeffsLoaded_ = true;
     }
 
     void setUseCalibrationMatrix
@@ -364,6 +379,11 @@ class GSCameraInterface
     )
     {
         resolutionX_override_ = 0; resolutionY_override_ = 0;
+    }
+
+    const bool calibrationLoaded() const
+    {
+        return calMatrixLoaded_ && distCoeffsLoaded_;
     }
 
   protected:
@@ -440,6 +460,7 @@ class GSCameraInterface
 
     cv::Mat calibrationMatrix_;
     cv::Mat distortionCoefficients_;
+    CalibrationModel distortionModel_;
 
     int resolutionX_override_ = 0;
     int resolutionY_override_ = 0;
@@ -448,6 +469,8 @@ class GSCameraInterface
     bool isCameraOpen_ = false;
     bool isCapturing_ = false;
     bool isInitialized_ = false;
+    bool calMatrixLoaded_ = false;
+    bool distCoeffsLoaded_ = false;
 
     // Frame capture synchronization
     std::mutex frameMutex_;
@@ -459,6 +482,7 @@ class GSCameraInterface
 
     CameraI2CInfo i2cInfo_;
     CameraInfo camInfo_;
+    CameraIDInfo cameraIDInfo_;
     CameraUUIDInfo uuidInfo_;
 
     static const std::string cameraModeToString(const TriggerMode &mode)

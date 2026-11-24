@@ -17,7 +17,7 @@ TaskBase::~TaskBase()
 {
     if(isRunning())
     {
-        end();
+        terminate();
     }
     MessagerBase::destroyContext();
     logInfo("Task destroyed: " + name_);
@@ -41,6 +41,7 @@ bool TaskBase::run()
     }
 
     // Run main loop
+    should_stop_.store(false);
     processMain();
 
     // Cleanup the task process environment and resources
@@ -52,7 +53,7 @@ bool TaskBase::run()
     return true;
 }
 
-void TaskBase::end()
+void TaskBase::terminate()
 {
     logInfo("Signal ending task: " + name_);
 

@@ -2,6 +2,7 @@
 #define MESSAGE_BASE_H
 
 #include "Infrastructure/Messaging/MessageInterface.h"
+#include "Infrastructure/Messaging/Messages/MessageTypes.h"
 #include <stdexcept>
 #include <sstream>
 
@@ -62,7 +63,7 @@ class MessageBase : public MessageInterface
     std::string toString() const override
     {
         std::ostringstream oss;
-        oss << "Message Type: " << static_cast<int>(getMessageType())
+        oss << "Message Type: " << messageTypeToString(getMessageType())
             << ", Timestamp: " << std::chrono::duration_cast<std::chrono::milliseconds>(
             timestamp_.time_since_epoch()).count() << " ms since epoch";
         return oss.str();
@@ -94,7 +95,8 @@ class MessageBase : public MessageInterface
         if (message_type != getMessageType())
         {
             throw std::runtime_error("Message type mismatch: expected " +
-                                     std::to_string(static_cast<int>(getMessageType())) + ", got " + std::to_string(static_cast<int>(message_type)));
+                                     std::to_string(static_cast<int>(getMessageType())) + " (" + messageTypeToString(getMessageType()) + ")"
+                                     ", got " + std::to_string(static_cast<int>(message_type)) + " (" + messageTypeToString(message_type) + ")");
         }
 
         timestamp_ = std::chrono::system_clock::time_point(

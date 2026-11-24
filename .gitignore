@@ -31,3 +31,5 @@ __pycache__/
 *.db*
 *.sqlite
 dev-env
+# Miscellaneous
+d2utmp*
